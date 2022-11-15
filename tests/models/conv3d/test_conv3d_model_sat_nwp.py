@@ -22,8 +22,12 @@ def test_model_forward(configuration_conv3d):
     # start model
     model = Model(**config)
 
-    dataset_configuration = configuration_conv3d
+    dataset_configuration: Configuration = configuration_conv3d
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
+    dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
+
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
 
     # create fake data loader
     train_dataset = FakeDataset(configuration=dataset_configuration)
@@ -43,7 +47,7 @@ def test_model_forward_no_satellite(configuration_conv3d):
 
     config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
     config = load_config(config_file)
-    config['include_future_satellite'] = False
+    config["include_future_satellite"] = False
 
     # start model
     model = Model(**config)
