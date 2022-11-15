@@ -6,7 +6,7 @@ forecast_minutes: 60
 history_minutes: 60
 number_of_conv3d_layers: 4
 conv3d_channels: 32
-nwp_image_size_pixels: 16
+nwp_image_size_pixels_height: 16
 number_nwp_channels: 10
 fc1_output_features: 16
 fc2_output_features: 16

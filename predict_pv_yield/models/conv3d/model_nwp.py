@@ -23,7 +23,7 @@ class Model(BaseModel):
         history_minutes: int = 60,
         number_of_conv3d_layers: int = 4,
         conv3d_channels: int = 32,
-        nwp_image_size_pixels: int = 64,
+        nwp_image_size_pixels_height: int = 64,
         number_nwp_channels: int = 10,
         fc1_output_features: int = 128,
         fc2_output_features: int = 128,
@@ -50,7 +50,7 @@ class Model(BaseModel):
         number_of_conv3d_layers, number of convolution 3d layers that are use
         conv3d_channels, the amount of convolution 3d channels
         image_size_pixels: the input satellite image size
-        nwp_image_size_pixels: the input nwp image size
+        nwp_image_size_pixels_height: the input nwp image size
         number_sat_channels: number of nwp channels
         fc1_output_features: number of fully connected outputs nodes out of the the first fully connected layer
         fc2_output_features: number of fully connected outputs nodes out of the the second fully connected layer
@@ -81,7 +81,7 @@ class Model(BaseModel):
 
         self.nwp_cnn_output_size = (
             conv3d_channels
-            * ((nwp_image_size_pixels - 2 * self.number_of_conv3d_layers) ** 2)
+            * ((nwp_image_size_pixels_height - 2 * self.number_of_conv3d_layers) ** 2)
             * (self.forecast_len_60 + self.history_len_60 + 1)
         )
 

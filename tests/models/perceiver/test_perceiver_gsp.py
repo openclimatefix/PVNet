@@ -15,8 +15,8 @@ def test_model_forward(configuration_perceiver):
 
     dataset_configuration = configuration_perceiver
     dataset_configuration.process.batch_size = 2
-    dataset_configuration.input_data.nwp.nwp_image_size_pixels = 64
-    dataset_configuration.input_data.satellite.satellite_image_size_pixels = 16
+    dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 64
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
 
     model = PerceiverModel(
         history_minutes=30,

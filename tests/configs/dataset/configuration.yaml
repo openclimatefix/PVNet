@@ -8,7 +8,7 @@ input_data:
   nwp:
     nwp_channels:
       - t
-    nwp_image_size_pixels: 2
+    nwp_image_size_pixels_height: 2
     nwp_zarr_path: tests/data/nwp_data/test.zarr
   pv:
     pv_filename: tests/data/pv_data/test.nc
@@ -16,12 +16,12 @@ input_data:
   satellite:
     satellite_channels:
       - HRV
-    satellite_image_size_pixels: 64
+    satellite_image_size_pixels_height: 64
     satellite_zarr_path: tests/data/sat_data.zarr
   hrvsatellite:
     hrvsatellite_channels:
       - HRV
-    hrvsatellite_image_size_pixels: 64
+    hrvsatellite_image_size_pixels_height: 64
     hrvsatellite_zarr_path: tests/data/sat_data.zarr
   opticalflow:
     opticalflow_zarr_path: /mnt/storage_ssd_8tb/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/satellite/EUMETSAT/SEVIRI_RSS/zarr/v3/eumetsat_seviri_uk.zarr
