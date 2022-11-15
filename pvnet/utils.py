@@ -10,7 +10,7 @@ import yaml
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities import rank_zero_only
 
-import predict_pv_yield
+import pvnet
 
 
 def load_config(config_file):
@@ -19,7 +19,7 @@ def load_config(config_file):
     """
 
     # get full path of config file
-    path = os.path.dirname(predict_pv_yield.__file__)
+    path = os.path.dirname(pvnet.__file__)
     config_file = f"{path}/../{config_file}"
 
     with open(config_file) as cfg:

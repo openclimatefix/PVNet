@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from nowcasting_dataloader.batch import BatchML
 from torch import nn
 
-from predict_pv_yield.models.base_model import BaseModel
+from pvnet.models.base_model import BaseModel
 
 logging.basicConfig()
-_LOG = logging.getLogger("predict_pv_yield")
+_LOG = logging.getLogger("pvnet")
 
 
 class Model(BaseModel):

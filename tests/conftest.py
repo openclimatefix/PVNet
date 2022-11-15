@@ -1,7 +1,7 @@
 import pytest
 from nowcasting_dataset.config.model import Configuration
 
-from predict_pv_yield.utils import load_config
+from pvnet.utils import load_config
 
 
 @pytest.fixture()

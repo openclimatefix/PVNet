@@ -1,4 +1,4 @@
-_target_: predict_pv_yield.data.dataloader.NetCDFDataModule
+_target_: pvnet.data.dataloader.NetCDFDataModule
 
 temp_path: "."
 n_train_data: 24900

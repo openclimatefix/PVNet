@@ -1,18 +1,23 @@
 import logging
 
-from predict_pv_yield.models.base_model import BaseModel
 from nowcasting_dataloader.batch import BatchML
 
+from pvnet.models.base_model import BaseModel
 
 logging.basicConfig()
-_LOG = logging.getLogger("predict_pv_yield")
+_LOG = logging.getLogger("pvnet")
 _LOG.setLevel(logging.DEBUG)
 
 
 class Model(BaseModel):
     name = "last_value"
 
-    def __init__(self, forecast_minutes: int = 12, history_minutes: int = 6, output_variable="pv_yield"):
+    def __init__(
+        self,
+        forecast_minutes: int = 12,
+        history_minutes: int = 6,
+        output_variable="pv_yield",
+    ):
         """
         Simple baseline model that takes the last pv yield value and copies it forward
         """
@@ -23,13 +28,13 @@ class Model(BaseModel):
 
         super().__init__()
 
-    def forward(self, x:BatchML):
+    def forward(self, x: BatchML):
 
         if type(x) == dict:
             x = BatchML(**x)
 
         # Shape: batch_size, seq_length, n_sites
-        if self.output_variable == 'gsp_yield':
+        if self.output_variable == "gsp_yield":
             gsp_yield = x.gsp.gsp_yield
         else:
             gsp_yield = x.pv.pv_yield

@@ -1,4 +1,4 @@
-_target_: predict_pv_yield.models.conv3d.model_sat_nwp.Model
+_target_: pvnet.models.conv3d.model_sat_nwp.Model
 
 include_pv_or_gsp_yield_history: True
 include_nwp: True

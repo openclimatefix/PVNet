@@ -1,4 +1,4 @@
-_target_: predict_pv_yield.models.conv3d.model.Model
+_target_: pvnet.models.conv3d.model.Model
 
 include_pv_yield: True
 include_nwp: True

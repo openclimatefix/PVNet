@@ -19,8 +19,8 @@ def main(config: DictConfig):
 
     # Imports should be nested inside @hydra.main to optimize tab completion
     # Read more here: https://github.com/facebookresearch/hydra/issues/934
-    from predict_pv_yield.training import train
-    from predict_pv_yield.utils import extras, print_config
+    from pvnet.training import train
+    from pvnet.utils import extras, print_config
 
     # A couple of optional utilities:
     # - disabling python warnings

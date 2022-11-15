@@ -3,7 +3,7 @@ import os
 import tilemapbase
 from hydra import compose, initialize
 
-from predict_pv_yield.training import train
+from pvnet.training import train
 
 
 def test_train():
