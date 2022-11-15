@@ -52,8 +52,11 @@ def test_model_forward_no_satellite(configuration_conv3d):
     # start model
     model = Model(**config)
 
-    dataset_configuration = configuration_conv3d
+    dataset_configuration: Configuration = configuration_conv3d
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
+    dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
 
     # create fake data loader
     train_dataset = FakeDataset(configuration=dataset_configuration)
@@ -74,8 +77,12 @@ def test_train(configuration_conv3d):
     config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
     config = load_config(config_file)
 
-    dataset_configuration = configuration_conv3d
+    dataset_configuration: Configuration = configuration_conv3d
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
+    dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
+
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
 
     # start model
     model = Model(**config)
@@ -85,7 +92,7 @@ def test_train(configuration_conv3d):
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=None)
 
     # fit model
-    trainer = pl.Trainer(gpus=0, max_epochs=1)
+    trainer = pl.Trainer(max_epochs=1)
     trainer.fit(model, train_dataloader)
 
     # predict over training set
