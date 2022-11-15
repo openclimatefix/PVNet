@@ -1,19 +1,23 @@
+import logging
+
+import numpy as np
+import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-
-from nowcasting_utils.visualization.visualization import plot_example
-from nowcasting_utils.visualization.line import plot_batch_results
-from nowcasting_dataset.data_sources.nwp.nwp_data_source import NWP_VARIABLE_NAMES
-from nowcasting_utils.models.loss import WeightedLosses
-from nowcasting_utils.models.metrics import mae_each_forecast_horizon, mse_each_forecast_horizon
 from nowcasting_dataloader.batch import BatchML
-from nowcasting_utils.metrics.validation import make_validation_results, save_validation_results_to_logger
-
-import pandas as pd
-import numpy as np
-
-import logging
+from nowcasting_dataset.data_sources.nwp.nwp_data_source import NWP_VARIABLE_NAMES
+from nowcasting_utils.metrics.validation import (
+    make_validation_results,
+    save_validation_results_to_logger,
+)
+from nowcasting_utils.models.loss import WeightedLosses
+from nowcasting_utils.models.metrics import (
+    mae_each_forecast_horizon,
+    mse_each_forecast_horizon,
+)
+from nowcasting_utils.visualization.line import plot_batch_results
+from nowcasting_utils.visualization.visualization import plot_example
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +79,9 @@ class BaseModel(pl.LightningModule):
 
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
-    def _training_or_validation_step(self, batch, tag: str, return_model_outputs: bool = False):
+    def _training_or_validation_step(
+        self, batch, tag: str, return_model_outputs: bool = False
+    ):
         """
         batch: The batch data
         tag: either 'Train', 'Validation' , 'Test'
@@ -120,8 +126,12 @@ class BaseModel(pl.LightningModule):
 
         if tag != "Train":
             # add metrics for each forecast horizon
-            mse_each_forecast_horizon_metric = mse_each_forecast_horizon(output=y_hat, target=y)
-            mae_each_forecast_horizon_metric = mae_each_forecast_horizon(output=y_hat, target=y)
+            mse_each_forecast_horizon_metric = mse_each_forecast_horizon(
+                output=y_hat, target=y
+            )
+            mae_each_forecast_horizon_metric = mae_each_forecast_horizon(
+                output=y_hat, target=y
+            )
 
             metrics_mse = {
                 f"MSE_forecast_horizon_{i}/{tag}": mse_each_forecast_horizon_metric[i]
@@ -167,7 +177,9 @@ class BaseModel(pl.LightningModule):
         if batch_idx in [0, 1, 2, 3, 4]:
 
             # make sure the interesting example doesnt go above the batch size
-            INTERESTING_EXAMPLES = (i for i in INTERESTING_EXAMPLES if i < self.batch_size)
+            INTERESTING_EXAMPLES = (
+                i for i in INTERESTING_EXAMPLES if i < self.batch_size
+            )
 
             for example_i in INTERESTING_EXAMPLES:
                 # 1. Plot example
@@ -187,7 +199,7 @@ class BaseModel(pl.LightningModule):
                     self.logger.experiment[-1].log_image(name, fig)
                     try:
                         fig.close()
-                    except Exception as _:
+                    except Exception:
                         # could not close figure
                         pass
 
@@ -212,26 +224,30 @@ class BaseModel(pl.LightningModule):
             ]
 
             # plot and save to logger
-            fig = plot_batch_results(model_name=self.name, y=y, y_hat=y_hat, x=time, x_hat=time_hat)
+            fig = plot_batch_results(
+                model_name=self.name, y=y, y_hat=y_hat, x=time, x_hat=time_hat
+            )
             fig.write_html(f"temp_{batch_idx}.html")
             try:
                 self.logger.experiment[-1][name].upload(f"temp_{batch_idx}.html")
-            except:
+            except Exception:
                 pass
 
         # save validation results
-        capacity = batch.gsp.gsp_capacity[:,-self.forecast_len_30:,0].cpu().numpy()
+        capacity = batch.gsp.gsp_capacity[:, -self.forecast_len_30 :, 0].cpu().numpy()
         predictions = model_output.cpu().numpy()
-        truths = batch.gsp.gsp_yield[:, -self.forecast_len_30:, 0].cpu().numpy()
+        truths = batch.gsp.gsp_yield[:, -self.forecast_len_30 :, 0].cpu().numpy()
         predictions = predictions * capacity
         truths = truths * capacity
 
-        results = make_validation_results(truths_mw=truths,
-                                          predictions_mw=predictions,
-                                          capacity_mwp=capacity,
-                                          gsp_ids=batch.gsp.gsp_id[:, 0].cpu(),
-                                          batch_idx=batch_idx,
-                                          t0_datetimes_utc=pd.to_datetime(batch.metadata.t0_datetime_utc))
+        results = make_validation_results(
+            truths_mw=truths,
+            predictions_mw=predictions,
+            capacity_mwp=capacity,
+            gsp_ids=batch.gsp.gsp_id[:, 0].cpu(),
+            batch_idx=batch_idx,
+            t0_datetimes_utc=pd.to_datetime(batch.metadata.t0_datetime_utc),
+        )
 
         # append so in 'validation_epoch_end' the file is saved
         if batch_idx == 0:
@@ -244,10 +260,12 @@ class BaseModel(pl.LightningModule):
 
         logger.info("Validation epoch end")
 
-        save_validation_results_to_logger(results_dfs=self.results_dfs,
-                                          results_file_name=self.results_file_name,
-                                          current_epoch=self.current_epoch,
-                                          logger=self.logger)
+        save_validation_results_to_logger(
+            results_dfs=self.results_dfs,
+            results_file_name=self.results_file_name,
+            current_epoch=self.current_epoch,
+            logger=self.logger,
+        )
 
     def test_step(self, batch, batch_idx):
         self._training_or_validation_step(batch, tag="Test")

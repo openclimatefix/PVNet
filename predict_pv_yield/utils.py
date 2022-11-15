@@ -1,16 +1,16 @@
-import yaml
-import os
-import predict_pv_yield
 import logging
 import os
 import warnings
-from typing import List, Sequence
+from collections.abc import Sequence
 
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
+import yaml
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities import rank_zero_only
+
+import predict_pv_yield
 
 
 def load_config(config_file):
@@ -22,8 +22,7 @@ def load_config(config_file):
     path = os.path.dirname(predict_pv_yield.__file__)
     config_file = f"{path}/../{config_file}"
 
-
-    with open(config_file, "r") as cfg:
+    with open(config_file) as cfg:
         config = yaml.load(cfg, Loader=yaml.FullLoader)
 
     if "_target_" in config.keys():
@@ -40,7 +39,15 @@ def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
 
     # this ensures all logging levels get marked with the rank zero decorator
     # otherwise logs would get multiplied for each GPU process in multi-GPU setup
-    for level in ("debug", "info", "warning", "error", "exception", "fatal", "critical"):
+    for level in (
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "exception",
+        "fatal",
+        "critical",
+    ):
         setattr(logger, level, rank_zero_only(getattr(logger, level)))
 
     return logger
@@ -75,7 +82,9 @@ def extras(config: DictConfig) -> None:
 
     # force debugger friendly configuration if <config.trainer.fast_dev_run=True>
     if config.trainer.get("fast_dev_run"):
-        log.info("Forcing debugger friendly configuration! <config.trainer.fast_dev_run=True>")
+        log.info(
+            "Forcing debugger friendly configuration! <config.trainer.fast_dev_run=True>"
+        )
         # Debuggers don't like GPUs or multiprocessing
         if config.trainer.get("gpus"):
             config.trainer.gpus = 0
@@ -139,8 +148,8 @@ def log_hyperparameters(
     model: pl.LightningModule,
     datamodule: pl.LightningDataModule,
     trainer: pl.Trainer,
-    callbacks: List[pl.Callback],
-    logger: List[pl.loggers.LightningLoggerBase],
+    callbacks: list[pl.Callback],
+    logger: list[pl.loggers.LightningLoggerBase],
 ) -> None:
     """This method controls which parameters from Hydra config are saved by Lightning loggers.
 
@@ -182,8 +191,8 @@ def finish(
     model: pl.LightningModule,
     datamodule: pl.LightningDataModule,
     trainer: pl.Trainer,
-    callbacks: List[pl.Callback],
-    logger: List[pl.loggers.LightningLoggerBase],
+    callbacks: list[pl.Callback],
+    logger: list[pl.loggers.LightningLoggerBase],
 ) -> None:
     """Makes sure everything closed properly."""
 

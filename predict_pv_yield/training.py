@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import Optional
 
 import hydra
+import torch
 from omegaconf import DictConfig
 from pytorch_lightning import (
     Callback,
@@ -12,7 +13,6 @@ from pytorch_lightning import (
 from pytorch_lightning.loggers import LightningLoggerBase
 
 from predict_pv_yield import utils
-import torch
 
 log = utils.get_logger(__name__)
 
@@ -43,7 +43,7 @@ def train(config: DictConfig) -> Optional[float]:
     model: LightningModule = hydra.utils.instantiate(config.model)
 
     # Init lightning callbacks
-    callbacks: List[Callback] = []
+    callbacks: list[Callback] = []
     if "callbacks" in config:
         for _, cb_conf in config.callbacks.items():
             if "_target_" in cb_conf:
@@ -51,7 +51,7 @@ def train(config: DictConfig) -> Optional[float]:
                 callbacks.append(hydra.utils.instantiate(cb_conf))
 
     # Init lightning loggers
-    logger: List[LightningLoggerBase] = []
+    logger: list[LightningLoggerBase] = []
     if "logger" in config:
         for _, lg_conf in config.logger.items():
             if "_target_" in lg_conf:
@@ -77,7 +77,7 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Train the model
     log.info("Starting training!")
-    if 'validate_only' in config:
+    if "validate_only" in config:
         trainer.validate(model=model, datamodule=datamodule)
     else:
         trainer.fit(model=model, datamodule=datamodule)

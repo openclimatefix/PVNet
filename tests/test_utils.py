@@ -1,9 +1,9 @@
-from predict_pv_yield.utils import extras, print_config
-
-from hydra import compose, initialize
-import hydra
-
 import os
+
+import hydra
+from hydra import compose, initialize
+
+from predict_pv_yield.utils import extras, print_config
 
 
 def test_utils():

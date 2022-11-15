@@ -1,9 +1,10 @@
-from predict_pv_yield.models.conv3d.model_sat_nwp import Model
-import torch
 import pytorch_lightning as pl
-from predict_pv_yield.utils import load_config
+import torch
 from nowcasting_dataloader.fake import FakeDataset
 from nowcasting_dataset.config.model import Configuration
+
+from predict_pv_yield.models.conv3d.model_sat_nwp import Model
+from predict_pv_yield.utils import load_config
 
 
 def test_init():

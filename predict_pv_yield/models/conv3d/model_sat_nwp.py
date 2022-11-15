@@ -2,10 +2,10 @@ import logging
 
 import torch
 import torch.nn.functional as F
+from nowcasting_dataloader.batch import BatchML
 from torch import nn
 
 from predict_pv_yield.models.base_model import BaseModel
-from nowcasting_dataloader.batch import BatchML
 
 logging.basicConfig()
 _LOG = logging.getLogger("predict_pv_yield")
@@ -139,10 +139,12 @@ class Model(BaseModel):
                 setattr(self, f"nwp_conv{i + 1}", layer)
 
             self.nwp_fc1 = nn.Linear(
-                in_features=self.nwp_cnn_output_size, out_features=self.fc1_output_features
+                in_features=self.nwp_cnn_output_size,
+                out_features=self.fc1_output_features,
             )
             self.nwp_fc2 = nn.Linear(
-                in_features=self.fc1_output_features, out_features=self.number_of_nwp_features
+                in_features=self.fc1_output_features,
+                out_features=self.number_of_nwp_features,
             )
 
         if self.embedding_dem:
@@ -152,13 +154,16 @@ class Model(BaseModel):
 
         if self.include_pv_yield_history:
             self.pv_fc1 = nn.Linear(
-                in_features=self.number_of_pv_samples_per_batch * (self.history_len_5 + 1),
+                in_features=self.number_of_pv_samples_per_batch
+                * (self.history_len_5 + 1),
                 out_features=128,
             )
 
         fc3_in_features = self.fc2_output_features
         if include_pv_or_gsp_yield_history:
-            fc3_in_features += self.number_of_samples_per_batch * (self.history_len_30 + 1)
+            fc3_in_features += self.number_of_samples_per_batch * (
+                self.history_len_30 + 1
+            )
         if include_nwp:
             fc3_in_features += 128
         if self.embedding_dem:
@@ -166,8 +171,12 @@ class Model(BaseModel):
         if self.include_pv_yield_history:
             fc3_in_features += 128
 
-        self.fc3 = nn.Linear(in_features=fc3_in_features, out_features=self.fc3_output_features)
-        self.fc4 = nn.Linear(in_features=self.fc3_output_features, out_features=self.forecast_len)
+        self.fc3 = nn.Linear(
+            in_features=fc3_in_features, out_features=self.fc3_output_features
+        )
+        self.fc4 = nn.Linear(
+            in_features=self.fc3_output_features, out_features=self.forecast_len
+        )
         # self.fc5 = nn.Linear(in_features=32, out_features=8)
         # self.fc6 = nn.Linear(in_features=8, out_features=1)
 
@@ -201,15 +210,20 @@ class Model(BaseModel):
         if self.include_pv_or_gsp_yield_history:
             if self.output_variable == "gsp_yield":
                 pv_yield_history = (
-                    x.gsp.gsp_yield[:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
+                    x.gsp.gsp_yield[:, : self.history_len_30 + 1]
+                    .nan_to_num(nan=0.0)
+                    .float()
                 )
             else:
                 pv_yield_history = (
-                    x.pv.pv_yield[:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
+                    x.pv.pv_yield[:, : self.history_len_30 + 1]
+                    .nan_to_num(nan=0.0)
+                    .float()
                 )
 
             pv_yield_history = pv_yield_history.reshape(
-                pv_yield_history.shape[0], pv_yield_history.shape[1] * pv_yield_history.shape[2]
+                pv_yield_history.shape[0],
+                pv_yield_history.shape[1] * pv_yield_history.shape[2],
             )
             # join up
             out = torch.cat((out, pv_yield_history), dim=1)
@@ -218,11 +232,14 @@ class Model(BaseModel):
         if self.include_pv_yield_history:
             # just take the first 128
             pv_yield_history = (
-                x.pv.pv_yield[:, : self.history_len_5 + 1, :128].nan_to_num(nan=0.0).float()
+                x.pv.pv_yield[:, : self.history_len_5 + 1, :128]
+                .nan_to_num(nan=0.0)
+                .float()
             )
 
             pv_yield_history = pv_yield_history.reshape(
-                pv_yield_history.shape[0], pv_yield_history.shape[1] * pv_yield_history.shape[2]
+                pv_yield_history.shape[0],
+                pv_yield_history.shape[1] * pv_yield_history.shape[2],
             )
             pv_yield_history = F.relu(self.pv_fc1(pv_yield_history))
 

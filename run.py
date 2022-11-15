@@ -1,9 +1,10 @@
 import os
 
-os.environ["HYDRA_FULL_ERROR"] = "1"
 import dotenv
 import hydra
 from omegaconf import DictConfig
+
+os.environ["HYDRA_FULL_ERROR"] = "1"
 
 # this file can be run for example using
 #  python run.py experiment=example_simple
@@ -18,8 +19,8 @@ def main(config: DictConfig):
 
     # Imports should be nested inside @hydra.main to optimize tab completion
     # Read more here: https://github.com/facebookresearch/hydra/issues/934
-    from predict_pv_yield.utils import extras, print_config
     from predict_pv_yield.training import train
+    from predict_pv_yield.utils import extras, print_config
 
     # A couple of optional utilities:
     # - disabling python warnings

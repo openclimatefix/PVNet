@@ -1,13 +1,11 @@
+import logging
 import os
+
+import torch
 from nowcasting_dataloader.datasets import NetCDFDataset, worker_init_fn
 from nowcasting_dataloader.fake import FakeDataset
 from nowcasting_dataset.config.load import load_yaml_configuration
-from typing import Tuple
-import logging
-import torch
 from pytorch_lightning import LightningDataModule
-
-
 
 _LOG = logging.getLogger(__name__)
 _LOG.setLevel(logging.DEBUG)
@@ -21,12 +19,16 @@ def get_dataloaders(
     cloud: str = "gcp",
     temp_path=".",
     data_path="prepared_ML_training_data/v4/",
-) -> Tuple:
+) -> tuple:
 
-    configuration = load_yaml_configuration(filename=f'{data_path}/configuration.yaml')
+    # configuration = load_yaml_configuration(filename=f"{data_path}/configuration.yaml")
 
     data_module = NetCDFDataModule(
-        temp_path=temp_path, data_path=data_path, cloud=cloud, n_train_data=n_train_data, n_val_data=n_validation_data
+        temp_path=temp_path,
+        data_path=data_path,
+        cloud=cloud,
+        n_train_data=n_train_data,
+        n_val_data=n_validation_data,
     )
 
     train_dataloader = data_module.train_dataloader()
@@ -75,8 +77,8 @@ class NetCDFDataModule(LightningDataModule):
         self.pin_memory = pin_memory
         self.fake_data = fake_data
 
-        filename = os.path.join(data_path, 'configuration.yaml')
-        _LOG.debug(f'Will be loading the configuration file {filename}')
+        filename = os.path.join(data_path, "configuration.yaml")
+        _LOG.debug(f"Will be loading the configuration file {filename}")
         self.configuration = load_yaml_configuration(filename=filename)
 
         self.dataloader_config = dict(
@@ -98,7 +100,7 @@ class NetCDFDataModule(LightningDataModule):
                 self.n_train_data,
                 os.path.join(self.data_path, "train"),
                 os.path.join(self.temp_path, "train"),
-                configuration=self.configuration
+                configuration=self.configuration,
             )
 
         return torch.utils.data.DataLoader(train_dataset, **self.dataloader_config)
@@ -111,7 +113,7 @@ class NetCDFDataModule(LightningDataModule):
                 self.n_val_data,
                 os.path.join(self.data_path, "test"),
                 os.path.join(self.temp_path, "test"),
-                configuration=self.configuration
+                configuration=self.configuration,
             )
 
         return torch.utils.data.DataLoader(val_dataset, **self.dataloader_config)
@@ -125,7 +127,7 @@ class NetCDFDataModule(LightningDataModule):
                 self.n_val_data,
                 os.path.join(self.data_path, "test"),
                 os.path.join(self.temp_path, "test"),
-                configuration=self.configuration
+                configuration=self.configuration,
             )
 
         return torch.utils.data.DataLoader(test_dataset, **self.dataloader_config)
