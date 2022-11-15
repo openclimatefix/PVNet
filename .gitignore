@@ -1,3 +1,9 @@
+# Custom
+config_tree.txt
+lightning_logs/
+logs/
+*.html
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
