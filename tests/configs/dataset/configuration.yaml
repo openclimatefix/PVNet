@@ -25,8 +25,10 @@ input_data:
     hrvsatellite_zarr_path: tests/data/sat_data.zarr
   opticalflow:
     opticalflow_zarr_path: /mnt/storage_ssd_8tb/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/satellite/EUMETSAT/SEVIRI_RSS/zarr/v3/eumetsat_seviri_uk.zarr
-    opticalflow_input_image_size_pixels: 94
-    opticalflow_output_image_size_pixels: 24
+    opticalflow_input_image_size_pixels_height: 94
+    opticalflow_input_image_size_pixels_width: 94
+    opticalflow_output_image_size_pixels_height: 24
+    opticalflow_output_image_size_pixels_width: 24
     opticalflow_source_data_source_class_name: SatelliteDataSource
     opticalflow_channels:
       - IR_016
