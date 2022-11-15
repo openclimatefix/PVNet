@@ -7,8 +7,6 @@ auto_select_gpus: False
 min_epochs: 1
 max_epochs: 10
 
-weights_summary: null
-progress_bar_refresh_rate: 5
 resume_from_checkpoint: null
 fast_dev_run: false
 profiler: 'simple'

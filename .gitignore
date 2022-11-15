@@ -3,6 +3,7 @@ config_tree.txt
 lightning_logs/
 logs/
 *.html
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
