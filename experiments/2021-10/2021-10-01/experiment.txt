@@ -1,9 +1,0 @@
-1. Perceiver Conv3d NWP SAT
-
-No future satellite images
-
-https://app.neptune.ai/o/OpenClimateFix/org/predict-pv-yield/e/PRED-378/charts
-
-~ 4 hours per epoch
-
-MAE = 0.0365 (after 22 epochs), compared to MAE 0.0304 when future satellite images were included

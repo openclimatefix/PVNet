@@ -1,6 +1,0 @@
-Ran Perceiver model
-
-https://app.neptune.ai/o/OpenClimateFix/org/predict-pv-yield/e/PRED-186/charts
-
-Ran it using batch size 8,
-Each epoch taking about 3 hours when running on GCP - n1-standard-8, NVIDIA Tesla P100

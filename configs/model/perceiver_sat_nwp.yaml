@@ -1,9 +1,0 @@
-_target_: predict_pv_yield.models.perceiver.perceiver_nwp_sat.Model
-
-forecast_minutes: 30
-history_minutes: 60
-batch_size: 8
-num_latents: 128
-latent_dim: 64
-embedding_dem: 0
-output_variable: gsp_yield
