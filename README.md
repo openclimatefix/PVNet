@@ -1,5 +1,5 @@
 # PVNet
-[![CI](https://github.com/openclimatefix/PVNet/actions/workflows/ci.yml/badge.svg)](https://github.com/openclimatefix/PVNet/actions/workflows/ci.yml)
+[![test-release](https://github.com/openclimatefix/PVNet/actions/workflows/test-release.yml/badge.svg)](https://github.com/openclimatefix/PVNet/actions/workflows/test-release.yml)
 
 ## Setup
 ```bash
