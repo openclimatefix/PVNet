@@ -3,8 +3,10 @@
 
 ## Setup
 ```bash
+git clone https://github.com/openclimatefix/PVNet.git
+cd PVNet
 pip install -r requirements.txt
-pip install git+https://github.com/SheffieldSolar/PV_Live-API@8157b0ac7853b01f10dd3bc16b569bc8694e5903
+pip install git+https://github.com/SheffieldSolar/PV_Live-API
 ```
 
 ## Running
