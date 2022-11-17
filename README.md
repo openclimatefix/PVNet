@@ -10,3 +10,9 @@ pip install -r requirements.txt
 ```bash
 python run.py
 ```
+
+## Development
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
