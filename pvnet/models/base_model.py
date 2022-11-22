@@ -5,7 +5,6 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from nowcasting_dataloader.batch import BatchML
 from nowcasting_dataset.data_sources.nwp.nwp_data_source import NWP_VARIABLE_NAMES
 from nowcasting_utils.metrics.validation import (
     make_validation_results,
@@ -18,6 +17,8 @@ from nowcasting_utils.models.metrics import (
 )
 from nowcasting_utils.visualization.line import plot_batch_results
 from nowcasting_utils.visualization.visualization import plot_example
+
+from ocf_datapipes.utils.consts import BatchKey
 
 logger = logging.getLogger(__name__)
 
@@ -80,24 +81,21 @@ class BaseModel(pl.LightningModule):
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
     def _training_or_validation_step(
-        self, batch, tag: str, return_model_outputs: bool = False
+        self, batch: dict, tag: str, return_model_outputs: bool = False
     ):
         """
         batch: The batch data
         tag: either 'Train', 'Validation' , 'Test'
         """
 
-        if type(batch) == dict:
-            batch = BatchML(**batch)
-
         # put the batch data through the model
         y_hat = self(batch)
 
         # get the true result out. Select the first data point, as this is the pv system in the center of the image
         if self.output_variable == "gsp_yield":
-            y = batch.gsp.gsp_yield
+            y = batch[BatchKey.gsp]
         else:
-            y = batch.pv.pv_yield
+            y = batch[BatchKey.pv]
         y = y[0 : self.batch_size, -self.forecast_len :, 0]
 
         # calculate mse, mae
@@ -162,10 +160,7 @@ class BaseModel(pl.LightningModule):
         else:
             return self._training_or_validation_step(batch, tag="Train")
 
-    def validation_step(self, batch: BatchML, batch_idx):
-
-        if type(batch) == dict:
-            batch = BatchML(**batch)
+    def validation_step(self, batch: dict, batch_idx):
 
         # get model outputs
         nmae_loss, model_output = self._training_or_validation_step(
@@ -206,17 +201,17 @@ class BaseModel(pl.LightningModule):
             # 2. plot summary batch of predictions and results
             # make x,y data
             if self.output_variable == "gsp_yield":
-                y = batch.gsp.gsp_yield[0 : self.batch_size, :, 0].cpu().numpy()
+                y = batch[BatchKey.gsp][0 : self.batch_size, :, 0].cpu().numpy()
             else:
-                y = batch.pv.pv_yield[0 : self.batch_size, :, 0].cpu().numpy()
+                y = batch[BatchKey.pv][0 : self.batch_size, :, 0].cpu().numpy()
             y_hat = model_output[0 : self.batch_size].cpu().numpy()
             time = [
                 pd.to_datetime(x, unit="ns")
-                for x in batch.gsp.gsp_datetime_index[0 : self.batch_size].cpu().numpy()
+                for x in batch[BatchKey.gsp_time_utc][0 : self.batch_size].cpu().numpy()
             ]
             time_hat = [
                 pd.to_datetime(x, unit="ns")
-                for x in batch.gsp.gsp_datetime_index[
+                for x in batch[BatchKey.gsp_time_utc][
                     0 : self.batch_size, self.history_len_30 + 1 :
                 ]
                 .cpu()
@@ -234,9 +229,9 @@ class BaseModel(pl.LightningModule):
                 pass
 
         # save validation results
-        capacity = batch.gsp.gsp_capacity[:, -self.forecast_len_30 :, 0].cpu().numpy()
+        capacity = batch[BatchKey.gsp_capacity_megawatt_power][:, -self.forecast_len_30 :, 0].cpu().numpy()
         predictions = model_output.cpu().numpy()
-        truths = batch.gsp.gsp_yield[:, -self.forecast_len_30 :, 0].cpu().numpy()
+        truths = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0].cpu().numpy()
         predictions = predictions * capacity
         truths = truths * capacity
 
@@ -244,7 +239,7 @@ class BaseModel(pl.LightningModule):
             truths_mw=truths,
             predictions_mw=predictions,
             capacity_mwp=capacity,
-            gsp_ids=batch.gsp.gsp_id[:, 0].cpu(),
+            gsp_ids=batch[BatchKey.gsp_id][:, 0].cpu(),
             batch_idx=batch_idx,
             t0_datetimes_utc=pd.to_datetime(batch.metadata.t0_datetime_utc),
         )
