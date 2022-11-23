@@ -1,4 +1,4 @@
-name: Test and release
+name: Test
 
 on: [push, pull_request]
 
