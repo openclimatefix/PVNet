@@ -79,32 +79,32 @@ def test_model_forward_no_satellite(configuration_conv3d):
     assert y.shape[1] == model.forecast_len_30
 
 
-# def test_train(configuration_conv3d):
-#
-#     config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
-#     config = load_config(config_file)
-#
-#     dataset_configuration: Configuration = configuration_conv3d
-#     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
-#     dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
-#     dataset_configuration.input_data.nwp.time_resolution_minutes = 60
-#     dataset_configuration.input_data.nwp.forecast_minutes = 60
-#     dataset_configuration.input_data.nwp.history_minutes = 60
-#     dataset_configuration.input_data.nwp.nwp_channels = dataset_configuration.input_data.nwp.nwp_channels[0:10]
-#     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
-#     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
-#     dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
-#
-#     # start model
-#     model = Model(**config)
-#
-#     # create fake data loader
-#     data_pipeline = fake_data_pipeline(configuration=dataset_configuration)
-#     train_dataloader = DataLoader(data_pipeline, batch_size=None)
-#
-#     # fit model
-#     trainer = pl.Trainer(max_epochs=1)
-#     trainer.fit(model, train_dataloader)
-#
-#     # predict over training set
-#     _ = trainer.predict(model, train_dataloader)
+def test_train(configuration_conv3d):
+
+    config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
+    config = load_config(config_file)
+
+    dataset_configuration: Configuration = configuration_conv3d
+    dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
+    dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
+    dataset_configuration.input_data.nwp.time_resolution_minutes = 60
+    dataset_configuration.input_data.nwp.forecast_minutes = 60
+    dataset_configuration.input_data.nwp.history_minutes = 60
+    dataset_configuration.input_data.nwp.nwp_channels = dataset_configuration.input_data.nwp.nwp_channels[0:10]
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
+    dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
+    dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
+
+    # start model
+    model = Model(**config)
+
+    # create fake data loader
+    data_pipeline = fake_data_pipeline(configuration=dataset_configuration).set_length(2)
+    train_dataloader = DataLoader(data_pipeline, batch_size=None)
+
+    # fit model
+    trainer = pl.Trainer(max_epochs=1, max_steps=2)
+    trainer.fit(model, train_dataloader)
+
+    # predict over training set
+    _ = trainer.predict(model, train_dataloader)
