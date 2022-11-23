@@ -1,9 +1,6 @@
 name: Test and release
 
-on:
-  push:
-    branches:
-      - main
+on: [push, pull_request]
 
 jobs:
   test:
@@ -28,9 +25,3 @@ jobs:
     - name: Pytest
       run: |
         pytest -s --cov=predict_pv_yield
-
-  release:
-    needs: test
-    uses:  openclimatefix/.github/.github/workflows/python-release.yml@main
-    secrets:
-      token: ${{ secrets.PYPI_API_TOKEN }}
