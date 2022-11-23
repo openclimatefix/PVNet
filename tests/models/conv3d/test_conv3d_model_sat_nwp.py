@@ -5,6 +5,7 @@ from pvnet.utils import load_config
 
 from ocf_datapipes.config.model import Configuration
 from ocf_datapipes.batch.fake.fake_batch import fake_data_pipeline, make_fake_batch
+from ocf_datapipes.transform.numpy.batch.add_length import AddLengthIterDataPipe
 
 from torch.utils.data import DataLoader
 
@@ -99,7 +100,7 @@ def test_train(configuration_conv3d):
     model = Model(**config)
 
     # create fake data loader
-    data_pipeline = fake_data_pipeline(configuration=dataset_configuration).set_length(2)
+    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=dataset_configuration), length=2)
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # fit model

@@ -5,6 +5,7 @@ import pandas as pd
 import tempfile
 
 from ocf_datapipes.batch.fake.fake_batch import fake_data_pipeline, make_fake_batch
+from ocf_datapipes.transform.numpy.batch.add_length import AddLengthIterDataPipe
 
 from torch.utils.data import DataLoader
 
@@ -62,7 +63,7 @@ def test_trainer(configuration):
     )
 
     # create fake data loader
-    data_pipeline = fake_data_pipeline(configuration=configuration).set_length(2)
+    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=configuration), length=2)
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # set up trainer
@@ -82,7 +83,7 @@ def test_trainer_validation(configuration):
     )
 
     # create fake data loader
-    data_pipeline = fake_data_pipeline(configuration=configuration).set_length(2)
+    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=configuration), length=2)
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # set up trainer

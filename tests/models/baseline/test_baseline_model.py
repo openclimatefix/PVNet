@@ -1,6 +1,7 @@
 from pvnet.models.baseline.last_value import Model
 import pytorch_lightning as pl
 from ocf_datapipes.batch.fake.fake_batch import fake_data_pipeline, make_fake_batch
+from ocf_datapipes.transform.numpy.batch.add_length import AddLengthIterDataPipe
 
 from torch.utils.data import DataLoader
 
@@ -33,7 +34,7 @@ def test_trainer(configuration):
     model = Model(forecast_minutes=configuration.input_data.default_forecast_minutes)
 
     # create fake data loader
-    data_pipeline = fake_data_pipeline(configuration=configuration).set_length(2)
+    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=configuration), length=2)
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # set up trainer

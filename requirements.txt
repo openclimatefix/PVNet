@@ -1,6 +1,5 @@
 nowcasting_utils
-ocf_datapipes>=0.5.30
-Cartopy>0.20.3
+ocf_datapipes
 numpy
 pandas
 matplotlib
@@ -23,6 +22,4 @@ hydra-core
 python-dotenv
 hydra-optuna-sweeper
 black
-torch==1.13.0
-torchdata==0.5.0
 
