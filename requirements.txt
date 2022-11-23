@@ -1,5 +1,5 @@
 nowcasting_utils
-ocf_datapipes
+ocf_datapipes>=0.5.30
 Cartopy>0.20.3
 numpy
 pandas
