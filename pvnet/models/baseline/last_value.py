@@ -1,10 +1,8 @@
 import logging
 
-from nowcasting_dataloader.batch import BatchML
+from ocf_datapipes.utils.consts import BatchKey
 
 from pvnet.models.base_model import BaseModel
-
-from ocf_datapipes.utils.consts import BatchKey
 
 logging.basicConfig()
 _LOG = logging.getLogger("pvnet")

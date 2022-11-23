@@ -2,11 +2,10 @@ import logging
 
 import torch
 import torch.nn.functional as F
-from nowcasting_dataloader.batch import BatchML
+from ocf_datapipes.utils.consts import BatchKey
 from torch import nn
 
 from pvnet.models.base_model import BaseModel
-from ocf_datapipes.utils.consts import BatchKey
 
 logging.basicConfig()
 _LOG = logging.getLogger("pvnet")
@@ -99,8 +98,8 @@ class Model(BaseModel):
             * (self.forecast_len_60 + self.history_len_60 + 1)
         )
 
-        print(f'{self.forecast_len_60}')
-        print(f'{self.history_len_60}')
+        print(f"{self.forecast_len_60}")
+        print(f"{self.history_len_60}")
 
         # conv0
         self.sat_conv0 = nn.Conv3d(
@@ -158,16 +157,13 @@ class Model(BaseModel):
 
         if self.include_pv_yield_history:
             self.pv_fc1 = nn.Linear(
-                in_features=self.number_of_pv_samples_per_batch
-                * (self.history_len_5 + 1),
+                in_features=self.number_of_pv_samples_per_batch * (self.history_len_5 + 1),
                 out_features=128,
             )
 
         fc3_in_features = self.fc2_output_features
         if include_pv_or_gsp_yield_history:
-            fc3_in_features += self.number_of_samples_per_batch * (
-                self.history_len_30 + 1
-            )
+            fc3_in_features += self.number_of_samples_per_batch * (self.history_len_30 + 1)
         if include_nwp:
             fc3_in_features += 128
         if self.embedding_dem:
@@ -175,12 +171,8 @@ class Model(BaseModel):
         if self.include_pv_yield_history:
             fc3_in_features += 128
 
-        self.fc3 = nn.Linear(
-            in_features=fc3_in_features, out_features=self.fc3_output_features
-        )
-        self.fc4 = nn.Linear(
-            in_features=self.fc3_output_features, out_features=self.forecast_len
-        )
+        self.fc3 = nn.Linear(in_features=fc3_in_features, out_features=self.fc3_output_features)
+        self.fc4 = nn.Linear(in_features=self.fc3_output_features, out_features=self.forecast_len)
         # self.fc5 = nn.Linear(in_features=32, out_features=8)
         # self.fc6 = nn.Linear(in_features=8, out_features=1)
 
@@ -213,15 +205,11 @@ class Model(BaseModel):
         if self.include_pv_or_gsp_yield_history:
             if self.output_variable == "gsp_yield":
                 pv_yield_history = (
-                    x[BatchKey.gsp][:, : self.history_len_30 + 1]
-                    .nan_to_num(nan=0.0)
-                    .float()
+                    x[BatchKey.gsp][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
                 )
             else:
                 pv_yield_history = (
-                    x[BatchKey.pv][:, : self.history_len_30 + 1]
-                    .nan_to_num(nan=0.0)
-                    .float()
+                    x[BatchKey.pv][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
                 )
 
             pv_yield_history = pv_yield_history.reshape(
@@ -235,9 +223,7 @@ class Model(BaseModel):
         if self.include_pv_yield_history:
             # just take the first 128
             pv_yield_history = (
-                x[BatchKey.pv][:, : self.history_len_5 + 1, :128]
-                .nan_to_num(nan=0.0)
-                .float()
+                x[BatchKey.pv][:, : self.history_len_5 + 1, :128].nan_to_num(nan=0.0).float()
             )
 
             pv_yield_history = pv_yield_history.reshape(

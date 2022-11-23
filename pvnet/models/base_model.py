@@ -5,7 +5,8 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from nowcasting_dataset.data_sources.nwp.nwp_data_source import NWP_VARIABLE_NAMES
+
+# from nowcasting_dataset.data_sources.nwp.nwp_data_source import NWP_VARIABLE_NAMES
 from nowcasting_utils.metrics.validation import (
     make_validation_results,
     save_validation_results_to_logger,
@@ -16,9 +17,9 @@ from nowcasting_utils.models.metrics import (
     mse_each_forecast_horizon,
 )
 from nowcasting_utils.visualization.line import plot_batch_results
-from nowcasting_utils.visualization.visualization import plot_example
-
 from ocf_datapipes.utils.consts import BatchKey
+
+# from nowcasting_utils.visualization.visualization import plot_example
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +125,8 @@ class BaseModel(pl.LightningModule):
 
         if tag != "Train":
             # add metrics for each forecast horizon
-            mse_each_forecast_horizon_metric = mse_each_forecast_horizon(
-                output=y_hat, target=y
-            )
-            mae_each_forecast_horizon_metric = mae_each_forecast_horizon(
-                output=y_hat, target=y
-            )
+            mse_each_forecast_horizon_metric = mse_each_forecast_horizon(output=y_hat, target=y)
+            mae_each_forecast_horizon_metric = mae_each_forecast_horizon(output=y_hat, target=y)
 
             metrics_mse = {
                 f"MSE_forecast_horizon_{i}/{tag}": mse_each_forecast_horizon_metric[i]
@@ -172,31 +169,29 @@ class BaseModel(pl.LightningModule):
         if batch_idx in [0, 1, 2, 3, 4]:
 
             # make sure the interesting example doesnt go above the batch size
-            INTERESTING_EXAMPLES = (
-                i for i in INTERESTING_EXAMPLES if i < self.batch_size
-            )
+            INTERESTING_EXAMPLES = (i for i in INTERESTING_EXAMPLES if i < self.batch_size)
 
-            for example_i in INTERESTING_EXAMPLES:
-                # 1. Plot example
-                if 0:
-                    fig = plot_example(
-                        batch,
-                        model_output,
-                        history_minutes=self.history_len_5 * 5,
-                        forecast_minutes=self.forecast_len_5 * 5,
-                        nwp_channels=NWP_VARIABLE_NAMES,
-                        example_i=example_i,
-                        epoch=self.current_epoch,
-                        output_variable=self.output_variable,
-                    )
-
-                    # save fig to log
-                    self.logger.experiment[-1].log_image(name, fig)
-                    try:
-                        fig.close()
-                    except Exception:
-                        # could not close figure
-                        pass
+            # for example_i in INTERESTING_EXAMPLES:
+            # 1. Plot example
+            # if 0:
+            # fig = plot_example(
+            #     batch,
+            #     model_output,
+            #     history_minutes=self.history_len_5 * 5,
+            #     forecast_minutes=self.forecast_len_5 * 5,
+            #     nwp_channels=NWP_VARIABLE_NAMES,
+            #     example_i=example_i,
+            #     epoch=self.current_epoch,
+            #     output_variable=self.output_variable,
+            # )
+            #
+            # # save fig to log
+            # self.logger.experiment[-1].log_image(name, fig)
+            # try:
+            #     fig.close()
+            # except Exception:
+            #     # could not close figure
+            #     pass
 
             # 2. plot summary batch of predictions and results
             # make x,y data
@@ -219,9 +214,7 @@ class BaseModel(pl.LightningModule):
             ]
 
             # plot and save to logger
-            fig = plot_batch_results(
-                model_name=self.name, y=y, y_hat=y_hat, x=time, x_hat=time_hat
-            )
+            fig = plot_batch_results(model_name=self.name, y=y, y_hat=y_hat, x=time, x_hat=time_hat)
             fig.write_html(f"temp_{batch_idx}.html")
             try:
                 self.logger.experiment[-1][name].upload(f"temp_{batch_idx}.html")
@@ -229,7 +222,9 @@ class BaseModel(pl.LightningModule):
                 pass
 
         # save validation results
-        capacity = batch[BatchKey.gsp_capacity_megawatt_power][:, -self.forecast_len_30 :, 0].cpu().numpy()
+        capacity = (
+            batch[BatchKey.gsp_capacity_megawatt_power][:, -self.forecast_len_30 :, 0].cpu().numpy()
+        )
         predictions = model_output.cpu().numpy()
         truths = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0].cpu().numpy()
         predictions = predictions * capacity
