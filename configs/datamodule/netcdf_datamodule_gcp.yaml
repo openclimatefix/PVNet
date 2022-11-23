@@ -1,9 +1,0 @@
-_target_: pvnet.data.dataloader.NetCDFDataModule
-
-temp_path: "."
-n_train_data: 24900
-n_val_data: 1000
-num_workers: 8
-pin_memory: True
-data_path: "gs://solar-pv-nowcasting-data/prepared_ML_training_data/v6/"
-fake_data: False

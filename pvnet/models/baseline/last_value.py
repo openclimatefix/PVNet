@@ -4,6 +4,8 @@ from nowcasting_dataloader.batch import BatchML
 
 from pvnet.models.base_model import BaseModel
 
+from ocf_datapipes.utils.consts import BatchKey
+
 logging.basicConfig()
 _LOG = logging.getLogger("pvnet")
 _LOG.setLevel(logging.DEBUG)
@@ -28,16 +30,13 @@ class Model(BaseModel):
 
         super().__init__()
 
-    def forward(self, x: BatchML):
-
-        if type(x) == dict:
-            x = BatchML(**x)
+    def forward(self, x: dict):
 
         # Shape: batch_size, seq_length, n_sites
         if self.output_variable == "gsp_yield":
-            gsp_yield = x.gsp.gsp_yield
+            gsp_yield = x[BatchKey.gsp]
         else:
-            gsp_yield = x.pv.pv_yield
+            gsp_yield = x[BatchKey.pv]
 
         # take the last value non forecaster value and the first in the pv yeild
         # (this is the pv site we are preditcting for)

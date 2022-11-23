@@ -241,7 +241,7 @@ class BaseModel(pl.LightningModule):
             capacity_mwp=capacity,
             gsp_ids=batch[BatchKey.gsp_id][:, 0].cpu(),
             batch_idx=batch_idx,
-            t0_datetimes_utc=pd.to_datetime(batch.metadata.t0_datetime_utc),
+            t0_datetimes_utc=pd.to_datetime(batch[BatchKey.gsp_time_utc][:, 0].cpu()),
         )
 
         # append so in 'validation_epoch_end' the file is saved
