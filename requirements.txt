@@ -22,4 +22,6 @@ hydra-core
 python-dotenv
 hydra-optuna-sweeper
 black
+torch==1.1.30
+torchdata==0.5.0
 
