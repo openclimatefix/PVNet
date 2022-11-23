@@ -1,5 +1,6 @@
 nowcasting_utils
 ocf_datapipes
+Cartopy>0.20.3
 numpy
 pandas
 matplotlib
