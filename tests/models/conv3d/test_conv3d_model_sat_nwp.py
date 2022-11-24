@@ -1,10 +1,13 @@
 import pytorch_lightning as pl
-import torch
-from nowcasting_dataloader.fake import FakeDataset
-from nowcasting_dataset.config.model import Configuration
 
 from pvnet.models.conv3d.model_sat_nwp import Model
 from pvnet.utils import load_config
+
+from ocf_datapipes.config.model import Configuration
+from ocf_datapipes.batch.fake.fake_batch import fake_data_pipeline, make_fake_batch
+from ocf_datapipes.transform.numpy.batch.add_length import AddLengthIterDataPipe
+
+from torch.utils.data import DataLoader
 
 
 def test_init():
@@ -26,17 +29,17 @@ def test_model_forward(configuration_conv3d):
     dataset_configuration: Configuration = configuration_conv3d
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
-
+    dataset_configuration.input_data.nwp.time_resolution_minutes = 60
+    dataset_configuration.input_data.nwp.forecast_minutes = 60
+    dataset_configuration.input_data.nwp.history_minutes = 60
+    dataset_configuration.input_data.nwp.nwp_channels = dataset_configuration.input_data.nwp.nwp_channels[0:10]
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
-
-    # create fake data loader
-    train_dataset = FakeDataset(configuration=dataset_configuration)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=None)
-    x = next(iter(train_dataloader))
+    dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
 
     # run data through model
-    y = model(x)
+    batch = make_fake_batch(configuration=dataset_configuration, to_torch=True)
+    y = model(batch)
 
     # check out put is the correct shape
     assert len(y.shape) == 2
@@ -56,16 +59,20 @@ def test_model_forward_no_satellite(configuration_conv3d):
     dataset_configuration: Configuration = configuration_conv3d
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
+    dataset_configuration.input_data.nwp.time_resolution_minutes = 60
+    dataset_configuration.input_data.nwp.forecast_minutes = 60
+    dataset_configuration.input_data.nwp.history_minutes = 60
+    dataset_configuration.input_data.nwp.nwp_channels = dataset_configuration.input_data.nwp.nwp_channels[0:10]
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
-
-    # create fake data loader
-    train_dataset = FakeDataset(configuration=dataset_configuration)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=None)
-    x = next(iter(train_dataloader))
+    dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
 
     # run data through model
-    y = model(x)
+    data_pipeline = fake_data_pipeline(configuration=dataset_configuration)
+    train_dataloader = DataLoader(data_pipeline, batch_size=None)
+    batch = next(iter(train_dataloader))
+
+    y = model(batch)
 
     # check out put is the correct shape
     assert len(y.shape) == 2
@@ -81,19 +88,23 @@ def test_train(configuration_conv3d):
     dataset_configuration: Configuration = configuration_conv3d
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_height = 16
     dataset_configuration.input_data.nwp.nwp_image_size_pixels_width = 16
-
+    dataset_configuration.input_data.nwp.time_resolution_minutes = 60
+    dataset_configuration.input_data.nwp.forecast_minutes = 60
+    dataset_configuration.input_data.nwp.history_minutes = 60
+    dataset_configuration.input_data.nwp.nwp_channels = dataset_configuration.input_data.nwp.nwp_channels[0:10]
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
+    dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
 
     # start model
     model = Model(**config)
 
     # create fake data loader
-    train_dataset = FakeDataset(configuration=dataset_configuration)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=None)
+    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=dataset_configuration), length=2)
+    train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # fit model
-    trainer = pl.Trainer(max_epochs=1)
+    trainer = pl.Trainer(max_epochs=1, max_steps=2)
     trainer.fit(model, train_dataloader)
 
     # predict over training set

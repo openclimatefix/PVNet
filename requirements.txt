@@ -1,6 +1,5 @@
-nowcasting_dataset
 nowcasting_utils
-nowcasting_dataloader
+ocf_datapipes
 numpy
 pandas
 matplotlib
@@ -23,3 +22,4 @@ hydra-core
 python-dotenv
 hydra-optuna-sweeper
 black
+

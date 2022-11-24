@@ -20,7 +20,7 @@ def test_train():
             "logger=csv",
             "experiment=example_simple",
             "datamodule.fake_data=true",
-            "datamodule.data_path=tests/configs/dataset",
+            "datamodule.configuration=tests/configs/dataset/configuration.yaml",
             "trainer.fast_dev_run=true",
         ],
     )

@@ -1,5 +1,5 @@
 import pytest
-from nowcasting_dataset.config.model import Configuration
+from ocf_datapipes.config.model import Configuration
 
 from pvnet.utils import load_config
 

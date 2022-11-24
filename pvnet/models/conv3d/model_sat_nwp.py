@@ -2,7 +2,7 @@ import logging
 
 import torch
 import torch.nn.functional as F
-from nowcasting_dataloader.batch import BatchML
+from ocf_datapipes.utils.consts import BatchKey
 from torch import nn
 
 from pvnet.models.base_model import BaseModel
@@ -98,6 +98,9 @@ class Model(BaseModel):
             * (self.forecast_len_60 + self.history_len_60 + 1)
         )
 
+        print(f"{self.forecast_len_60}")
+        print(f"{self.history_len_60}")
+
         # conv0
         self.sat_conv0 = nn.Conv3d(
             in_channels=number_sat_channels,
@@ -149,21 +152,18 @@ class Model(BaseModel):
 
         if self.embedding_dem:
             self.pv_system_id_embedding = nn.Embedding(
-                num_embeddings=940, embedding_dim=self.embedding_dem
+                num_embeddings=1000, embedding_dim=self.embedding_dem
             )
 
         if self.include_pv_yield_history:
             self.pv_fc1 = nn.Linear(
-                in_features=self.number_of_pv_samples_per_batch
-                * (self.history_len_5 + 1),
+                in_features=self.number_of_pv_samples_per_batch * (self.history_len_5 + 1),
                 out_features=128,
             )
 
         fc3_in_features = self.fc2_output_features
         if include_pv_or_gsp_yield_history:
-            fc3_in_features += self.number_of_samples_per_batch * (
-                self.history_len_30 + 1
-            )
+            fc3_in_features += self.number_of_samples_per_batch * (self.history_len_30 + 1)
         if include_nwp:
             fc3_in_features += 128
         if self.embedding_dem:
@@ -171,24 +171,19 @@ class Model(BaseModel):
         if self.include_pv_yield_history:
             fc3_in_features += 128
 
-        self.fc3 = nn.Linear(
-            in_features=fc3_in_features, out_features=self.fc3_output_features
-        )
-        self.fc4 = nn.Linear(
-            in_features=self.fc3_output_features, out_features=self.forecast_len
-        )
+        self.fc3 = nn.Linear(in_features=fc3_in_features, out_features=self.fc3_output_features)
+        self.fc4 = nn.Linear(in_features=self.fc3_output_features, out_features=self.forecast_len)
         # self.fc5 = nn.Linear(in_features=32, out_features=8)
         # self.fc6 = nn.Linear(in_features=8, out_features=1)
 
     def forward(self, x):
 
-        if type(x) == dict:
-            x = BatchML(**x)
-
         # ******************* Satellite imagery *************************
-        # Shape: batch_size, channel, seq_length, height, width
-        sat_data = x.satellite.data.float()
-        batch_size, n_chans, seq_len, height, width = sat_data.shape
+        # Shape: batch_size, seq_length, channel, height, width
+        sat_data = x[BatchKey.satellite_actual]
+        batch_size, seq_len, n_chans, height, width = sat_data.shape
+        # switch time and channels
+        sat_data = torch.swapaxes(sat_data, 1, 2).float()
 
         if not self.include_future_satellite:
             sat_data = sat_data[:, :, : self.history_len_5 + 1]
@@ -210,15 +205,11 @@ class Model(BaseModel):
         if self.include_pv_or_gsp_yield_history:
             if self.output_variable == "gsp_yield":
                 pv_yield_history = (
-                    x.gsp.gsp_yield[:, : self.history_len_30 + 1]
-                    .nan_to_num(nan=0.0)
-                    .float()
+                    x[BatchKey.gsp][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
                 )
             else:
                 pv_yield_history = (
-                    x.pv.pv_yield[:, : self.history_len_30 + 1]
-                    .nan_to_num(nan=0.0)
-                    .float()
+                    x[BatchKey.pv][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
                 )
 
             pv_yield_history = pv_yield_history.reshape(
@@ -232,9 +223,7 @@ class Model(BaseModel):
         if self.include_pv_yield_history:
             # just take the first 128
             pv_yield_history = (
-                x.pv.pv_yield[:, : self.history_len_5 + 1, :128]
-                .nan_to_num(nan=0.0)
-                .float()
+                x[BatchKey.pv][:, : self.history_len_5 + 1, :128].nan_to_num(nan=0.0).float()
             )
 
             pv_yield_history = pv_yield_history.reshape(
@@ -248,11 +237,13 @@ class Model(BaseModel):
         # *********************** NWP Data ************************************
         if self.include_nwp:
 
-            # shape: batch_size, n_chans, seq_len, height, width
-            nwp_data = x.nwp.data.float()
+            # shape: batch_size, seq_len, n_chans, height, width
+            nwp_data = x[BatchKey.nwp].float()
+            nwp_data = torch.swapaxes(nwp_data, 1, 2)
 
             out_nwp = F.relu(self.nwp_conv0(nwp_data))
             for i in range(0, self.number_of_conv3d_layers - 1):
+                print(out_nwp.shape)
                 layer = getattr(self, f"nwp_conv{i + 1}")
                 out_nwp = F.relu(layer(out_nwp))
 
@@ -267,9 +258,9 @@ class Model(BaseModel):
         # ********************** Embedding of PV system ID ********************
         if self.embedding_dem:
             if self.output_variable == "pv_yield":
-                id = x.pv.pv_system_row_number[0 : self.batch_size, 0]
+                id = x[BatchKey.pv_system_row_number][0 : self.batch_size, 0]
             else:
-                id = x.gsp.gsp_id[0 : self.batch_size, 0]
+                id = x[BatchKey.gsp_id][0 : self.batch_size, 0]
 
             id = id.type(torch.IntTensor)
             id = id.to(out.device)

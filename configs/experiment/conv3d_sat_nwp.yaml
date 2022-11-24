@@ -6,7 +6,7 @@
 defaults:
   - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
   - override /model: conv3d_sat_nwp.yaml
-  - override /datamodule: netcdf_datamodule.yaml
+  - override /datamodule: ocf_datapipes.yaml
   - override /callbacks: default.yaml
   - override /logger: neptune.yaml
 
