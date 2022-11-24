@@ -10,7 +10,7 @@ install_requires = (this_directory / "requirements.txt").read_text().splitlines(
 
 setup(
     name="PVNet",
-    version="0.0.7",
+    version="0.0.8",
     license="MIT",
     description="PVNet",
     author="Peter Dudfield",
