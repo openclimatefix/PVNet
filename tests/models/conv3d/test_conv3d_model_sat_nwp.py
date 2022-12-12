@@ -36,6 +36,8 @@ def test_model_forward(configuration_conv3d):
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
     dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
+    dataset_configuration.input_data.pv.history_minutes = 60
+    dataset_configuration.input_data.pv.forecast_minutes = 60
 
     # run data through model
     batch = make_fake_batch(configuration=dataset_configuration, to_torch=True)
@@ -66,6 +68,8 @@ def test_model_forward_no_satellite(configuration_conv3d):
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
     dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
+    dataset_configuration.input_data.pv.history_minutes = 60
+    dataset_configuration.input_data.pv.forecast_minutes = 60
 
     # run data through model
     data_pipeline = fake_data_pipeline(configuration=dataset_configuration)
@@ -95,6 +99,8 @@ def test_train(configuration_conv3d):
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_height = 16
     dataset_configuration.input_data.satellite.satellite_image_size_pixels_width = 16
     dataset_configuration.input_data.pv.n_pv_systems_per_example = 128
+    dataset_configuration.input_data.pv.history_minutes = 60
+    dataset_configuration.input_data.pv.forecast_minutes = 60
 
     # start model
     model = Model(**config)

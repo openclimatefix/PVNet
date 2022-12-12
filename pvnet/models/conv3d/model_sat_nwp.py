@@ -34,6 +34,10 @@ class Model(BaseModel):
         embedding_dem: int = 16,
         include_pv_yield_history: int = True,
         include_future_satellite: int = True,
+        live_satellite_images: bool = True,
+        gsp_forecast_minutes: int = 480,
+        gsp_history_minutes: int = 120,
+        include_sun: bool = True,
     ):
         """
         3d conv model, that takes in different data streams
@@ -77,19 +81,32 @@ class Model(BaseModel):
         self.embedding_dem = embedding_dem
         self.include_pv_yield_history = include_pv_yield_history
         self.include_future_satellite = include_future_satellite
+        self.live_satellite_images = live_satellite_images
+        self.number_sat_channels = number_sat_channels
+        self.image_size_pixels = image_size_pixels
+        self.gsp_forecast_minutes = gsp_forecast_minutes
+        self.gsp_history_minutes = gsp_history_minutes
+        self.include_sun = include_sun
 
         super().__init__()
 
         conv3d_channels = conv3d_channels
 
         if include_future_satellite:
-            cnn_output_size_time = self.forecast_len_5 + self.history_len_5 + 1
+            self.cnn_output_size_time = self.forecast_len_5 + self.history_len_5 + 1
         else:
-            cnn_output_size_time = self.history_len_5 + 1
+            self.cnn_output_size_time = self.history_len_5 + 1
+
+        if live_satellite_images:
+            # remove the last 12 satellite images (60 minutes) as no available live
+            self.cnn_output_size_time = self.cnn_output_size_time - 6
+            if self.cnn_output_size_time <= 0:
+                assert Exception("Need to use at least 30 mintues of satellite data in the past")
+
         self.cnn_output_size = (
             conv3d_channels
             * ((image_size_pixels - 2 * self.number_of_conv3d_layers) ** 2)
-            * cnn_output_size_time
+            * self.cnn_output_size_time
         )
 
         self.nwp_cnn_output_size = (
@@ -98,12 +115,9 @@ class Model(BaseModel):
             * (self.forecast_len_60 + self.history_len_60 + 1)
         )
 
-        print(f"{self.forecast_len_60}")
-        print(f"{self.history_len_60}")
-
         # conv0
         self.sat_conv0 = nn.Conv3d(
-            in_channels=number_sat_channels,
+            in_channels=self.number_sat_channels,
             out_channels=conv3d_channels,
             kernel_size=(3, 3, 3),
             padding=(1, 0, 0),
@@ -160,6 +174,12 @@ class Model(BaseModel):
                 in_features=self.number_of_pv_samples_per_batch * (self.history_len_5 + 1),
                 out_features=128,
             )
+        if self.include_sun:
+            # the minus 12 is bit of hard coded smudge for pvnet
+            self.sun_fc1 = nn.Linear(
+                in_features=2 * (self.forecast_len_5 + self.history_len_5 + 1),
+                out_features=16,
+            )
 
         fc3_in_features = self.fc2_output_features
         if include_pv_or_gsp_yield_history:
@@ -170,6 +190,8 @@ class Model(BaseModel):
             fc3_in_features += self.embedding_dem
         if self.include_pv_yield_history:
             fc3_in_features += 128
+        if self.include_sun:
+            fc3_in_features += 16
 
         self.fc3 = nn.Linear(in_features=fc3_in_features, out_features=self.fc3_output_features)
         self.fc4 = nn.Linear(in_features=self.fc3_output_features, out_features=self.forecast_len)
@@ -187,6 +209,9 @@ class Model(BaseModel):
 
         if not self.include_future_satellite:
             sat_data = sat_data[:, :, : self.history_len_5 + 1]
+
+        if self.live_satellite_images:
+            sat_data = sat_data[:, :, :-6]
 
         # :) Pass data through the network :)
         out = F.relu(self.sat_conv0(sat_data))
@@ -243,7 +268,6 @@ class Model(BaseModel):
 
             out_nwp = F.relu(self.nwp_conv0(nwp_data))
             for i in range(0, self.number_of_conv3d_layers - 1):
-                print(out_nwp.shape)
                 layer = getattr(self, f"nwp_conv{i + 1}")
                 out_nwp = F.relu(layer(out_nwp))
 
@@ -266,6 +290,12 @@ class Model(BaseModel):
             id = id.to(out.device)
             id_embedding = self.pv_system_id_embedding(id)
             out = torch.cat((out, id_embedding), dim=1)
+
+        if self.include_sun:
+
+            sun = torch.cat((x[BatchKey.pv_solar_azimuth], x[BatchKey.pv_solar_elevation]), dim=1).float()
+            out_sun = self.sun_fc1(sun)
+            out = torch.cat((out, out_sun), dim=1)
 
         # Fully connected layers.
         out = F.relu(self.fc3(out))
