@@ -26,3 +26,21 @@ def test_train():
     )
 
     train(config=config)
+
+
+def test_train_pvnet():
+
+    os.environ["NEPTUNE_API_TOKEN"] = "not_a_token"
+
+    # initialize(config_path="../configs", job_name="test_app")
+    config = compose(
+        config_name="config",
+        overrides=[
+            "logger=csv",
+            "experiment=conv3d_sat_nwp",
+            "datamodule.fake_data=true",
+            "trainer.fast_dev_run=true",
+        ],
+    )
+
+    train(config=config)

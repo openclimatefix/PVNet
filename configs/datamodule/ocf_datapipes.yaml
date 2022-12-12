@@ -1,7 +1,7 @@
 _target_: ocf_datapipes.training.datamodules.default.DataModule
 
-data_pipeline: "pv_satellite_nwp"
 configuration: "../../../../pvnet/data/gcp_configuration.yaml"
+data_pipeline: "gsp_pv_satellite_nwp"
 #n_train_data: 4000
 #n_val_data: 400
 #num_workers: 8

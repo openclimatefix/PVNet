@@ -33,10 +33,11 @@ input_data:
     nwp_image_size_pixels_width: 64
     nwp_meters_per_pixel: 2000
     nwp_zarr_path: gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_3.zarr
+    time_resolution_minutes: 60
   pv:
-    forecast_minutes: 120
+    forecast_minutes: 480
     get_center: false
-    history_minutes: 90
+    history_minutes: 60
     is_live: false
     n_pv_systems_per_example: 128
     pv_files_groups:

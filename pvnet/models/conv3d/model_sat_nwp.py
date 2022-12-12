@@ -33,7 +33,7 @@ class Model(BaseModel):
         output_variable: str = "pv_yield",
         embedding_dem: int = 16,
         include_pv_yield_history: int = True,
-        include_future_satellite: int = True,
+        include_future_satellite: int = False,
         live_satellite_images: bool = True,
         gsp_forecast_minutes: int = 480,
         gsp_history_minutes: int = 120,
