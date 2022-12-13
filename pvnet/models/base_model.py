@@ -187,7 +187,7 @@ class BaseModel(pl.LightningModule):
 
             # 2. plot summary batch of predictions and results
             # make x,y data
-            y = batch[BatchKey.pv][0 : self.batch_size, :, 0].cpu().numpy()
+            y = batch[BatchKey.gsp][0 : self.batch_size, :, 0].cpu().numpy()
             y_hat = model_output[0 : self.batch_size].cpu().numpy()
             time = [
                 pd.to_datetime(x, unit="ns")
@@ -218,7 +218,6 @@ class BaseModel(pl.LightningModule):
         truths = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0].cpu().numpy()
         predictions = capacity*predictions
         truths = capacity*truths
-
 
         results = make_validation_results(
             truths_mw=truths,
