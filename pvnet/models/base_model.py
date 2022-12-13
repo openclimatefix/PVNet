@@ -88,10 +88,7 @@ class BaseModel(pl.LightningModule):
         y_hat = self(batch)
 
         # get the true result out. Select the first data point, as this is the pv system in the center of the image
-        if self.output_variable == "gsp_yield":
-            y = batch[BatchKey.gsp]
-        else:
-            y = batch[BatchKey.pv]
+        y = batch[BatchKey.gsp]
         y = y[0 : self.batch_size, -self.forecast_len :, 0]
 
         # calculate mse, mae
@@ -190,10 +187,7 @@ class BaseModel(pl.LightningModule):
 
             # 2. plot summary batch of predictions and results
             # make x,y data
-            if self.output_variable == "gsp_yield":
-                y = batch[BatchKey.gsp][0 : self.batch_size, :, 0].cpu().numpy()
-            else:
-                y = batch[BatchKey.pv][0 : self.batch_size, :, 0].cpu().numpy()
+            y = batch[BatchKey.pv][0 : self.batch_size, :, 0].cpu().numpy()
             y_hat = model_output[0 : self.batch_size].cpu().numpy()
             time = [
                 pd.to_datetime(x, unit="ns")
@@ -218,12 +212,13 @@ class BaseModel(pl.LightningModule):
 
         # save validation results
         capacity = (
-            batch[BatchKey.gsp_capacity_megawatt_power][:, -self.forecast_len_30 :, 0].cpu().numpy()
+            batch[BatchKey.gsp_capacity_megawatt_power][:, 0:1].cpu().numpy()
         )
         predictions = model_output.cpu().numpy()
         truths = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0].cpu().numpy()
-        predictions = predictions * capacity
-        truths = truths * capacity
+        predictions = capacity*predictions
+        truths = capacity*truths
+
 
         results = make_validation_results(
             truths_mw=truths,
