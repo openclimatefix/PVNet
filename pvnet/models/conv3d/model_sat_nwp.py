@@ -67,7 +67,7 @@ class Model(BaseModel):
         include_future_satellite: option to include future satellite images, or not
         """
 
-        self.include_pv_or_gsp_yield_history = include_pv_or_gsp_yield_history
+        self.include_gsp_yield_history = include_pv_or_gsp_yield_history
         self.include_nwp = include_nwp
         self.number_of_conv3d_layers = number_of_conv3d_layers
         self.number_of_nwp_features = 128
@@ -235,22 +235,17 @@ class Model(BaseModel):
         # which has shape (batch_size, 128)
 
         # add pv yield
-        if self.include_pv_or_gsp_yield_history:
-            if self.output_variable == "gsp_yield":
-                pv_yield_history = (
-                    x[BatchKey.gsp][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
-                )
-            else:
-                pv_yield_history = (
-                    x[BatchKey.pv][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
-                )
+        if self.include_gsp_yield_history:
+            gsp_yield_history = (
+                x[BatchKey.gsp][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
+            )
 
-            pv_yield_history = pv_yield_history.reshape(
-                pv_yield_history.shape[0],
-                pv_yield_history.shape[1] * pv_yield_history.shape[2],
+            gsp_yield_history = gsp_yield_history.reshape(
+                gsp_yield_history.shape[0],
+                gsp_yield_history.shape[1] * gsp_yield_history.shape[2],
             )
             # join up
-            out = torch.cat((out, pv_yield_history), dim=1)
+            out = torch.cat((out, gsp_yield_history), dim=1)
 
         # add the pv yield history. This can be used if trying to predict gsp
         if self.include_pv_yield_history:

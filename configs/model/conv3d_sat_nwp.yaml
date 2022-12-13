@@ -7,7 +7,7 @@ history_minutes: 60
 number_of_conv3d_layers: 6
 image_size_pixels: 24
 number_sat_channels: 11
-number_nwp_channels: 4
+number_nwp_channels: 2
 conv3d_channels: 32
 fc1_output_features: 128
 fc2_output_features: 128

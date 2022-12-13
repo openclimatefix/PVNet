@@ -28,8 +28,6 @@ input_data:
     nwp_channels:
     - t
     - dswrf
-    - prate
-    - si10
     nwp_image_size_pixels_height: 64
     nwp_image_size_pixels_width: 64
     nwp_meters_per_pixel: 2000

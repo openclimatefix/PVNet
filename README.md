@@ -19,3 +19,8 @@ python run.py
 pip install -r requirements.txt -r requirements-dev.txt
 pytest
 ```
+
+Might need to install PVLive
+```
+pip install git+https://github.com/SheffieldSolar/PV_Live-API#pvlive_api
+```
