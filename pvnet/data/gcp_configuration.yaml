@@ -20,6 +20,7 @@ input_data:
     metadata_only: false
     n_gsp_per_example: 32
     start_datetime: '2020-01-01T00:00:00'
+    time_resolution_minutes: 30
   nwp:
     forecast_minutes: 480
     history_minutes: 60

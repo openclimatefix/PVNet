@@ -90,6 +90,14 @@ class Model(BaseModel):
 
         super().__init__()
 
+        self.history_len_30 = (
+            self.gsp_history_minutes // 30
+        )  # the number of historic timestemps for 5 minutes data
+        self.forecast_len_30 = (
+            self.gsp_forecast_minutes // 30
+        )  # the number of forecast timestemps for 5 minutes data
+
+
         conv3d_channels = conv3d_channels
 
         if include_future_satellite:
@@ -177,7 +185,7 @@ class Model(BaseModel):
         if self.include_sun:
             # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len_5 + self.history_len_5 + 1),
+                in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1 ),
                 out_features=16,
             )
 
@@ -293,7 +301,7 @@ class Model(BaseModel):
 
         if self.include_sun:
 
-            sun = torch.cat((x[BatchKey.pv_solar_azimuth], x[BatchKey.pv_solar_elevation]), dim=1).float()
+            sun = torch.cat((x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1).float()
             out_sun = self.sun_fc1(sun)
             out = torch.cat((out, out_sun), dim=1)
 
