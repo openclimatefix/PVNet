@@ -4,6 +4,12 @@ import dotenv
 import hydra
 from omegaconf import DictConfig
 
+import logging
+import sys
+
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
 os.environ["HYDRA_FULL_ERROR"] = "1"
 
 # this file can be run for example using
