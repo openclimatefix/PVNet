@@ -10,7 +10,7 @@ from pytorch_lightning import (
     Trainer,
     seed_everything,
 )
-from pytorch_lightning.loggers import LightningLoggerBase
+from pytorch_lightning.loggers.base import LightningLoggerBase
 
 from pvnet import utils
 
