@@ -30,7 +30,6 @@ class Model(BaseModel):
         fc1_output_features: int = 128,
         fc2_output_features: int = 128,
         fc3_output_features: int = 64,
-        output_variable: str = "pv_yield",
         embedding_dem: int = 16,
         include_pv_yield_history: int = True,
         include_future_satellite: int = False,
@@ -62,7 +61,6 @@ class Model(BaseModel):
         fc1_output_features: number of fully connected outputs nodes out of the the first fully connected layer
         fc2_output_features: number of fully connected outputs nodes out of the the second fully connected layer
         fc3_output_features: number of fully connected outputs nodes out of the the third fully connected layer
-        output_variable: the output variable to be predicted
         number_nwp_channels: The number of nwp channels there are
         include_future_satellite: option to include future satellite images, or not
         """
@@ -76,7 +74,6 @@ class Model(BaseModel):
         self.fc3_output_features = fc3_output_features
         self.forecast_minutes = forecast_minutes
         self.history_minutes = history_minutes
-        self.output_variable = output_variable
         self.number_nwp_channels = number_nwp_channels
         self.embedding_dem = embedding_dem
         self.include_pv_yield_history = include_pv_yield_history
@@ -92,10 +89,10 @@ class Model(BaseModel):
 
         self.history_len_30 = (
             self.gsp_history_minutes // 30
-        )  # the number of historic timestemps for 5 minutes data
+        )  # the number of historic timestemps for 30 minutes data
         self.forecast_len_30 = (
             self.gsp_forecast_minutes // 30
-        )  # the number of forecast timestemps for 5 minutes data
+        )  # the number of forecast timestemps for 30 minutes data
 
 
         conv3d_channels = conv3d_channels
@@ -234,7 +231,7 @@ class Model(BaseModel):
         out = F.relu(self.fc2(out))
         # which has shape (batch_size, 128)
 
-        # add pv yield
+        # add gsp yield history
         if self.include_gsp_yield_history:
             gsp_yield_history = (
                 x[BatchKey.gsp][:, : self.history_len_30 + 1].nan_to_num(nan=0.0).float()
@@ -282,12 +279,9 @@ class Model(BaseModel):
             # join with other FC layer
             out = torch.cat((out, out_nwp), dim=1)
 
-        # ********************** Embedding of PV system ID ********************
+        # ********************** Embedding of GSP ID ********************
         if self.embedding_dem:
-            if self.output_variable == "pv_yield":
-                id = x[BatchKey.pv_system_row_number][0 : self.batch_size, 0]
-            else:
-                id = x[BatchKey.gsp_id][0 : self.batch_size, 0]
+            id = x[BatchKey.pv_system_row_number][0 : self.batch_size, 0]
 
             id = id.type(torch.IntTensor)
             id = id.to(out.device)

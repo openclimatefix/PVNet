@@ -27,8 +27,6 @@ activities = [torch.profiler.ProfilerActivity.CPU]
 if torch.cuda.is_available():
     activities.append(torch.profiler.ProfilerActivity.CUDA)
 
-default_output_variable = "pv_yield"
-
 
 class BaseModel(pl.LightningModule):
 
@@ -64,10 +62,6 @@ class BaseModel(pl.LightningModule):
         self.forecast_len_60 = (
             self.forecast_minutes // 60
         )  # the number of forecast timestemps for 60 minutes data
-
-        if not hasattr(self, "output_variable"):
-            print("setting")
-            self.output_variable = default_output_variable
 
         self.forecast_len = self.forecast_len_30
         self.history_len = self.history_len_30

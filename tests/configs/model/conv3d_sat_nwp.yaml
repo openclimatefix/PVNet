@@ -13,5 +13,4 @@ number_nwp_channels: 10
 fc1_output_features: 16
 fc2_output_features: 16
 fc3_output_features: 16
-output_variable: gsp_yield
 include_pv_yield_history: True

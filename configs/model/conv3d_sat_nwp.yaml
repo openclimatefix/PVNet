@@ -12,6 +12,5 @@ conv3d_channels: 32
 fc1_output_features: 128
 fc2_output_features: 128
 fc3_output_features: 64
-output_variable: gsp_yield
 include_pv_yield_history: False
 include_future_satellite: False

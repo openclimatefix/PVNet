@@ -16,25 +16,20 @@ class Model(BaseModel):
         self,
         forecast_minutes: int = 12,
         history_minutes: int = 6,
-        output_variable="pv_yield",
     ):
         """
-        Simple baseline model that takes the last pv yield value and copies it forward
+        Simple baseline model that takes the last gsp yield value and copies it forward
         """
 
         self.forecast_minutes = forecast_minutes
         self.history_minutes = history_minutes
-        self.output_variable = output_variable
 
         super().__init__()
 
     def forward(self, x: dict):
 
         # Shape: batch_size, seq_length, n_sites
-        if self.output_variable == "gsp_yield":
-            gsp_yield = x[BatchKey.gsp]
-        else:
-            gsp_yield = x[BatchKey.pv]
+        gsp_yield = x[BatchKey.gsp]
 
         # take the last value non forecaster value and the first in the pv yeild
         # (this is the pv site we are preditcting for)
