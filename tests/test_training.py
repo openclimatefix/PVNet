@@ -42,5 +42,7 @@ def test_train_pvnet():
             "trainer.fast_dev_run=true",
         ],
     )
+    
+    
 
     train(config=config)

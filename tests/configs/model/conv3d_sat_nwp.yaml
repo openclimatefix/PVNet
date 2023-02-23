@@ -14,3 +14,4 @@ fc1_output_features: 16
 fc2_output_features: 16
 fc3_output_features: 16
 include_pv_yield_history: True
+include_sun: True
