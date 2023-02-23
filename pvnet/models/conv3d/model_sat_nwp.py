@@ -34,8 +34,6 @@ class Model(BaseModel):
         include_pv_yield_history: int = True,
         include_future_satellite: int = False,
         live_satellite_images: bool = True,
-        gsp_forecast_minutes: int = 480,
-        gsp_history_minutes: int = 120,
         include_sun: bool = True,
     ):
         """
@@ -81,19 +79,9 @@ class Model(BaseModel):
         self.live_satellite_images = live_satellite_images
         self.number_sat_channels = number_sat_channels
         self.image_size_pixels = image_size_pixels
-        self.gsp_forecast_minutes = gsp_forecast_minutes
-        self.gsp_history_minutes = gsp_history_minutes
         self.include_sun = include_sun
 
         super().__init__()
-
-        self.history_len_30 = (
-            self.gsp_history_minutes // 30
-        )  # the number of historic timestemps for 30 minutes data
-        self.forecast_len_30 = (
-            self.gsp_forecast_minutes // 30
-        )  # the number of forecast timestemps for 30 minutes data
-
 
         conv3d_channels = conv3d_channels
 
@@ -289,7 +277,6 @@ class Model(BaseModel):
             out = torch.cat((out, id_embedding), dim=1)
 
         if self.include_sun:
-
             sun = torch.cat((x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1).float()
             out_sun = self.sun_fc1(sun)
             out = torch.cat((out, out_sun), dim=1)
