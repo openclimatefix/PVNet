@@ -14,3 +14,4 @@ fc2_output_features: 128
 fc3_output_features: 64
 include_pv_yield_history: False
 include_future_satellite: False
+include_sun: True
