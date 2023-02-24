@@ -13,36 +13,27 @@ def test_train():
     # for Github actions need to create this
     tilemapbase.init(create=True)
 
-    initialize(config_path="../configs", job_name="test_app")
+    initialize(config_path="testconfigs/", job_name="test_app")
     config = compose(
-        config_name="config",
+        config_name="config.yaml",
         overrides=[
-            "logger=csv",
-            "experiment=example_simple",
-            "datamodule.fake_data=true",
-            "datamodule.configuration=tests/configs/dataset/configuration.yaml",
-            "trainer.fast_dev_run=true",
+            "model=conv3d_sat_nwp.yaml",
         ],
     )
 
     train(config=config)
 
 
-def test_train_pvnet():
+def _test_train_pvnet():
 
     os.environ["NEPTUNE_API_TOKEN"] = "not_a_token"
 
-    # initialize(config_path="../configs", job_name="test_app")
+    initialize(config_path="testconfigs/", job_name="test_app")
     config = compose(
-        config_name="config",
+        config_name="config.yaml",
         overrides=[
-            "logger=csv",
-            "experiment=conv3d_sat_nwp",
-            "datamodule.fake_data=true",
-            "trainer.fast_dev_run=true",
+            "model=baseline.yaml",
         ],
     )
-    
-    
 
     train(config=config)

@@ -14,22 +14,22 @@ from torch.utils.data import DataLoader
 
 def test_init():
 
-    config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
+    config_file = "tests/testconfigs/model/conv3d_sat_nwp.yaml"
     config = load_config(config_file)
 
     _ = Model(**config)
 
 
 
-def test_model_forward(configuration_conv3d):
+def test_model_forward(configuration):
 
-    config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
+    config_file = "tests/testconfigs/model/conv3d_sat_nwp.yaml"
     config = load_config(config_file)
     
     # start model
     model = Model(**config)
 
-    data_config: Configuration = configuration_conv3d
+    data_config: Configuration = configuration
 
     # run data through model
     batch = make_fake_batch(configuration=data_config, to_torch=True)
@@ -41,16 +41,16 @@ def test_model_forward(configuration_conv3d):
     assert y.shape[1] == model.forecast_len_30
 
 
-def test_model_forward_no_satellite(configuration_conv3d):
+def test_model_forward_no_satellite(configuration):
 
-    config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
+    config_file = "tests/testconfigs/model/conv3d_sat_nwp.yaml"
     config = load_config(config_file)
     config["include_future_satellite"] = False
 
     # start model
     model = Model(**config)
 
-    data_config: Configuration = configuration_conv3d
+    data_config: Configuration = configuration
 
     # run data through model
     data_pipeline = fake_data_pipeline(configuration=data_config)
@@ -65,15 +65,15 @@ def test_model_forward_no_satellite(configuration_conv3d):
     assert y.shape[1] == model.forecast_len_30
 
 
-def test_train(configuration_conv3d):
+def test_train(configuration):
 
-    config_file = "tests/configs/model/conv3d_sat_nwp.yaml"
+    config_file = "tests/testconfigs/model/conv3d_sat_nwp.yaml"
     config = load_config(config_file)
 
     # start model
     model = Model(**config)
 
-    data_config: Configuration = configuration_conv3d
+    data_config: Configuration = configuration
 
     # create fake data loader
     data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=data_config), length=2)

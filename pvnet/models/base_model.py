@@ -216,7 +216,7 @@ class BaseModel(pl.LightningModule):
         results = make_validation_results(
             truths_mw=truths,
             predictions_mw=predictions,
-            capacity_mwp=capacity,
+            capacity_mwp=capacity.squeeze(),
             gsp_ids=batch[BatchKey.gsp_id][:, 0].cpu(),
             batch_idx=batch_idx,
             t0_datetimes_utc=pd.to_datetime(batch[BatchKey.gsp_time_utc][:, 0].cpu()),
