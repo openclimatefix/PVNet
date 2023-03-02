@@ -32,6 +32,7 @@ class Model(BaseModel):
         fc3_output_features: int = 64,
         embedding_dem: int = 16,
         include_pv_yield_history: int = True,
+        number_of_pv_samples_per_batch: int = 128,
         include_future_satellite: int = False,
         live_satellite_images: bool = True,
         include_sun: bool = True,
@@ -45,7 +46,7 @@ class Model(BaseModel):
         3. Final convolutional layer goes to full connected layer. This is joined by other data inputs like
         - pv yield
         - time variables
-        Then there ~4 fully connected layers which end up forecasting the pv yield / gsp into the future
+        Then there ~4 fully connected layers which end up forecasting the gsp into the future
 
         include_pv_or_gsp_yield_history: include pv yield data
         include_nwp: include nwp data
@@ -80,6 +81,7 @@ class Model(BaseModel):
         self.number_sat_channels = number_sat_channels
         self.image_size_pixels = image_size_pixels
         self.include_sun = include_sun
+        self.number_of_pv_samples_per_batch = number_of_pv_samples_per_batch
 
         super().__init__()
 
@@ -176,7 +178,7 @@ class Model(BaseModel):
 
         fc3_in_features = self.fc2_output_features
         if include_pv_or_gsp_yield_history:
-            fc3_in_features += self.number_of_samples_per_batch * (self.history_len_30 + 1)
+            fc3_in_features += self.history_len_30 + 1
         if include_nwp:
             fc3_in_features += 128
         if self.embedding_dem:
@@ -192,6 +194,8 @@ class Model(BaseModel):
         # self.fc6 = nn.Linear(in_features=8, out_features=1)
 
     def forward(self, x):
+        
+        _LOG.info("model forward pass")
 
         # ******************* Satellite imagery *************************
         # Shape: batch_size, seq_length, channel, height, width
@@ -269,8 +273,7 @@ class Model(BaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dem:
-            id = x[BatchKey.pv_system_row_number][0 : self.batch_size, 0]
-
+            id = x[BatchKey.gsp_id][:, 0]
             id = id.type(torch.IntTensor)
             id = id.to(out.device)
             id_embedding = self.pv_system_id_embedding(id)
@@ -280,7 +283,7 @@ class Model(BaseModel):
             sun = torch.cat((x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1).float()
             out_sun = self.sun_fc1(sun)
             out = torch.cat((out, out_sun), dim=1)
-
+        
         # Fully connected layers.
         out = F.relu(self.fc3(out))
         out = self.fc4(out)

@@ -30,9 +30,6 @@ if torch.cuda.is_available():
 
 class BaseModel(pl.LightningModule):
 
-    # default batch_size
-    batch_size = 32
-
     # results file name
     results_file_name = "results_epoch"
 
@@ -65,9 +62,7 @@ class BaseModel(pl.LightningModule):
 
         self.forecast_len = self.forecast_len_30
         self.history_len = self.history_len_30
-        self.number_of_samples_per_batch = 32
-        self.number_of_pv_samples_per_batch = 128
-
+        
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
     def _training_or_validation_step(
@@ -77,13 +72,11 @@ class BaseModel(pl.LightningModule):
         batch: The batch data
         tag: either 'Train', 'Validation' , 'Test'
         """
-
+        
         # put the batch data through the model
         y_hat = self(batch)
 
-        # get the true result out. Select the first data point, as this is the pv system in the center of the image
-        y = batch[BatchKey.gsp]
-        y = y[0 : self.batch_size, -self.forecast_len :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len:, 0]
 
         # calculate mse, mae
         mse_loss = F.mse_loss(y_hat, y)
@@ -116,11 +109,11 @@ class BaseModel(pl.LightningModule):
 
             metrics_mse = {
                 f"MSE_forecast_horizon_{i}/{tag}": mse_each_forecast_horizon_metric[i]
-                for i in range(self.forecast_len_30)
+                for i in range(self.forecast_len)
             }
             metrics_mae = {
                 f"MSE_forecast_horizon_{i}/{tag}": mae_each_forecast_horizon_metric[i]
-                for i in range(self.forecast_len_30)
+                for i in range(self.forecast_len)
             }
 
             self.log_dict(
@@ -137,64 +130,27 @@ class BaseModel(pl.LightningModule):
             return nmae_loss
 
     def training_step(self, batch, batch_idx):
-
-        if (batch_idx == 0) and (self.current_epoch == 0):
-            return self._training_or_validation_step(batch, tag="Train")
-        else:
-            return self._training_or_validation_step(batch, tag="Train")
+        return self._training_or_validation_step(batch, tag="Train")
 
     def validation_step(self, batch: dict, batch_idx):
-
         # get model outputs
-        nmae_loss, model_output = self._training_or_validation_step(
+        nmae_loss, y_hat = self._training_or_validation_step(
             batch, tag="Validation", return_model_outputs=True
         )
-
-        INTERESTING_EXAMPLES = (1, 5, 6, 7, 9, 11, 17, 19)
+        
+        y_hat = y_hat.cpu().numpy()
+                
         name = f"validation/plot/epoch_{self.current_epoch}_{batch_idx}"
         if batch_idx in [0, 1, 2, 3, 4]:
-
-            # make sure the interesting example doesnt go above the batch size
-            INTERESTING_EXAMPLES = (i for i in INTERESTING_EXAMPLES if i < self.batch_size)
-
-            # for example_i in INTERESTING_EXAMPLES:
-            # 1. Plot example
-            # if 0:
-            # fig = plot_example(
-            #     batch,
-            #     model_output,
-            #     history_minutes=self.history_len_5 * 5,
-            #     forecast_minutes=self.forecast_len_5 * 5,
-            #     nwp_channels=NWP_VARIABLE_NAMES,
-            #     example_i=example_i,
-            #     epoch=self.current_epoch,
-            #     output_variable=self.output_variable,
-            # )
-            #
-            # # save fig to log
-            # self.logger.experiment[-1].log_image(name, fig)
-            # try:
-            #     fig.close()
-            # except Exception:
-            #     # could not close figure
-            #     pass
-
             # 2. plot summary batch of predictions and results
             # make x,y data
-            y = batch[BatchKey.gsp][0 : self.batch_size, :, 0].cpu().numpy()
-            y_hat = model_output[0 : self.batch_size].cpu().numpy()
+            y = batch[BatchKey.gsp][:, :, 0].cpu().numpy()
+            
             time = [
                 pd.to_datetime(x, unit="ns")
-                for x in batch[BatchKey.gsp_time_utc][0 : self.batch_size].cpu().numpy()
+                for x in batch[BatchKey.gsp_time_utc].cpu().numpy()
             ]
-            time_hat = [
-                pd.to_datetime(x, unit="ns")
-                for x in batch[BatchKey.gsp_time_utc][
-                    0 : self.batch_size, self.history_len_30 + 1 :
-                ]
-                .cpu()
-                .numpy()
-            ]
+            time_hat = [t[-self.forecast_len:] for t in time]
 
             # plot and save to logger
             fig = plot_batch_results(model_name=self.name, y=y, y_hat=y_hat, x=time, x_hat=time_hat)
@@ -208,10 +164,10 @@ class BaseModel(pl.LightningModule):
         capacity = (
             batch[BatchKey.gsp_capacity_megawatt_power][:, 0:1].cpu().numpy()
         )
-        predictions = model_output.cpu().numpy()
-        truths = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0].cpu().numpy()
-        predictions = capacity*predictions
-        truths = capacity*truths
+        y = batch[BatchKey.gsp][:, -self.forecast_len:, 0].cpu().numpy()
+        
+        predictions = capacity*y_hat
+        truths = capacity*y
 
         results = make_validation_results(
             truths_mw=truths,

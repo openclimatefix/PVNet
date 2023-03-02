@@ -22,18 +22,3 @@ def test_train():
     )
 
     train(config=config)
-
-
-def _test_train_pvnet():
-
-    os.environ["NEPTUNE_API_TOKEN"] = "not_a_token"
-
-    initialize(config_path="testconfigs/", job_name="test_app")
-    config = compose(
-        config_name="config.yaml",
-        overrides=[
-            "model=baseline.yaml",
-        ],
-    )
-
-    train(config=config)

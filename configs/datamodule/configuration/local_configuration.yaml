@@ -5,60 +5,59 @@ general:
 input_data:
   data_source_which_defines_geospatial_locations: gsp
   default_forecast_minutes: 120
-  default_history_minutes: 30
+  default_history_minutes: 60
   
   gsp:
+    gsp_zarr_path: /mnt/storage_ssd_4tb/metnet_train/pv_gsp.zarr
+    history_minutes: 60
+    forecast_minutes: 120
+    time_resolution_minutes: 30
+    start_datetime: '2020-01-01T00:00:00'
     end_datetime: '2021-09-01T00:00:00'
-    forecast_minutes: 480
     gsp_image_size_pixels_height: 64
     gsp_image_size_pixels_width: 64
     gsp_meters_per_pixel: 2000
-    gsp_zarr_path: /mnt/storage_ssd_4tb/metnet_train/pv_gsp.zarr
-    history_minutes: 120
+    n_gsp_per_example: 32
     is_live: false
     live_interpolate_minutes: 60
     live_load_extra_minutes: 60
     log_level: ERROR
     metadata_only: false
-    n_gsp_per_example: 32
-    start_datetime: '2020-01-01T00:00:00'
-    time_resolution_minutes: 30
     
   nwp:
-    forecast_minutes: 480
+    nwp_zarr_path: /mnt/leonardo/storage_ssd_8tb/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/NWP/UK_Met_Office/UKV/zarr/UKV_intermediate_version_7.zarr
     history_minutes: 60
-    log_level: DEBUG
+    forecast_minutes: 120
+    time_resolution_minutes: 60
     nwp_channels:
       - t
       - dswrf
     nwp_image_size_pixels_height: 64
     nwp_image_size_pixels_width: 64
     nwp_meters_per_pixel: 2000
-    nwp_zarr_path: /mnt/leonardo/storage_c/UKV_intermediate_version_7.zarr
-    time_resolution_minutes: 60
+    log_level: DEBUG
 
   pv:
-    forecast_minutes: 480
-    history_minutes: 60
-    get_center: false
-    is_live: false
-    n_pv_systems_per_example: 128
     pv_files_groups:
       - label: solar_sheffield_passiv
         pv_filename: /mnt/storage_ssd_4tb/metnet_train/Passiv/ocf_formatted/v0/passiv.netcdf
         pv_metadata_filename: /mnt/storage_ssd_4tb/metnet_train/Passiv/ocf_formatted/v0/system_metadata_OCF_ONLY.csv
-    pv_image_size_meters_height: 64
-    pv_image_size_meters_width: 64
+    history_minutes: 60
+    forecast_minutes: 120
+    time_resolution_minutes: 5
     start_datetime: '2020-01-01T00:00:00'
     end_datetime: '2021-09-01T00:00:00'
+    pv_image_size_meters_height: 64
+    pv_image_size_meters_width: 64
+    n_pv_systems_per_example: 128
+    get_center: false
+    is_live: false
     
   satellite:
+    satellite_zarr_path: "/mnt/leonardo/storage_c/2020_nonhrv.zarr"
+    history_minutes: 60
     forecast_minutes: 120
-    history_minutes: 30
-    is_live: false
-    keep_dawn_dusk_hours: 4
-    live_delay_minutes: 30
-    log_level: DEBUG
+    time_resolution_minutes: 5
     satellite_channels:
       - IR_016
       - IR_039
@@ -74,15 +73,20 @@ input_data:
     satellite_image_size_pixels_height: 24
     satellite_image_size_pixels_width: 24
     satellite_meters_per_pixel: 6000
-    satellite_zarr_path: "/mnt/leonardo/storage_c/2020_nonhrv.zarr"
-    time_resolution_minutes: 5
-    
+    keep_dawn_dusk_hours: 4
+    live_delay_minutes: 30
+    is_live: false
+    log_level: DEBUG
+
   hrvsatellite:
+    hrvsatellite_zarr_path: "/mnt/leonardo/storage_c/2020_hrv.zarr"
+    history_minutes: 60
+    forecast_minutes: 120
+    time_resolution_minutes: 5
     hrvsatellite_channels:
       - HRV
     hrvsatellite_image_size_pixels_height: 128
     hrvsatellite_image_size_pixels_width: 256
-    hrvsatellite_zarr_path: "/mnt/leonardo/storage_c/2020_hrv.zarr"
     
   topographic:
     topographic_filename: /mnt/storage_ssd_4tb/metnet_train/Topo/europe_dem_1km_osgb.tif

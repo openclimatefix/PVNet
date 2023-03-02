@@ -1,5 +1,13 @@
 import os
 
+import torch
+try:
+    torch.multiprocessing.set_start_method('spawn')
+    import torch.multiprocessing as mp
+    mp.set_start_method('spawn')
+except RuntimeError:
+    pass
+
 import dotenv
 import hydra
 from omegaconf import DictConfig
@@ -8,7 +16,7 @@ import logging
 import sys
 
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 os.environ["HYDRA_FULL_ERROR"] = "1"
 
