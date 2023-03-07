@@ -32,8 +32,8 @@ input_data:
     nwp_channels:
       - t
       - dswrf
-    nwp_image_size_pixels_height: 64
-    nwp_image_size_pixels_width: 64
+    nwp_image_size_pixels_height: 24
+    nwp_image_size_pixels_width: 24
     nwp_meters_per_pixel: 2000
     log_level: DEBUG
 
@@ -47,16 +47,17 @@ input_data:
     time_resolution_minutes: 5
     start_datetime: '2020-01-01T00:00:00'
     end_datetime: '2021-09-01T00:00:00'
-    pv_image_size_meters_height: 64
-    pv_image_size_meters_width: 64
+    pv_image_size_meters_height: 24
+    pv_image_size_meters_width: 24
     n_pv_systems_per_example: 128
     get_center: false
     is_live: false
     
   satellite:
-    satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
+    #satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
+    satellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
     history_minutes: 60
-    forecast_minutes: 120
+    forecast_minutes: 0
     time_resolution_minutes: 5
     satellite_channels:
       - IR_016
@@ -81,7 +82,7 @@ input_data:
   hrvsatellite:
     hrvsatellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_hrv.zarr
     history_minutes: 60
-    forecast_minutes: 120
+    forecast_minutes: 0
     time_resolution_minutes: 5
     hrvsatellite_channels:
       - HRV
@@ -95,18 +96,3 @@ input_data:
 
 output_data:
   filepath: 'not-needed'
-  
-process:
-  batch_size: 2
-  local_temp_path: /home/jamesfulton/tmp
-  n_test_batches: 0
-  n_train_batches: 6
-  n_validation_batches: 2
-  seed: 1234
-  split_method: day_random_test_date
-  t0_datetime_frequency: 300.0
-  train_test_validation_split:
-    - 10
-    - 1
-    - 0
-  upload_every_n_batches: 0

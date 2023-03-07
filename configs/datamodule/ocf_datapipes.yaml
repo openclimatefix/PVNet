@@ -1,11 +1,18 @@
-_target_: ocf_datapipes.training.datamodules.default.DataModule
-
-data_pipeline: "gsp_pv_satellite_nwp"
-#defaults:
-#  - configuration: local_configuration.yaml
+_target_: pvnet.data.datamodule.DataModule
 configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
 fake_data: False
-n_train_data: 4000
-n_val_data: 400
-num_workers: 2
+n_train_data: 10000
+n_val_data: 100
+n_test_data: 100
+num_workers: 6
 prefetch_factor: 2
+batch_size: 16
+train_period:
+    - 2010-01-01
+    - 2024-01-01
+val_period:
+    - 2010-01-01
+    - 2024-01-01
+test_period:
+    - 2010-01-01
+    - 2024-01-01
