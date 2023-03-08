@@ -8,29 +8,17 @@ from torch.utils.data import DataLoader, default_collate
 from ocf_datapipes.batch.fake.fake_batch import fake_data_pipeline
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 
-from ocf_datapipes.utils.utils import stack_np_examples_into_batch
+from ocf_datapipes.utils.utils import (
+    stack_np_examples_into_batch,
+    set_fsspec_for_multiprocess,
+)
 
 from datetime import datetime
-
-def set_fsspec_for_multiprocess() -> None:
-    """
-    Clear reference to the loop and thread.
-    This is a nasty hack that was suggested but NOT recommended by the lead fsspec developer!
-    This appears necessary otherwise gcsfs hangs when used after forking multiple worker processes.
-    Only required for fsspec >= 0.9.0
-    See:
-    - https://github.com/fsspec/gcsfs/issues/379#issuecomment-839929801
-    - https://github.com/fsspec/filesystem_spec/pull/963#issuecomment-1131709948
-    TODO: Try deleting this two lines to make sure this is still relevant.
-    """
-    fsspec.asyn.iothread[0] = None
-    fsspec.asyn.loop[0] = None
 
 
 def worker_init_fn(worker_id):
     """Configures each dataset worker process.
     1. Get fsspec ready for multi process
-    2. To call NowcastingDataset.per_worker_init().
     """
     # fix for fsspec when using multprocess
     set_fsspec_for_multiprocess()

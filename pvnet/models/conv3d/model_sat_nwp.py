@@ -17,7 +17,7 @@ class Model(BaseModel):
 
     def __init__(
         self,
-        include_pv_or_gsp_yield_history: bool = True,
+        include_gsp_yield_history: bool = True,
         include_nwp: bool = True,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -31,8 +31,6 @@ class Model(BaseModel):
         fc2_output_features: int = 128,
         fc3_output_features: int = 64,
         embedding_dem: int = 16,
-        include_pv_yield_history: int = True,
-        number_of_pv_samples_per_batch: int = 128,
         include_future_satellite: int = False,
         live_satellite_images: bool = True,
         include_sun: bool = True,
@@ -48,7 +46,7 @@ class Model(BaseModel):
         - time variables
         Then there ~4 fully connected layers which end up forecasting the gsp into the future
 
-        include_pv_or_gsp_yield_history: include pv yield data
+        include_gsp_yield_history: include gsp yield data
         include_nwp: include nwp data
         forecast_len: the amount of minutes that should be forecasted
         history_len: the amount of historical minutes that are used
@@ -64,7 +62,7 @@ class Model(BaseModel):
         include_future_satellite: option to include future satellite images, or not
         """
 
-        self.include_gsp_yield_history = include_pv_or_gsp_yield_history
+        self.include_gsp_yield_history = include_gsp_yield_history
         self.include_nwp = include_nwp
         self.number_of_conv3d_layers = number_of_conv3d_layers
         self.number_of_nwp_features = 128
@@ -75,17 +73,13 @@ class Model(BaseModel):
         self.history_minutes = history_minutes
         self.number_nwp_channels = number_nwp_channels
         self.embedding_dem = embedding_dem
-        self.include_pv_yield_history = include_pv_yield_history
         self.include_future_satellite = include_future_satellite
         self.live_satellite_images = live_satellite_images
         self.number_sat_channels = number_sat_channels
         self.image_size_pixels = image_size_pixels
         self.include_sun = include_sun
-        self.number_of_pv_samples_per_batch = number_of_pv_samples_per_batch
 
         super().__init__()
-
-        conv3d_channels = conv3d_channels
 
         if include_future_satellite:
             self.cnn_output_size_time = self.forecast_len_5 + self.history_len_5 + 1
@@ -164,11 +158,6 @@ class Model(BaseModel):
                 num_embeddings=1000, embedding_dim=self.embedding_dem
             )
 
-        if self.include_pv_yield_history:
-            self.pv_fc1 = nn.Linear(
-                in_features=self.number_of_pv_samples_per_batch * (self.history_len_5 + 1),
-                out_features=128,
-            )
         if self.include_sun:
             # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
@@ -177,14 +166,12 @@ class Model(BaseModel):
             )
 
         fc3_in_features = self.fc2_output_features
-        if include_pv_or_gsp_yield_history:
+        if include_gsp_yield_history:
             fc3_in_features += self.history_len_30 + 1
         if include_nwp:
             fc3_in_features += 128
         if self.embedding_dem:
             fc3_in_features += self.embedding_dem
-        if self.include_pv_yield_history:
-            fc3_in_features += 128
         if self.include_sun:
             fc3_in_features += 16
 
@@ -221,7 +208,6 @@ class Model(BaseModel):
         # Fully connected layers
         out = F.relu(self.fc1(out))
         out = F.relu(self.fc2(out))
-        # which has shape (batch_size, 128)
 
         # add gsp yield history
         if self.include_gsp_yield_history:
@@ -236,21 +222,6 @@ class Model(BaseModel):
             # join up
             out = torch.cat((out, gsp_yield_history), dim=1)
 
-        # add the pv yield history. This can be used if trying to predict gsp
-        if self.include_pv_yield_history:
-            # just take the first 128
-            pv_yield_history = (
-                x[BatchKey.pv][:, : self.history_len_5 + 1, :128].nan_to_num(nan=0.0).float()
-            )
-
-            pv_yield_history = pv_yield_history.reshape(
-                pv_yield_history.shape[0],
-                pv_yield_history.shape[1] * pv_yield_history.shape[2],
-            )
-            pv_yield_history = F.relu(self.pv_fc1(pv_yield_history))
-
-            out = torch.cat((out, pv_yield_history), dim=1)
-
         # *********************** NWP Data ************************************
         if self.include_nwp:
 
@@ -262,7 +233,7 @@ class Model(BaseModel):
             for i in range(0, self.number_of_conv3d_layers - 1):
                 layer = getattr(self, f"nwp_conv{i + 1}")
                 out_nwp = F.relu(layer(out_nwp))
-
+            
             # fully connected layers
             out_nwp = out_nwp.reshape(batch_size, self.nwp_cnn_output_size)
             out_nwp = F.relu(self.nwp_fc1(out_nwp))
@@ -280,7 +251,10 @@ class Model(BaseModel):
             out = torch.cat((out, id_embedding), dim=1)
 
         if self.include_sun:
-            sun = torch.cat((x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1).float()
+            sun = torch.cat(
+                (x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), 
+                dim=1
+            ).float()
             out_sun = self.sun_fc1(sun)
             out = torch.cat((out, out_sun), dim=1)
         
