@@ -1,10 +1,10 @@
 general:
-  description: Config for producing batches on OCF's on-premises hardware.
-  name: local_pvnet
+  description: Config for producing batches on GCP
+  name: gcp_pvnet
   
 input_data:
-  default_forecast_minutes: 120
   default_history_minutes: 60
+  default_forecast_minutes: 120
   
   gsp:
     gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v5/pv_gsp.zarr
@@ -59,6 +59,16 @@ input_data:
     live_delay_minutes: 30
     is_live: false
     log_level: DEBUG
+    
+  hrvsatellite:
+    hrvsatellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
+    history_minutes: 60
+    forecast_minutes: 0
+    time_resolution_minutes: 5
+    hrvsatellite_channels:
+      - IR_016
+    hrvsatellite_image_size_pixels_height: 24
+    hrvsatellite_image_size_pixels_width: 24
 
 output_data:
   filepath: 'not-needed'

@@ -1,10 +1,10 @@
 _target_: pvnet.data.datamodule.DataModule
 configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
 fake_data: False
-n_train_data: 10000
-n_val_data: 100
-n_test_data: 100
-num_workers: 6
+n_train_data: null
+n_val_data: 2
+n_test_data: 2
+num_workers: 4
 prefetch_factor: 2
 batch_size: 16
 train_period:

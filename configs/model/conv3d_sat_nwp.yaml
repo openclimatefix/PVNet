@@ -13,6 +13,4 @@ conv3d_channels: 32
 fc1_output_features: 128
 fc2_output_features: 128
 fc3_output_features: 64
-include_future_satellite: False
-live_satellite_images: True
 include_sun: True

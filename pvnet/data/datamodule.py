@@ -90,7 +90,6 @@ class DataModule(LightningDataModule):
         data_pipeline = (
             data_pipeline
                 .batch(batch_size)
-                .set_length(n_data)
                 .map(stack_np_examples_into_batch)
         )
         return data_pipeline
