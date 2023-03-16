@@ -16,9 +16,17 @@ import logging
 import sys
 
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+# Tired of seeing these warnings
+import warnings
+from sqlalchemy import exc as sa_exc
+warnings.filterwarnings("ignore", category=sa_exc.SAWarning) 
+
+
+logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 os.environ["HYDRA_FULL_ERROR"] = "1"
+
+
 
 # this file can be run for example using
 #  python run.py experiment=example_simple
@@ -28,7 +36,7 @@ os.environ["HYDRA_FULL_ERROR"] = "1"
 dotenv.load_dotenv(override=True)
 
 
-@hydra.main(config_path="configs/", config_name="config.yaml")
+@hydra.main(config_path="configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
 
     # Imports should be nested inside @hydra.main to optimize tab completion
