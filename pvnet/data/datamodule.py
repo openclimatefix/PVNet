@@ -33,9 +33,9 @@ class DataModule(LightningDataModule):
         self,
         configuration,
         fake_data,
-        n_train_data,
-        n_val_data,
-        n_test_data,
+        n_train_batches,
+        n_val_batches,
+        n_test_batches,
         batch_size=16,
         num_workers=0,
         prefetch_factor=2,
@@ -47,8 +47,9 @@ class DataModule(LightningDataModule):
         super().__init__()
         self.configuration = configuration
         self.fake_data = fake_data
-        self.n_train_data = n_train_data
-        self.n_val_data = n_val_data
+        self.n_train_batches = n_train_batches
+        self.n_val_batches = n_val_batches
+        self.n_test_batches = n_test_batches
         self.batch_size = batch_size
 
         self.train_period = [
@@ -76,7 +77,7 @@ class DataModule(LightningDataModule):
             batch_size=None,
         )
         
-    def _get_datapipe(self, start_time, end_time, n_data, batch_size):
+    def _get_datapipe(self, start_time, end_time, n_batches, batch_size):
         if self.fake_data:
             data_pipeline = fake_data_pipeline(
                 configuration=self.configuration
@@ -87,19 +88,24 @@ class DataModule(LightningDataModule):
                 start_time=start_time,
                 end_time=end_time,
             )
+        
         data_pipeline = (
             data_pipeline
                 .batch(batch_size)
                 .map(stack_np_examples_into_batch)
         )
+        
+        if n_batches is not None:
+            data_pipeline = data_pipeline.set_length(n_batches)
+            
         return data_pipeline
         
     def train_dataloader(self):
-        datapipe = self._get_datapipe(*self.train_period, self.n_train_data, self.batch_size)
+        datapipe = self._get_datapipe(*self.train_period, self.n_train_batches, self.batch_size)
         return DataLoader(datapipe, **self.dataloader_config)
 
     def val_dataloader(self):
-        datapipe = self._get_datapipe(*self.val_period, self.n_val_data, self.batch_size)
+        datapipe = self._get_datapipe(*self.val_period, self.n_val_batches, self.batch_size)
         kwargs = dict(**self.dataloader_config)
         kwargs['num_workers'] = 0
         kwargs['prefetch_factor'] = 2
@@ -108,7 +114,7 @@ class DataModule(LightningDataModule):
         return DataLoader(datapipe, **kwargs)
 
     def test_dataloader(self):
-        datapipe = self._get_datapipe(*self.test_period, self.n_test_data, self.batch_size)
+        datapipe = self._get_datapipe(*self.test_period, self.n_test_batches, self.batch_size)
         kwargs = dict(**self.dataloader_config)
         kwargs['num_workers'] = 0
         kwargs['prefetch_factor'] = 2
