@@ -1,9 +1,9 @@
 _target_: pvnet.data.datamodule.DataModule
 configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
 fake_data: False
-n_train_data: null
-n_val_data: 2
-n_test_data: 2
+n_train_batches: null
+n_val_batches: null
+n_test_batches: null
 num_workers: 4
 prefetch_factor: 2
 batch_size: 16

@@ -5,10 +5,13 @@
 
 defaults:
   - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
-  - override /model: baseline.yaml
+  - override /model: conv3d_sat_nwp.yaml
   - override /datamodule: ocf_datapipes.yaml
   - override /callbacks: default.yaml
-  - override /logger: neptune.yaml
+  - override /logger: tensorboard.yaml
+  - override /hparams_search: null
+  - override /hydra: default.yaml
+
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
