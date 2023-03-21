@@ -1,0 +1,34 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=example_simple.yaml
+
+defaults:
+  - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
+  - override /model: test.yaml
+  - override /datamodule: ocf_datapipes.yaml
+  - override /callbacks: default.yaml
+  - override /logger: tensorboard.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+seed: 518
+
+
+trainer:
+    min_epochs: 0
+    max_epochs: 1
+    reload_dataloaders_every_n_epochs: 0
+    limit_train_batches: 3
+    limit_val_batches:   3
+    limit_test_batches:  3
+    num_sanity_val_steps: 0
+    #fast_dev_run: 3
+
+datamodule:
+    num_workers: 4
+    prefetch_factor: 2
+    batch_size: 2
+
+#validate_only: '1'  # by putting this key in the config file, the model does not get trained.

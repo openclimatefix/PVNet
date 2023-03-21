@@ -1,12 +1,5 @@
-import logging
-
 from ocf_datapipes.utils.consts import BatchKey
-
 from pvnet.models.base_model import BaseModel
-
-logging.basicConfig()
-_LOG = logging.getLogger("pvnet")
-_LOG.setLevel(logging.DEBUG)
 
 
 class Model(BaseModel):
@@ -20,10 +13,8 @@ class Model(BaseModel):
         """
         Simple baseline model that takes the last gsp yield value and copies it forward
         """
-
         self.forecast_minutes = forecast_minutes
         self.history_minutes = history_minutes
-
         super().__init__()
 
     def forward(self, x: dict):
