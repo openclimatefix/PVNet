@@ -50,6 +50,7 @@ class DefaultFCNet(AbstractTabularNetwork):
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
             nn.LeakyReLU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
+            nn.ReLU(),
         )
 
 

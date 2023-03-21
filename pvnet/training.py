@@ -76,16 +76,11 @@ def train(config: DictConfig) -> Optional[float]:
     )
 
     # Train the model
-    log.info("Starting training!")
-    if "validate_only" in config:
-        trainer.validate(model=model, datamodule=datamodule)
-    else:
-        trainer.fit(model=model, datamodule=datamodule)
+    trainer.fit(model=model, datamodule=datamodule)
 
     # Evaluate model on test set, using the best model achieved during training
-    if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
-        log.info("Starting testing!")
-        trainer.test()
+    log.info("Starting testing!")
+    trainer.test(model=model, datamodule=datamodule, ckpt_path="best")
 
     # Make sure everything closed properly
     log.info("Finalizing!")
