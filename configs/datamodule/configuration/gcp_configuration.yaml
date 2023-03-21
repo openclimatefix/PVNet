@@ -4,12 +4,12 @@ general:
   
 input_data:
   default_history_minutes: 120
-  default_forecast_minutes: 360
+  default_forecast_minutes: 480
   
   gsp:
     gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v5/pv_gsp.zarr
     history_minutes: 120
-    forecast_minutes: 360
+    forecast_minutes: 480
     time_resolution_minutes: 30
     start_datetime: '2020-01-01T00:00:00'
     end_datetime: '2021-09-01T00:00:00'
@@ -24,7 +24,7 @@ input_data:
   nwp:
     nwp_zarr_path: gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
     history_minutes: 120
-    forecast_minutes: 360
+    forecast_minutes: 480
     time_resolution_minutes: 60
     nwp_channels:
       - t
@@ -36,7 +36,11 @@ input_data:
     
   satellite:
     #satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
-    satellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
+    satellite_zarr_path:
+      - gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v5/2019_nonhrv_*_rechunked.zarr
+      - gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v5/2020_nonhrv_*_rechunked.zarr
+      - gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v5/2021_nonhrv_*_rechunked.zarr  
+    #satellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
     history_minutes: 90
     forecast_minutes: 0
     time_resolution_minutes: 5
@@ -61,12 +65,13 @@ input_data:
     log_level: DEBUG
     
   hrvsatellite:
-    hrvsatellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
+    #hrvsatellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
+    hrvsatellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v5/2019_hrv_*_rechunked.zarr
     history_minutes: 60
     forecast_minutes: 0
     time_resolution_minutes: 5
     hrvsatellite_channels:
-      - IR_016
+      - HRV
     hrvsatellite_image_size_pixels_height: 24
     hrvsatellite_image_size_pixels_width: 24
 

@@ -1,18 +1,14 @@
 _target_: pvnet.data.datamodule.DataModule
 configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
-fake_data: False
-n_train_batches: null
-n_val_batches: null
-n_test_batches: null
-num_workers: 4
+num_workers: 28
 prefetch_factor: 2
-batch_size: 16
+batch_size: 32
 train_period:
-    - 2010-01-01
-    - 2024-01-01
+    - null
+    - 2020-12-31
 val_period:
-    - 2010-01-01
-    - 2024-01-01
+    - 2021-01-01
+    - 2021-12-31
 test_period:
-    - 2010-01-01
-    - 2024-01-01
+    - 2021-01-01
+    - 2021-12-31
