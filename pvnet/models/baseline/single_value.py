@@ -11,8 +11,8 @@ class Model(BaseModel):
 
     def __init__(
         self,
-        forecast_minutes: int = 12,
-        history_minutes: int = 6,
+        forecast_minutes: int = 120,
+        history_minutes: int = 60,
     ):
         """
         Simple baseline model that predicts always the same value. Mainly used for testing
@@ -24,10 +24,7 @@ class Model(BaseModel):
 
     def forward(self, x: dict):
 
-        # Shape: batch_size, seq_length, n_sites
-        batch_size, seq_length, n_sites = x[BatchKey.gsp].shape
-
         # Returns a single value at all steps
-        y_hat = torch.zeros((batch_size, self.forecast_len, n_sites)) + self._dummy_parameters
+        y_hat = torch.zeros_like(x[BatchKey.gsp][:, :self.forecast_len]) + self._dummy_parameters
 
         return y_hat

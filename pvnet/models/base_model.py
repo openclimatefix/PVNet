@@ -119,6 +119,8 @@ class BaseModel(pl.LightningModule):
 
         self.log_dict(
             logged_losses,
+            on_step=True, 
+            on_epoch=False,
             sync_dist=True  # Required for distributed training
             # (even multi-GPU on single machine).
         )
@@ -138,7 +140,9 @@ class BaseModel(pl.LightningModule):
 
         self.log_dict(
             logged_losses,
-            sync_dist=True
+            on_step=False, 
+            on_epoch=True,
+            sync_dist=True,
         )
         
         global_step = self.trainer.global_step
@@ -167,7 +171,9 @@ class BaseModel(pl.LightningModule):
         
         self.log_dict(
             logged_losses,
-            sync_dist=True 
+            on_step=False, 
+            on_epoch=True,
+            sync_dist=True, 
         )
         
         return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)

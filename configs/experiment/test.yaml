@@ -5,7 +5,7 @@
 
 defaults:
   - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
-  - override /model: test.yaml
+  #- override /model: test.yaml
   - override /datamodule: ocf_datapipes.yaml
   - override /callbacks: default.yaml
   - override /logger: tensorboard.yaml
@@ -20,11 +20,13 @@ trainer:
     min_epochs: 0
     max_epochs: 1
     reload_dataloaders_every_n_epochs: 0
-    limit_train_batches: 3
-    limit_val_batches:   3
-    limit_test_batches:  3
+    limit_train_batches: 4
+    limit_val_batches:   4
+    limit_test_batches:  4
+    val_check_interval: 2
     num_sanity_val_steps: 0
     #fast_dev_run: 3
+    
 
 datamodule:
     num_workers: 4

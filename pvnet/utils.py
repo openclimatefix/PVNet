@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import pvnet
 import datetime
 from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.utils.geospatial import osgb_to_lat_lon
 
 
 def load_config(config_file):
@@ -210,64 +211,63 @@ def finish(
 
 def plot_batch_forecasts(batch, y_hat):
 
-        def _get_numpy(key):
-            return batch[key].cpu().numpy().squeeze()
-        
-        y = batch[BatchKey.gsp].cpu().numpy()
-        y_hat = y_hat.cpu().numpy()
-        
-        gsp_ids = batch[BatchKey.gsp_id].cpu().numpy().squeeze()
-        t0_idx = batch[BatchKey.gsp_t0_idx]
-        
-        times_utc = batch[BatchKey.gsp_time_utc].cpu().numpy().squeeze().astype("datetime64[s]")
-        times_utc = [pd.to_datetime(t) for t in times_utc]
-        
-        n_times = len(times_utc[0])-t0_idx-1
-        batch_size = y.shape[0]
-    
-        fig, axes = plt.subplots(4,4, figsize=(8,8))
-            
-        for i, ax in enumerate(axes.ravel()):
-            if i>=batch_size:
-                ax.axis("off")
-                continue
-            ax.plot(
-                times_utc[i], 
-                y[i], 
-                marker='.', 
-                color="k", 
-                label=r"$y$"
-            )
-            ax.plot(
-                times_utc[i][-len(y_hat[i]):], 
-                y_hat[i], marker='.', 
-                color="r", 
-                label=r"$\hat{y}$"
-            )
-            ax.set_title(f"ID: {gsp_ids[i]} | {times_utc[i][0].date()}", fontsize="small")
-            
-            xticks = [t for t in times_utc[i] if t.minute==0][::2]
-            ax.set_xticks(ticks=xticks, labels=[f"{t.hour:02}" for t in xticks], rotation=90)
-            ax.grid()
-            
-        axes[-1,-1].legend(loc="best")
-        
-        for ax in axes[-1,:]:
-            ax.set_xlabel("Time (hour of day)")
+    def _get_numpy(key):
+        return batch[key].cpu().numpy().squeeze()
 
-        plt.suptitle("Normed GSP output")
-        plt.tight_layout()
-        
-        return fig
-    
+    y = batch[BatchKey.gsp].cpu().numpy()
+    y_hat = y_hat.cpu().numpy()
 
-def _repeat(x):
-    return np.repeat(x.squeeze(), n_times)
+    gsp_ids = batch[BatchKey.gsp_id].cpu().numpy().squeeze()
+    t0_idx = batch[BatchKey.gsp_t0_idx]
 
-def _get_numpy(key):
-    return batch[key].cpu().numpy().squeeze()    
+    times_utc = batch[BatchKey.gsp_time_utc].cpu().numpy().squeeze().astype("datetime64[s]")
+    times_utc = [pd.to_datetime(t) for t in times_utc]
+
+    n_times = len(times_utc[0])-t0_idx-1
+    batch_size = y.shape[0]
+
+    fig, axes = plt.subplots(4,4, figsize=(8,8))
+
+    for i, ax in enumerate(axes.ravel()):
+        if i>=batch_size:
+            ax.axis("off")
+            continue
+        ax.plot(
+            times_utc[i], 
+            y[i], 
+            marker='.', 
+            color="k", 
+            label=r"$y$"
+        )
+        ax.plot(
+            times_utc[i][-len(y_hat[i]):], 
+            y_hat[i], marker='.', 
+            color="r", 
+            label=r"$\hat{y}$"
+        )
+        ax.set_title(f"ID: {gsp_ids[i]} | {times_utc[i][0].date()}", fontsize="small")
+
+        xticks = [t for t in times_utc[i] if t.minute==0][::2]
+        ax.set_xticks(ticks=xticks, labels=[f"{t.hour:02}" for t in xticks], rotation=90)
+        ax.grid()
+
+    axes[-1,-1].legend(loc="best")
+
+    for ax in axes[-1,:]:
+        ax.set_xlabel("Time (hour of day)")
+
+    plt.suptitle("Normed GSP output")
+    plt.tight_layout()
+
+    return fig 
 
 def construct_ocf_ml_metrics_batch_df(batch, y, y_hat):
+    
+    def _repeat(x):
+        return np.repeat(x.squeeze(), n_times)
+
+    def _get_numpy(key):
+        return batch[key].cpu().numpy().squeeze()   
 
     t0_idx = batch[BatchKey.gsp_t0_idx]
     times_utc = _get_numpy(BatchKey.gsp_time_utc)

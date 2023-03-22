@@ -51,7 +51,7 @@ class DefaultFCNet(AbstractTabularNetwork):
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
             nn.LeakyReLU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
-            nn.ReLU(),
+            nn.PReLU(),
         )
 
 
@@ -61,7 +61,8 @@ class DefaultFCNet(AbstractTabularNetwork):
     
 class TabNet(AbstractTabularNetwork):
     """
-    Defines TabNet network
+    An implmentation of TabNet which also uses the default FC network in parallel. The FC network 
+    was included to add skip connections and stabalize the training.
 
     Args:
         in_features: int
@@ -120,7 +121,7 @@ class TabNet(AbstractTabularNetwork):
 
         super().__init__(in_features, out_features)
         
-        self.model = _TabNetModel(
+        self._tabnet = _TabNetModel(
             input_dim=in_features,
             output_dim=out_features,
             n_d=n_d,
@@ -137,8 +138,21 @@ class TabNet(AbstractTabularNetwork):
             momentum=momentum,
             mask_type=mask_type,
         )
-        self.activation = nn.PRELU()
+        
+        self._simple_model = DefaultFCNet(
+            in_features=in_features,
+            out_features=out_features,
+            fc_hidden_features=32,
+        )
+        
+        self.activation = nn.PReLU()
     
     def forward(self, x):
-        return self.activation(self.model(x))
+        # TODO: USE THIS LOSS COMPONENT
+        #loss = self.compute_loss(output, y)
+        # Add the overall sparsity loss
+        #loss = loss - self.lambda_sparse * M_loss
+        out1, M_loss = self._tabnet(x)
+        out2 = self._simple_model(x)
+        return self.activation(out1+out2)
   
