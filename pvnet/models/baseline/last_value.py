@@ -1,24 +1,24 @@
-from ocf_datapipes.utils.consts import BatchKey
 from pvnet.models.base_model import BaseModel
+from pvnet.optimizers import AbstractOptimizer
+
+from ocf_datapipes.utils.consts import BatchKey
 
 
 class Model(BaseModel):
+    """Simple baseline model that takes the last gsp yield value and copies it forward.
+    """
     name = "last_value"
 
     def __init__(
         self,
         forecast_minutes: int = 12,
         history_minutes: int = 6,
+        optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-        """
-        Simple baseline model that takes the last gsp yield value and copies it forward
-        """
-        self.forecast_minutes = forecast_minutes
-        self.history_minutes = history_minutes
-        super().__init__()
+        super().__init__(history_minutes, forecast_minutes, optimizer)
+
 
     def forward(self, x: dict):
-
         # Shape: batch_size, seq_length, n_sites
         gsp_yield = x[BatchKey.gsp]
 
@@ -28,6 +28,4 @@ class Model(BaseModel):
 
         # expand the last valid forward n predict steps
         out = y_hat.unsqueeze(1).repeat(1, self.forecast_len)
-        # shape: batch_size, forecast_len
-
         return out

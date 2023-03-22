@@ -5,14 +5,11 @@ from ocf_datapipes.utils.consts import BatchKey
 from torch import nn
 from pvnet.models.conv3d.encoders import AbstractNWPSatelliteEncoder
 from pvnet.models.conv3d.dense_networks import AbstractTabularNetwork
+from pvnet.optimizers import AbstractOptimizer
 from typing import Optional
 
 from pvnet.models.base_model import BaseModel
 import pvnet
-
-logging.basicConfig()
-_LOG = logging.getLogger("pvnet")
-
     
 
 class Model(BaseModel):
@@ -61,7 +58,6 @@ class Model(BaseModel):
     name = "conv3d_sat_nwp"
 
     
-    
     def __init__(
         self,
         image_encoder: AbstractNWPSatelliteEncoder = pvnet.models.conv3d.encoders.DefaultPVNet,
@@ -85,6 +81,8 @@ class Model(BaseModel):
         nwp_image_size_pixels: int = 64,
         number_sat_channels: int = 12,
         number_nwp_channels: int = 10,
+        
+        optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
 
 
@@ -93,11 +91,7 @@ class Model(BaseModel):
         self.include_sun = include_sun
         self.embedding_dim = embedding_dim
         
-        # These properties needed for BaseModel
-        self.history_minutes = history_minutes
-        self.forecast_minutes = forecast_minutes
-        
-        super().__init__()
+        super().__init__(history_minutes, forecast_minutes, optimizer)
         
         # TODO: remove this hardcoding
         # We limit the history to have a delay of 15 mins in satellite data

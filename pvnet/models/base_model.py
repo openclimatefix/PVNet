@@ -27,29 +27,31 @@ if torch.cuda.is_available():
 
 class BaseModel(pl.LightningModule):
 
-    def __init__(self):
+    def __init__(
+            self, 
+            history_minutes, 
+            forecast_minutes, 
+            optimizer,
+    ):
         super().__init__()
+        
+        self._optimizer = optimizer
+        
+        self.history_minutes = history_minutes
+        self.forecast_minutes = forecast_minutes
+        
+        # Number of timestemps for 5 minutely data
+        self.history_len_5 = history_minutes // 5  
+        self.forecast_len_5 = forecast_minutes // 5
+        
+        # Number of timestemps for 30 minutely data
+        self.history_len_30 = history_minutes // 30
+        self.forecast_len_30 = forecast_minutes // 30
 
-        self.history_len_5 = (
-            self.history_minutes // 5
-        )  # the number of historic timestemps for 5 minutes data
-        self.forecast_len_5 = (
-            self.forecast_minutes // 5
-        )  # the number of forecast timestemps for 5 minutes data
-
-        self.history_len_30 = (
-            self.history_minutes // 30
-        )  # the number of historic timestemps for 5 minutes data
-        self.forecast_len_30 = (
-            self.forecast_minutes // 30
-        )  # the number of forecast timestemps for 5 minutes data
-
-        # the number of historic timesteps for 60 minutes data
+        # Number of timesteps for 60 minutely data
         # Note that ceil is taken as for 30 minutes of history data, one history value will be used
-        self.history_len_60 = int(np.ceil(self.history_minutes / 60))
-        self.forecast_len_60 = (
-            self.forecast_minutes // 60
-        )  # the number of forecast timestemps for 60 minutes data
+        self.history_len_60 = int(np.ceil(history_minutes / 60))
+        self.forecast_len_60 = self.forecast_minutes // 60
 
         self.forecast_len = self.forecast_len_30
         self.history_len = self.history_len_30
@@ -188,5 +190,4 @@ class BaseModel(pl.LightningModule):
         )
         
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.0005)
-        return optimizer
+        return self._optimizer(self.parameters())
