@@ -155,4 +155,82 @@ class TabNet(AbstractTabularNetwork):
         out1, M_loss = self._tabnet(x)
         out2 = self._simple_model(x)
         return self.activation(out1+out2)
+    
+
+class ResidualLinearBlock(nn.Module):
+    def __init__(
+        self,
+        in_features: int,
+        n_layers: int = 2,
+    ):
+        
+        super().__init__()
+
+        layers = []
+        for i in range(n_layers):
+            if i!=0:
+                layers += [nn.ReLU()]
+            layers += [
+                nn.Linear(
+                    in_features=in_features, 
+                    out_features=in_features,
+                )
+            ]
+        self.convs = nn.Sequential(*layers)
+        self.final_activation = nn.LeakyReLU()
+        
+        
+    def forward(self, x):
+        return self.final_activation(self.convs(x)+x)
+
+    
+class ResFCNet(AbstractTabularNetwork):
+    """
+
+    Args:
+        in_features: Number of input features.
+        out_features: Number of output features.
+        fc_hidden_features: Number of features in middle hidden layers.
+        n_res_blocks: Number of residual blocks to use.
+        batchnorm: Appy batch-normalization.
+        dropout_frac: Dropout fraction
+    """
+
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        fc_hidden_features: int = 256,
+        n_res_blocks: int = 4,
+        batchnorm: bool = False,
+        dropout_frac: float = 0.2,
+    ):
+
+
+        super().__init__(in_features, out_features)
+        
+        model = [
+            nn.Linear(in_features=in_features, out_features=fc_hidden_features),
+            nn.LeakyReLU(),
+        ]
+        
+        for i in range(n_res_blocks):
+            model += [
+                ResidualLinearBlock(
+                    in_features=fc_hidden_features,
+                    n_layers=2,
+                )
+            ]
+            if batchnorm:
+                model += [nn.BatchNorm1d(fc_hidden_features)]
+            if dropout>0:
+                model += [nn.Dropout(p=dropout_frac)]
+        self.model = nn.Sequential(*model)
+
+
+    def forward(self, x):
+        return self.model(x)
+
+    
+
   

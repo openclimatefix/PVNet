@@ -20,20 +20,22 @@ class ResidualConv3dBlock(nn.Module):
 
         conv_layers = []
         for i in range(n_layers):
+            if i!=0:
+                conv_layers += [nn.ReLU()]
             conv_layers += [
                 nn.Conv3d(
                     in_channels=in_channels,
                     out_channels=in_channels,
                     kernel_size=(3, 3, 3),
                     padding=(1, 1, 1),
-                ),
-                nn.LeakyReLU(),
+                )
             ]
         self.convs = nn.Sequential(*conv_layers)
+        self.final_activation = nn.LeakyReLU()
         
         
     def forward(self, x):
-        return self.convs(x)+x
+        return self.final_activation(self.convs(x)+x)
 
 ############ ENCODERS ####################
 
