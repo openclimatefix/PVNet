@@ -193,7 +193,7 @@ class ResFCNet(AbstractTabularNetwork):
         fc_hidden_features: Number of features in middle hidden layers.
         n_res_blocks: Number of residual blocks to use.
         batchnorm: Appy batch-normalization.
-        dropout_frac: Dropout fraction
+        dropout_frac: Dropout fraction.
     """
 
     def __init__(
@@ -223,8 +223,16 @@ class ResFCNet(AbstractTabularNetwork):
             ]
             if batchnorm:
                 model += [nn.BatchNorm1d(fc_hidden_features)]
-            if dropout>0:
+            if dropout_frac>0:
                 model += [nn.Dropout(p=dropout_frac)]
+        
+        model += [
+            nn.Linear(
+                in_features=fc_hidden_features, 
+                out_features=out_features
+            ),
+            nn.PReLU(),
+        ]
         self.model = nn.Sequential(*model)
 
 
