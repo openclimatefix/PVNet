@@ -19,8 +19,7 @@ import sys
 # Tired of seeing these warnings
 import warnings
 from sqlalchemy import exc as sa_exc
-warnings.filterwarnings("ignore", category=sa_exc.SAWarning) 
-
+warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 

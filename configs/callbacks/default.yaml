@@ -20,3 +20,7 @@ model_summary:
   _target_: pytorch_lightning.callbacks.ModelSummary
   max_depth: 3
 
+device_stats_monitor:
+  _target_: pytorch_lightning.callbacks.DeviceStatsMonitor
+  cpu_stats: True
+

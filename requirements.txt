@@ -6,9 +6,8 @@ matplotlib
 xarray
 ipykernel
 h5netcdf
-torch
-pytorch-lightning
-perceiver_pytorch
+torch>=2.0
+pytorch-lightning>=2.0
 pytest
 pytest-cov
 flake8

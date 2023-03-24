@@ -36,7 +36,7 @@ class BaseModel(pl.LightningModule):
         super().__init__()
         
         self._optimizer = optimizer
-        
+                
         self.history_minutes = history_minutes
         self.forecast_minutes = forecast_minutes
         
@@ -89,11 +89,11 @@ class BaseModel(pl.LightningModule):
         mae_each_forecast_horizon_metric = mae_each_forecast_horizon(output=y_hat, target=y)
 
         losses = {
-            f"MSE(step={i})": m for i, m in enumerate(mse_each_forecast_horizon_metric)
+            f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_forecast_horizon_metric)
         }
         losses.update(
             {
-                f"MAE(step={i})": m for i, m in enumerate(mae_each_forecast_horizon_metric)
+                f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_forecast_horizon_metric)
             }
         )
         return losses
@@ -112,10 +112,6 @@ class BaseModel(pl.LightningModule):
         y_hat = self(batch)
         y = batch[BatchKey.gsp][:, -self.forecast_len:, 0]
         
-        if (batch_idx%self.trainer.log_every_n_steps)==0:
-            fig = plot_batch_forecasts(batch, y_hat.detach())
-            fig.savefig(f"current_test_batch.png")
-        
         losses = self._calculate_common_losses(y, y_hat)
         logged_losses = {f"{k}/train":v for k, v in losses.items()}
 
@@ -123,9 +119,11 @@ class BaseModel(pl.LightningModule):
             logged_losses,
             on_step=True, 
             on_epoch=False,
-            sync_dist=True  # Required for distributed training
-            # (even multi-GPU on single machine).
         )
+        
+        if (batch_idx%self.trainer.log_every_n_steps)==0:
+            fig = plot_batch_forecasts(batch, y_hat.detach())
+            fig.savefig(f"latest_logged_train_batch.png")
         
         return losses["MAE"]
     
@@ -144,7 +142,6 @@ class BaseModel(pl.LightningModule):
             logged_losses,
             on_step=False, 
             on_epoch=True,
-            sync_dist=True,
         )
         
         global_step = self.trainer.global_step
@@ -153,7 +150,7 @@ class BaseModel(pl.LightningModule):
             # plot and save to logger
             fig = plot_batch_forecasts(batch, y_hat)
             self.logger.experiment.add_figure(
-                f"forecast_examples_{batch_idx}",
+                f"val_forecast_samples/batch_idx_{batch_idx}",
                 fig,
                 global_step,
             )
@@ -175,7 +172,6 @@ class BaseModel(pl.LightningModule):
             logged_losses,
             on_step=False, 
             on_epoch=True,
-            sync_dist=True, 
         )
         
         return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)

@@ -9,7 +9,7 @@ import rich.tree
 import yaml
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities import rank_zero_only
-from pytorch_lightning.loggers.base import LightningLoggerBase
+from pytorch_lightning.loggers import Logger
 
 import pandas as pd
 import numpy as np
@@ -155,7 +155,7 @@ def log_hyperparameters(
     datamodule: pl.LightningDataModule,
     trainer: pl.Trainer,
     callbacks: list[pl.Callback],
-    logger: list[LightningLoggerBase],
+    logger: list[Logger],
 ) -> None:
     """This method controls which parameters from Hydra config are saved by Lightning loggers.
 
@@ -198,7 +198,7 @@ def finish(
     datamodule: pl.LightningDataModule,
     trainer: pl.Trainer,
     callbacks: list[pl.Callback],
-    logger: list[LightningLoggerBase],
+    logger: list[Logger],
 ) -> None:
     """Makes sure everything closed properly."""
 

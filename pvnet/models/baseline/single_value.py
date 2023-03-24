@@ -25,5 +25,5 @@ class Model(BaseModel):
 
     def forward(self, x: dict):
         # Returns a single value at all steps
-        y_hat = torch.zeros_like(x[BatchKey.gsp][:, :self.forecast_len]) + self._dummy_parameters
+        y_hat = torch.zeros_like(x[BatchKey.gsp][:, :self.forecast_len, 0]) + self._dummy_parameters
         return y_hat

@@ -4,6 +4,8 @@ from typing import Callable, Union
 import fsspec.asyn
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, default_collate
+import numpy as np
+import torch
 
 from ocf_datapipes.batch.fake.fake_batch import fake_data_pipeline
 from ocf_datapipes.training.pvnet import pvnet_datapipe
@@ -15,13 +17,21 @@ from ocf_datapipes.utils.utils import (
 
 from datetime import datetime
 
+from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 
-def worker_init_fn(worker_id):
+
+def worker_init_fn(*args, **kwargs):
     """Configures each dataset worker process.
     1. Get fsspec ready for multi process
     """
     # fix for fsspec when using multprocess
     set_fsspec_for_multiprocess()
+    
+def batch_to_tensor(batch):
+    for k in list(batch.keys()):
+        if isinstance(batch[k], np.ndarray) and np.issubdtype(batch[k].dtype, np.number):
+            batch[k] = torch.as_tensor(batch[k])    
+    return batch
     
 
 class DataModule(LightningDataModule):
@@ -57,8 +67,14 @@ class DataModule(LightningDataModule):
             for d in test_period
         ]
 
+        self.readingservice_config = dict(
+            num_workers=num_workers,
+            multiprocessing_context="spawn",
+            worker_prefetch_cnt=prefetch_factor,
+            #worker_init_fn=worker_init_fn,
+        )
         self.dataloader_config = dict(
-            pin_memory=True,
+            pin_memory=False,
             num_workers=num_workers,
             prefetch_factor=prefetch_factor,
             worker_init_fn=worker_init_fn,
@@ -80,20 +96,30 @@ class DataModule(LightningDataModule):
             data_pipeline
                 .batch(batch_size)
                 .map(stack_np_examples_into_batch)
+                .map(batch_to_tensor)
         )   
         return data_pipeline
         
     def train_dataloader(self):
         datapipe = self._get_datapipe(*self.train_period, self.batch_size)
-        return DataLoader(datapipe, **self.dataloader_config)
-
-    def val_dataloader(self):
-        datapipe = self._get_datapipe(*self.val_period, self.batch_size)
+        #rs = MultiProcessingReadingService(**self.readingservice_config)
+        #return DataLoader2(datapipe, reading_service=rs)
         kwargs = dict(**self.dataloader_config)
         return DataLoader(datapipe, **kwargs)
+        
+    def val_dataloader(self):
+        datapipe = self._get_datapipe(*self.val_period, self.batch_size)
+        #rs = MultiProcessingReadingService(**self.readingservice_config)
+        #return DataLoader2(datapipe, reading_service=rs)
+        kwargs = dict(**self.dataloader_config)
+        return DataLoader(datapipe, **kwargs)
+        
 
     def test_dataloader(self):
         datapipe = self._get_datapipe(*self.test_period, self.batch_size)
+        #rs = MultiProcessingReadingService(**self.readingservice_config)
+        #return DataLoader2(datapipe, reading_service=rs)
         kwargs = dict(**self.dataloader_config)
         return DataLoader(datapipe, **kwargs)
+        
 

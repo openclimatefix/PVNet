@@ -9,8 +9,6 @@ max_epochs: null
 reload_dataloaders_every_n_epochs: 1
 val_check_interval: 1000
 num_sanity_val_steps: 2
-
-resume_from_checkpoint: null
 fast_dev_run: false
 profiler: 'simple'
 
