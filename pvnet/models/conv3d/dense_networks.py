@@ -4,7 +4,6 @@ from abc import ABCMeta, abstractmethod
 
 from pvnet.models.base_model import BaseModel
 from torchvision.transforms import CenterCrop
-from pytorch_tabnet.tab_network import TabNet as _TabNetModel
 
 
 class AbstractTabularNetwork(nn.Module, metaclass=ABCMeta):
@@ -51,7 +50,7 @@ class DefaultFCNet(AbstractTabularNetwork):
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
             nn.LeakyReLU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
-            nn.PReLU(),
+            nn.ReLU(),
         )
 
 
@@ -118,6 +117,7 @@ class TabNet(AbstractTabularNetwork):
         mask_type="sparsemax",
     ):
 
+        from pytorch_tabnet.tab_network import TabNet as _TabNetModel
 
         super().__init__(in_features, out_features)
         
@@ -145,7 +145,7 @@ class TabNet(AbstractTabularNetwork):
             fc_hidden_features=32,
         )
         
-        self.activation = nn.PReLU()
+        self.activation = nn.ReLU()
     
     def forward(self, x):
         # TODO: USE THIS LOSS COMPONENT
@@ -158,42 +158,55 @@ class TabNet(AbstractTabularNetwork):
     
 
 class ResidualLinearBlock(nn.Module):
+    """Residual block of 'full pre-activation' from figure 4(e) of [1]. This was the best performing 
+    residual block tested in [1].
+    
+    Sources:
+        [1] https://arxiv.org/pdf/1603.05027.pdf
+        
+    Args:
+        in_features: Number of input features.
+        n_layers: Number of layers in residual pathway.
+        dropout_frac: Probability of an element to be zeroed.
+    """
     def __init__(
         self,
         in_features: int,
         n_layers: int = 2,
+        dropout_frac: float = 0.0,
     ):
         
         super().__init__()
 
         layers = []
         for i in range(n_layers):
-            if i!=0:
-                layers += [nn.ReLU()]
             layers += [
+                nn.BatchNorm1d(fc_hidden_features),
+                nn.ReLU(),
                 nn.Linear(
                     in_features=in_features, 
                     out_features=in_features,
-                )
+                ),
             ]
-        self.convs = nn.Sequential(*layers)
-        self.final_activation = nn.LeakyReLU()
-        
-        
+            if dropout_frac>0:
+                layers+=[nn.Dropout(p=dropout_frac)]
+        self.model = nn.Sequential(*layers)
+    
     def forward(self, x):
-        return self.final_activation(self.convs(x)+x)
+        return self.model(x)+x
 
     
 class ResFCNet(AbstractTabularNetwork):
     """
+    Fully connected deep network based on ResNet architecture.
 
     Args:
         in_features: Number of input features.
         out_features: Number of output features.
         fc_hidden_features: Number of features in middle hidden layers.
         n_res_blocks: Number of residual blocks to use.
-        batchnorm: Appy batch-normalization.
-        dropout_frac: Dropout fraction
+        res_block_layers: Number of fully-connected layers used in each residual block.
+        dropout_frac: Probability of an element to be zeroed in the residual pathways.
     """
 
     def __init__(
@@ -202,7 +215,7 @@ class ResFCNet(AbstractTabularNetwork):
         out_features: int,
         fc_hidden_features: int = 256,
         n_res_blocks: int = 4,
-        batchnorm: bool = False,
+        res_block_layers: int = 2,
         dropout_frac: float = 0.2,
     ):
 
@@ -218,13 +231,19 @@ class ResFCNet(AbstractTabularNetwork):
             model += [
                 ResidualLinearBlock(
                     in_features=fc_hidden_features,
-                    n_layers=2,
+                    n_layers=res_block_layers,
+                    dropout_frac=dropout_frac,
                 )
             ]
-            if batchnorm:
-                model += [nn.BatchNorm1d(fc_hidden_features)]
-            if dropout>0:
-                model += [nn.Dropout(p=dropout_frac)]
+                
+        model = [
+            nn.Linear(
+                in_features=fc_hidden_features, 
+                out_features=out_features
+            ),
+            nn.ReLU(),
+        ]
+        
         self.model = nn.Sequential(*model)
 
 

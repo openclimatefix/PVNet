@@ -14,7 +14,8 @@ flake8
 jedi
 tables
 tilemapbase
-neptune-client[pytorch-lightning]
+neptune
+tensorboard
 rich
 omegaconf
 hydra-core
