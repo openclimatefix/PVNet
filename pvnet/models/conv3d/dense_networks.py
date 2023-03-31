@@ -5,6 +5,8 @@ from abc import ABCMeta, abstractmethod
 from pvnet.models.base_model import BaseModel
 from torchvision.transforms import CenterCrop
 
+from pvnet.models.conv3d.basic_blocks import ResidualLinearBlock, ResidualLinearBlock2
+
 
 class AbstractTabularNetwork(nn.Module, metaclass=ABCMeta):
     """Abstract class for a network to combine the features from all the inputs.
@@ -43,12 +45,11 @@ class DefaultFCNet(AbstractTabularNetwork):
         fc_hidden_features: int=128,
     ):
 
-
         super().__init__(in_features, out_features)
     
         self.model = nn.Sequential(
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
-            nn.LeakyReLU(),
+            nn.ELU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
             nn.ReLU(),
         )
@@ -145,7 +146,7 @@ class TabNet(AbstractTabularNetwork):
             fc_hidden_features=32,
         )
         
-        self.activation = nn.ReLU()
+        self.activation = nn.LeakyReLU(negative_slope=0.01)
     
     def forward(self, x):
         # TODO: USE THIS LOSS COMPONENT
@@ -155,50 +156,13 @@ class TabNet(AbstractTabularNetwork):
         out1, M_loss = self._tabnet(x)
         out2 = self._simple_model(x)
         return self.activation(out1+out2)
-    
 
-class ResidualLinearBlock(nn.Module):
-    """Residual block of 'full pre-activation' from figure 4(e) of [1]. This was the best performing 
-    residual block tested in [1].
-    
-    Sources:
-        [1] https://arxiv.org/pdf/1603.05027.pdf
-        
-    Args:
-        in_features: Number of input features.
-        n_layers: Number of layers in residual pathway.
-        dropout_frac: Probability of an element to be zeroed.
-    """
-    def __init__(
-        self,
-        in_features: int,
-        n_layers: int = 2,
-        dropout_frac: float = 0.0,
-    ):
-        
-        super().__init__()
-
-        layers = []
-        for i in range(n_layers):
-            layers += [
-                nn.BatchNorm1d(fc_hidden_features),
-                nn.ReLU(),
-                nn.Linear(
-                    in_features=in_features, 
-                    out_features=in_features,
-                ),
-            ]
-            if dropout_frac>0:
-                layers+=[nn.Dropout(p=dropout_frac)]
-        self.model = nn.Sequential(*layers)
-    
-    def forward(self, x):
-        return self.model(x)+x
 
     
 class ResFCNet(AbstractTabularNetwork):
     """
-    Fully connected deep network based on ResNet architecture.
+    Fully connected deep network based on ResNet architecture. With n_res_blocks=0 this becomes
+    equivalent to `DefaultFCNet`.
 
     Args:
         in_features: Number of input features.
@@ -213,18 +177,17 @@ class ResFCNet(AbstractTabularNetwork):
         self,
         in_features: int,
         out_features: int,
-        fc_hidden_features: int = 256,
+        fc_hidden_features: int = 128,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
         dropout_frac: float = 0.2,
     ):
-
+        
 
         super().__init__(in_features, out_features)
-        
+                
         model = [
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
-            nn.LeakyReLU(),
         ]
         
         for i in range(n_res_blocks):
@@ -236,14 +199,61 @@ class ResFCNet(AbstractTabularNetwork):
                 )
             ]
                 
+        model += [
+            nn.ELU(),
+            nn.Linear(in_features=fc_hidden_features, out_features=out_features),
+            nn.LeakyReLU(negative_slope=0.01),
+        ]
+        self.model = nn.Sequential(*model)
+
+
+    def forward(self, x):
+        return self.model(x)
+    
+class ResFCNet2(AbstractTabularNetwork):
+    """
+    Fully connected deep network based on ResNet architecture. With n_res_blocks=0 this becomes
+    equivalent to `DefaultFCNet`.
+
+    Args:
+        in_features: Number of input features.
+        out_features: Number of output features.
+        fc_hidden_features: Number of features in middle hidden layers.
+        n_res_blocks: Number of residual blocks to use.
+        res_block_layers: Number of fully-connected layers used in each residual block.
+        dropout_frac: Probability of an element to be zeroed in the residual pathways.
+    """
+
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        fc_hidden_features: int = 128,
+        n_res_blocks: int = 4,
+        res_block_layers: int = 2,
+    ):
+        
+
+        super().__init__(in_features, out_features)
+                
         model = [
-            nn.Linear(
-                in_features=fc_hidden_features, 
-                out_features=out_features
-            ),
+            nn.Linear(in_features=in_features, out_features=fc_hidden_features),
+            nn.BatchNorm1d(fc_hidden_features),
             nn.ReLU(),
         ]
         
+        for i in range(n_res_blocks):
+            model += [
+                ResidualLinearBlock2(
+                    in_features=fc_hidden_features,
+                    n_layers=res_block_layers,
+                )
+            ]
+                
+        model += [
+            nn.Linear(in_features=fc_hidden_features, out_features=out_features),
+            nn.LeakyReLU(negative_slope=0.01),
+        ]
         self.model = nn.Sequential(*model)
 
 
