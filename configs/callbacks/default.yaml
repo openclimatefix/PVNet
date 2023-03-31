@@ -9,13 +9,20 @@ model_checkpoint:
   filename: "epoch_{epoch:03d}"
   auto_insert_metric_name: False
 
-early_stopping:
-  _target_: pytorch_lightning.callbacks.EarlyStopping
+#early_stopping:
+#  _target_: pytorch_lightning.callbacks.EarlyStopping
+#  monitor: "MAE/val" # name of the logged metric which determines when model is improving
+#  mode: "min" # can be "max" or "min"
+#  patience: 10 # how many epochs (or val check periods) of not improving until training stops
+#  min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
+  
+pretrain_output_network:
+  _target_: pvnet.callbacks.PretrainOutputNetwork
   monitor: "MAE/val" # name of the logged metric which determines when model is improving
   mode: "min" # can be "max" or "min"
-  patience: 10 # how many epochs (or val check periods) of not improving until training stops
-  min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
-  
+  patience: 0 # how many epochs (or val check periods) of not improving until training stops
+  min_delta: 0.05 # minimum change in the monitored metric needed to qualify as an improvement  
+
 model_summary:
   _target_: pytorch_lightning.callbacks.ModelSummary
   max_depth: 3

@@ -3,7 +3,7 @@
 # specify here default training configuration
 defaults:
   - trainer: default.yaml
-  - model: conv3d_sat_nwp_v4.yaml
+  - model: conv3d_sat_nwp_v5.yaml
   - datamodule: ocf_datapipes.yaml
   - callbacks: default.yaml # set this to null if you don't want to use callbacks
   - logger: tensorboard.yaml # set logger here or use command line (e.g. `python run.py logger=wandb`)

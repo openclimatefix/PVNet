@@ -7,9 +7,13 @@ devices: auto
 min_epochs: 5
 max_epochs: null
 reload_dataloaders_every_n_epochs: 1
-val_check_interval: 1000
-num_sanity_val_steps: 2
+num_sanity_val_steps: 0
 fast_dev_run: false
 profiler: 'simple'
 
-limit_val_batches: 500
+accumulate_grad_batches: 4
+val_check_interval: 8000
+limit_val_batches: 800
+log_every_n_steps: 50
+
+

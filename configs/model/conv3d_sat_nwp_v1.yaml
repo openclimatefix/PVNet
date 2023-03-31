@@ -2,12 +2,13 @@ _target_: pvnet.models.conv3d.model_sat_nwp.Model
 
 # Sat/NWP encoder settings
 image_encoder: 
-    _target_: pvnet.models.conv3d.encoders.EncoderNaiveEfficientNet
+    _target_: pvnet.models.conv3d.encoders.DefaultPVNet
     _partial_: True
 
 encoder_out_features: 128
 encoder_kwargs: 
-    model_name: efficientnet-b0
+    number_of_conv3d_layers: 6
+    conv3d_channels: 32
 
 include_nwp: True
 sat_image_size_pixels: 24

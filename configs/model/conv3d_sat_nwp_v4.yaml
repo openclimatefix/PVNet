@@ -20,7 +20,7 @@ number_nwp_channels: 2
 output_network: 
     _target_: pvnet.models.conv3d.dense_networks.DefaultFCNet
     _partial_: True
-output_network_kwrgs:
+output_network_kwargs:
     fc_hidden_features: 64
 
 embedding_dim: 16
