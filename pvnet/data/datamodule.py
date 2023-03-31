@@ -48,11 +48,13 @@ class DataModule(LightningDataModule):
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
+        block_nwp_and_sat=False,
     ):
 
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
+        self.block_nwp_and_sat = block_nwp_and_sat
 
         self.train_period = [
             None if d is None else datetime.strptime(d, "%Y-%m-%d") 
@@ -90,6 +92,8 @@ class DataModule(LightningDataModule):
             self.configuration, 
             start_time=start_time,
             end_time=end_time,
+            block_sat=self.block_nwp_and_sat,
+            block_nwp=self.block_nwp_and_sat,
         )
 
         data_pipeline = (
