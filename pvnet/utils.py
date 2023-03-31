@@ -209,7 +209,7 @@ def finish(
 
             wandb.finish()
 
-def plot_batch_forecasts(batch, y_hat):
+def plot_batch_forecasts(batch, y_hat, batch_idx=None):
 
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
@@ -251,12 +251,16 @@ def plot_batch_forecasts(batch, y_hat):
         ax.set_xticks(ticks=xticks, labels=[f"{t.hour:02}" for t in xticks], rotation=90)
         ax.grid()
 
-    axes[-1,-1].legend(loc="best")
+    axes[0,0].legend(loc="best")
 
     for ax in axes[-1,:]:
         ax.set_xlabel("Time (hour of day)")
-
-    plt.suptitle("Normed GSP output")
+    
+    if batch_idx is not None:
+        title = f"Normed GSP output : batch_idx={batch_idx}"
+    else:
+        title = "Normed GSP output"
+    plt.suptitle(title)
     plt.tight_layout()
 
     return fig 

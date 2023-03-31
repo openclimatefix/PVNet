@@ -58,6 +58,10 @@ class BaseModel(pl.LightningModule):
         
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
         
+        self._accumulated_losses = None
+        self._accumulated_batches = None
+        self._accumulated_y_hat = None
+        
         
     def _calculate_common_losses(self, y, y_hat):
         """Calculate losses common to train, test, and val"""
@@ -106,24 +110,78 @@ class BaseModel(pl.LightningModule):
         return losses
             
 
+    def _training_accumulate_log(self, batch, batch_idx, losses, y_hat):
+        """Internal function to accumulate training batches and log results when
+        using accummulated grad batches. Should make the variability in logged training step metrics
+        indpendent on whether we accumulate N batches of size B or just use a larger batch size of
+        N*B with no accumulaion.
+        """
+        
+        losses = {k:v.detach().cpu() for k, v in losses.items()}
+        y_hat = y_hat.detach().cpu()
+        
+        def dict_list_append(d1, d2):
+            for k, v in d2.items():
+                d1[k] += [v]
+                
+        def filter_batch_dict(d):
+            drop_keys = [BatchKey.satellite_actual, BatchKey.nwp]
+            return {k:v for k, v in d.items() if k not in drop_keys}
+        
+        def dict_init_list(d):
+            return {k:[v] for k, v in d.items()}
+        
+        if self._accumulated_losses is None:
+            self._accumulated_losses = dict_init_list(losses)
+            
+            # Accummulate batches, but drop unndeeded and bulky data
+            self._accumulated_batches = dict_init_list(filter_batch_dict(batch))
+            
+            self._accumulated_y_hat = [y_hat]
+            
+        else:
+            dict_list_append(self._accumulated_losses, losses)
+            dict_list_append(self._accumulated_batches, filter_batch_dict(batch))
+            self._accumulated_y_hat += [y_hat]
+                
+        
+        if not self.trainer.fit_loop._should_accumulate():
+            
+            losses = {k:np.mean(v) for k, v in self._accumulated_losses.items()}
+            
+            batch = {}
+            for k, v in self._accumulated_batches.items():
+                if k==BatchKey.gsp_t0_idx:
+                    batch[k] = v[0]
+                else:
+                    batch[k] = torch.cat(v, dim=0)
+
+            y_hat = torch.cat(self._accumulated_y_hat, dim=0)
+            
+            self.log_dict(
+                losses,
+                on_step=True, 
+                on_epoch=False,
+            )
+            
+            # Number of accumulated grad batches
+            grad_batch_num = (batch_idx+1)/self.trainer.accumulate_grad_batches
+            if grad_batch_num%self.trainer.log_every_n_steps==0:
+                fig = plot_batch_forecasts(batch, y_hat, batch_idx)
+                fig.savefig(f"latest_logged_train_batch.png")
+                
+            self._accumulated_losses = None
+            self._accumulated_batches = None
+            self._accumulated_y_hat = None
+        
     def training_step(self, batch, batch_idx):
         
-        # put the batch data through the model
         y_hat = self(batch)
         y = batch[BatchKey.gsp][:, -self.forecast_len:, 0]
         
         losses = self._calculate_common_losses(y, y_hat)
-        logged_losses = {f"{k}/train":v for k, v in losses.items()}
-
-        self.log_dict(
-            logged_losses,
-            on_step=True, 
-            on_epoch=False,
-        )
         
-        if (batch_idx%self.trainer.log_every_n_steps)==0:
-            fig = plot_batch_forecasts(batch, y_hat.detach())
-            fig.savefig(f"latest_logged_train_batch.png")
+        self._training_accumulate_log(batch, batch_idx, losses, y_hat)
         
         return losses["MAE"]
     
@@ -176,7 +234,7 @@ class BaseModel(pl.LightningModule):
         
         return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)
     
-    def test_epoch_end(self, outputs):
+    def on_test_epoch_end(self, outputs):
         results_df = pd.concat(outputs)
         # setting model_name="test" gives us keys like "test/mw/forecast_horizon_30_minutes/mae"
         metrics = evaluation(results_df=results_df, model_name="test", outturn_unit='mw')
