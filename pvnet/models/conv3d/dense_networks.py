@@ -220,8 +220,13 @@ class ResFCNet2(AbstractTabularNetwork):
         out_features: Number of output features.
         fc_hidden_features: Number of features in middle hidden layers.
         n_res_blocks: Number of residual blocks to use.
+<<<<<<< HEAD
         res_block_layers: Number of fully-connected layers used in each residual block.
         dropout_frac: Probability of an element to be zeroed in the residual pathways.
+=======
+        batchnorm: Appy batch-normalization.
+        dropout_frac: Dropout fraction.
+>>>>>>> bf43f7e3378e159da64778d816010bc97fe1f4f0
     """
 
     def __init__(
@@ -249,10 +254,24 @@ class ResFCNet2(AbstractTabularNetwork):
                     n_layers=res_block_layers,
                 )
             ]
+<<<<<<< HEAD
                 
         model += [
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
             nn.LeakyReLU(negative_slope=0.01),
+=======
+            if batchnorm:
+                model += [nn.BatchNorm1d(fc_hidden_features)]
+            if dropout_frac>0:
+                model += [nn.Dropout(p=dropout_frac)]
+        
+        model += [
+            nn.Linear(
+                in_features=fc_hidden_features, 
+                out_features=out_features
+            ),
+            nn.PReLU(),
+>>>>>>> bf43f7e3378e159da64778d816010bc97fe1f4f0
         ]
         self.model = nn.Sequential(*model)
 
