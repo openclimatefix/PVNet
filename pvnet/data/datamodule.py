@@ -2,7 +2,7 @@
 from typing import Callable, Union
 
 import fsspec.asyn
-from pytorch_lightning import LightningDataModule
+from lightning.pytorch import LightningDataModule
 from torch.utils.data import DataLoader, default_collate
 import numpy as np
 import torch

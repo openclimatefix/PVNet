@@ -1,5 +1,27 @@
+pretrain_early_stopping:
+  _target_: pvnet.callbacks.PretrainEarlyStopping
+  monitor: "MAE/val" # name of the logged metric which determines when model is improving
+  mode: "min" # can be "max" or "min"
+  patience: 5 # how many epochs (or val check periods) of not improving until training stops
+  min_delta: 0.001 # minimum change in the monitored metric needed to qualify as an improvement
+  
+pretrain_encoder_freezing:
+  _target_: pvnet.callbacks.PretrainFreeze
+
+
+early_stopping:
+  _target_: pvnet.callbacks.MainEarlyStopping
+  monitor: "MAE/val" # name of the logged metric which determines when model is improving
+  mode: "min" # can be "max" or "min"
+  patience: 5 # how many epochs (or val check periods) of not improving until training stops
+  min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
+
+model_summary:
+  _target_: lightning.pytorch.callbacks.ModelSummary
+  max_depth: 3
+
 model_checkpoint:
-  _target_: pytorch_lightning.callbacks.ModelCheckpoint
+  _target_: lightning.pytorch.callbacks.ModelCheckpoint
   monitor: "MAE/val" # name of the logged metric which determines when model is improving
   mode: "min" # can be "max" or "min"
   save_top_k: 1 # save k best models (determined by above metric)
@@ -9,25 +31,11 @@ model_checkpoint:
   filename: "epoch_{epoch:03d}"
   auto_insert_metric_name: False
 
-#early_stopping:
-#  _target_: pytorch_lightning.callbacks.EarlyStopping
-#  monitor: "MAE/val" # name of the logged metric which determines when model is improving
-#  mode: "min" # can be "max" or "min"
-#  patience: 10 # how many epochs (or val check periods) of not improving until training stops
-#  min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
-  
-pretrain_output_network:
-  _target_: pvnet.callbacks.PretrainOutputNetwork
-  monitor: "MAE/val" # name of the logged metric which determines when model is improving
-  mode: "min" # can be "max" or "min"
-  patience: 0 # how many epochs (or val check periods) of not improving until training stops
-  min_delta: 0.05 # minimum change in the monitored metric needed to qualify as an improvement  
-
-model_summary:
-  _target_: pytorch_lightning.callbacks.ModelSummary
-  max_depth: 3
-
 device_stats_monitor:
-  _target_: pytorch_lightning.callbacks.DeviceStatsMonitor
+  _target_: lightning.pytorch.callbacks.DeviceStatsMonitor
   cpu_stats: True
+
+
+
+
 

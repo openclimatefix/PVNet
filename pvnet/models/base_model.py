@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 import torch.nn.functional as F
 from typing import Literal
@@ -125,8 +125,8 @@ class BaseModel(pl.LightningModule):
                 d1[k] += [v]
                 
         def filter_batch_dict(d):
-            drop_keys = [BatchKey.satellite_actual, BatchKey.nwp]
-            return {k:v for k, v in d.items() if k not in drop_keys}
+            keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
+            return {k:v for k, v in d.items() if k in keep_keys}
         
         def dict_init_list(d):
             return {k:[v] for k, v in d.items()}
@@ -180,12 +180,12 @@ class BaseModel(pl.LightningModule):
         y = batch[BatchKey.gsp][:, -self.forecast_len:, 0]
         
         losses = self._calculate_common_losses(y, y_hat)
+        losses = {f"{k}/train":v for k, v in losses.items()}
         
         self._training_accumulate_log(batch, batch_idx, losses, y_hat)
         
-        return losses["MAE"]
+        return losses["MAE/train"]
     
-
     def validation_step(self, batch: dict, batch_idx):
         # put the batch data through the model
         y_hat = self(batch)
