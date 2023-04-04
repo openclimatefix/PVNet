@@ -36,10 +36,10 @@ input_data:
     log_level: DEBUG
     
   satellite:
-    satellite_zarr_path: ""
-      #- /mnt/disks/data_ssd/2019_nonhrv.zarr 
-      #- /mnt/disks/data_ssd/2020_nonhrv.zarr 
-      #- /mnt/disks/data_ssd/2021_nonhrv.zarr 
+    satellite_zarr_path:
+      - /mnt/disks/data_ssd/2019_nonhrv.zarr 
+      - /mnt/disks/data_ssd/2020_nonhrv.zarr 
+      - /mnt/disks/data_ssd/2021_nonhrv.zarr 
       #- gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2019_nonhrv.zarr
       #- gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
       #- gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr  

@@ -4,25 +4,25 @@ _target_: pvnet.models.conv3d.model_sat_nwp.Model
 # Sat/NWP encoder settings
 #--------------------------------------------
 
-image_encoder: 
-    _target_: pvnet.models.conv3d.encoders.EncoderUNET
-    _partial_: True
-encoder_out_features: 128
-encoder_kwargs: 
-    n_downscale: 2
-    res_block_layers: 3
-    conv3d_channels: 16
-    dropout_frac: 0.0
-    
 #image_encoder: 
-#    _target_: pvnet.models.conv3d.encoders.DefaultPVNet
+#    _target_: pvnet.models.conv3d.encoders.EncoderUNET
 #    _partial_: True
 #encoder_out_features: 128
-#encoder_kwargs:
-#    number_of_conv3d_layers: 3
-#    conv3d_channels: 32
+#encoder_kwargs: 
+#    n_downscale: 2
+#    res_block_layers: 3
+#    conv3d_channels: 16
+#    dropout_frac: 0.0
+    
+image_encoder: 
+    _target_: pvnet.models.conv3d.encoders.DefaultPVNet
+    _partial_: True
+encoder_out_features: 128
+encoder_kwargs:
+    number_of_conv3d_layers: 3
+    conv3d_channels: 32
 
-include_sat: False
+include_sat: True
 include_nwp: False
 sat_image_size_pixels: 24
 nwp_image_size_pixels: 24
@@ -44,7 +44,7 @@ output_network:
     _partial_: True
 output_network_kwargs:
     fc_hidden_features: 64
-    n_res_blocks: 2
+    n_res_blocks: 3
     res_block_layers: 2
     dropout_frac: 0.0
 
@@ -63,4 +63,4 @@ nwp_forecast_minutes: 480
 
 optimizer:
     _target_: pvnet.optimizers.Adam
-    lr: 0.0001
+    lr: 0.0005
