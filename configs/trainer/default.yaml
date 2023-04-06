@@ -12,8 +12,8 @@ fast_dev_run: false
 #profiler: 'simple'
 
 accumulate_grad_batches: 4
-val_check_interval: 8000
-limit_val_batches: 800
+#val_check_interval: 800
+#limit_val_batches: 800
 log_every_n_steps: 50
 
 

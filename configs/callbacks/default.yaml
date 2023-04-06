@@ -1,20 +1,24 @@
-pretrain_early_stopping:
-  _target_: pvnet.callbacks.PretrainEarlyStopping
-  monitor: "MAE/val" # name of the logged metric which determines when model is improving
-  mode: "min" # can be "max" or "min"
-  patience: 5 # how many epochs (or val check periods) of not improving until training stops
-  min_delta: 0.001 # minimum change in the monitored metric needed to qualify as an improvement
+#pretrain_early_stopping:
+#  _target_: pvnet.callbacks.PretrainEarlyStopping
+#  monitor: "MAE/val" # name of the logged metric which determines when model is improving
+#  mode: "min" # can be "max" or "min"
+#  patience: 10 # how many epochs (or val check periods) of not improving until training stops
+#  min_delta: 0.001 # minimum change in the monitored metric needed to qualify as an improvement
+
+#pretrain_encoder_freezing:
+#  _target_: pvnet.callbacks.PretrainFreeze
+
   
-pretrain_encoder_freezing:
-  _target_: pvnet.callbacks.PretrainFreeze
-
-
 early_stopping:
   _target_: pvnet.callbacks.MainEarlyStopping
   monitor: "MAE/val" # name of the logged metric which determines when model is improving
   mode: "min" # can be "max" or "min"
-  patience: 5 # how many epochs (or val check periods) of not improving until training stops
+  patience: 10 # how many epochs (or val check periods) of not improving until training stops
   min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
+
+learning_rate_monitor:
+  _target_: lightning.pytorch.callbacks.LearningRateMonitor
+  logging_interval: "epoch"
 
 model_summary:
   _target_: lightning.pytorch.callbacks.ModelSummary

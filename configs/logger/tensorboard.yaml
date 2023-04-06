@@ -6,5 +6,5 @@ tensorboard:
   name: "default"
   version: null
   log_graph: False
-  default_hp_metric: True
+  default_hp_metric: False
   prefix: ""

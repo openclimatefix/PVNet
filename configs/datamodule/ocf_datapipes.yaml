@@ -1,7 +1,9 @@
 _target_: pvnet.data.datamodule.DataModule
 configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
-num_workers: 14
-prefetch_factor: 4
+use_premade_batches: True
+batch_dir: "/mnt/disks/batches/batches_v1"
+num_workers: 10
+prefetch_factor: 2
 batch_size: 8
 train_period:
     - null

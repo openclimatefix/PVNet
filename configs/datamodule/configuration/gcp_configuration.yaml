@@ -22,8 +22,7 @@ input_data:
     metadata_only: false
     
   nwp:
-    nwp_zarr_path: ""
-    #gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
+    nwp_zarr_path: gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
     history_minutes: 120
     forecast_minutes: 480
     time_resolution_minutes: 60
@@ -37,6 +36,9 @@ input_data:
     
   satellite:
     satellite_zarr_path:
+      - /mnt/disks/data_ssd/2016_nonhrv.zarr
+      - /mnt/disks/data_ssd/2017_nonhrv.zarr 
+      - /mnt/disks/data_ssd/2018_nonhrv.zarr 
       - /mnt/disks/data_ssd/2019_nonhrv.zarr 
       - /mnt/disks/data_ssd/2020_nonhrv.zarr 
       - /mnt/disks/data_ssd/2021_nonhrv.zarr 
