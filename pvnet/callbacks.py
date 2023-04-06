@@ -7,6 +7,8 @@ import logging
 from typing import Any, Callable, Dict, Optional, Tuple
 from lightning.pytorch.trainer.states import TrainerFn
 from lightning.pytorch.callbacks import EarlyStopping, BaseFinetuning
+from lightning.pytorch.callbacks import LearningRateFinder
+
 
 class PhaseEarlyStopping(EarlyStopping):
     
@@ -73,6 +75,28 @@ class PretrainFreeze(BaseFinetuning):
             self.activate()
         else:
             self.deactivate()
+    
+    def deactivate(self):
+        self.active = False
+        
+    def activate(self):
+        self.active = True
+
+
+class PhasedLearningRateFinder(LearningRateFinder):
+    """Finds a learning rate at the start of each phase of learning"""
+    active = True
+
+    def on_fit_start(self, *args, **kwargs):
+        return
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        if self.active:
+            self.lr_find(trainer, pl_module)
+            self.deactivate()
+            
+    def switch_phase(self, phase: str):
+        self.activate()
     
     def deactivate(self):
         self.active = False
