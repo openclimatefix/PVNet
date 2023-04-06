@@ -24,7 +24,85 @@ activities = [torch.profiler.ProfilerActivity.CPU]
 if torch.cuda.is_available():
     activities.append(torch.profiler.ProfilerActivity.CUDA)
 
+    
+class PredAccumulator:
+    def __init__(self):
+        self._y_hats = []
 
+    def __bool__(self):
+        return self._y_hats!=[]
+        
+    def append(self, y_hat):
+        self._y_hats += [y_hat]
+    
+    def flush(self):
+        y_hat = torch.cat(self._y_hats, dim=0)
+        self._y_hats = []
+        return y_hat
+
+    
+class DictListAccumulator:
+    
+    @staticmethod
+    def dict_list_append(d1, d2):
+        for k, v in d2.items():
+            d1[k] += [v]
+
+    @staticmethod
+    def dict_init_list(d):
+        return {k:[v] for k, v in d.items()}
+    
+
+class LossAccumulator(DictListAccumulator):
+    def __init__(self):
+        self._losses = {}
+        
+    def __bool__(self):
+        return self._losses!={}
+    
+    def append(self, loss_dict):
+        if not self:
+            self._losses = self.dict_init_list(loss_dict)
+        else:
+            self.dict_list_append(self._losses, loss_dict)
+            
+    def flush(self):
+        losses = {k:np.mean(v) for k, v in self._losses.items()}
+        self._losses = {}
+        return losses
+        
+
+class BatchAccumulator(DictListAccumulator):
+    
+    def __init__(self):
+        self._batches = {}
+        
+    def __bool__(self):
+        return self._batches!={}
+        
+    @staticmethod
+    def filter_batch_dict(d):
+        keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
+        return {k:v for k, v in d.items() if k in keep_keys}
+    
+    def append(self, batch):
+        if not self:
+            self._batches = self.dict_init_list(self.filter_batch_dict(batch))
+        else:
+            self.dict_list_append(self._batches, self.filter_batch_dict(batch))
+            
+    def flush(self):
+        batch = {}
+        for k, v in self._batches.items():
+            if k==BatchKey.gsp_t0_idx:
+                batch[k] = v[0]
+            else:
+                batch[k] = torch.cat(v, dim=0)
+        self._batches = {}
+        return batch
+                    
+
+        
 class BaseModel(pl.LightningModule):
 
     def __init__(
@@ -36,6 +114,10 @@ class BaseModel(pl.LightningModule):
         super().__init__()
         
         self._optimizer = optimizer
+        
+        # Model must have lr to allow tuning
+        # This setting is only used when lr is tuned with callback
+        self.lr = None
                 
         self.history_minutes = history_minutes
         self.forecast_minutes = forecast_minutes
@@ -58,9 +140,9 @@ class BaseModel(pl.LightningModule):
         
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
         
-        self._accumulated_losses = None
-        self._accumulated_batches = None
-        self._accumulated_y_hat = None
+        self._accumulated_losses = LossAccumulator()
+        self._accumulated_batches = BatchAccumulator()
+        self._accumulated_y_hat = PredAccumulator()
         
         
     def _calculate_common_losses(self, y, y_hat):
@@ -120,43 +202,15 @@ class BaseModel(pl.LightningModule):
         losses = {k:v.detach().cpu() for k, v in losses.items()}
         y_hat = y_hat.detach().cpu()
         
-        def dict_list_append(d1, d2):
-            for k, v in d2.items():
-                d1[k] += [v]
-                
-        def filter_batch_dict(d):
-            keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
-            return {k:v for k, v in d.items() if k in keep_keys}
-        
-        def dict_init_list(d):
-            return {k:[v] for k, v in d.items()}
-        
-        if self._accumulated_losses is None:
-            self._accumulated_losses = dict_init_list(losses)
-            
-            # Accummulate batches, but drop unndeeded and bulky data
-            self._accumulated_batches = dict_init_list(filter_batch_dict(batch))
-            
-            self._accumulated_y_hat = [y_hat]
-            
-        else:
-            dict_list_append(self._accumulated_losses, losses)
-            dict_list_append(self._accumulated_batches, filter_batch_dict(batch))
-            self._accumulated_y_hat += [y_hat]
-                
+        self._accumulated_losses.append(losses)
+        self._accumulated_batches.append(batch)
+        self._accumulated_y_hat.append(y_hat)
         
         if not self.trainer.fit_loop._should_accumulate():
             
-            losses = {k:np.mean(v) for k, v in self._accumulated_losses.items()}
-            
-            batch = {}
-            for k, v in self._accumulated_batches.items():
-                if k==BatchKey.gsp_t0_idx:
-                    batch[k] = v[0]
-                else:
-                    batch[k] = torch.cat(v, dim=0)
-
-            y_hat = torch.cat(self._accumulated_y_hat, dim=0)
+            losses = self._accumulated_losses.flush()
+            batch = self._accumulated_batches.flush()
+            y_hat = self._accumulated_y_hat.flush()
             
             self.log_dict(
                 losses,
@@ -169,10 +223,7 @@ class BaseModel(pl.LightningModule):
             if grad_batch_num%self.trainer.log_every_n_steps==0:
                 fig = plot_batch_forecasts(batch, y_hat, batch_idx)
                 fig.savefig(f"latest_logged_train_batch.png")
-                
-            self._accumulated_losses = None
-            self._accumulated_batches = None
-            self._accumulated_y_hat = None
+
         
     def training_step(self, batch, batch_idx):
         
@@ -202,19 +253,35 @@ class BaseModel(pl.LightningModule):
             on_epoch=True,
         )
         
-        global_step = self.trainer.global_step
         
-        if batch_idx in [0, 1]:
-            # plot and save to logger
-            fig = plot_batch_forecasts(batch, y_hat)
-            self.logger.experiment.add_figure(
-                f"val_forecast_samples/batch_idx_{batch_idx}",
-                fig,
-                global_step,
-            )
+        accum_batch_num = (batch_idx+1)/self.trainer.accumulate_grad_batches
+        
+        if accum_batch_num in [0, 1]:
+            
+            # Store these temporarily under self
+            if not hasattr(self, "self._val_y_hats"):
+                self._val_y_hats = PredAccumulator()
+                self._val_batches = BatchAccumulator()
+            
+            self._val_y_hats.append(y_hat)
+            self._val_batches.append(batch)
+            
+            if (accum_batch_num+1)%self.trainer.accumulate_grad_batches==0:
 
-        return logged_losses
+                y_hat = self._val_y_hats.flush()
+                batch = self._val_batches.flush()
+                
+                fig = plot_batch_forecasts(batch, y_hat)
+                self.logger.experiment.add_figure(
+                    f"val_forecast_samples/batch_idx_{accum_batch_num}",
+                    fig,
+                    self.trainer.global_step,
+                )
+                del self._val_y_hats
+                del self._val_batches
 
+        return logged_losses        
+        
 
     def test_step(self, batch, batch_idx):
         # put the batch data through the model
@@ -244,4 +311,7 @@ class BaseModel(pl.LightningModule):
         )
         
     def configure_optimizers(self):
+        if self.lr is not None:
+            # Use learning rate found by learning rate finder callback
+            self._optimizer.lr = self.lr
         return self._optimizer(self.parameters())
