@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 from pvnet.models.base_model import BaseModel
 from torchvision.transforms import CenterCrop
+from collections import OrderedDict
 
 from pvnet.models.conv3d.basic_blocks import ResidualLinearBlock, ResidualLinearBlock2
 
@@ -21,6 +22,14 @@ class AbstractTabularNetwork(nn.Module, metaclass=ABCMeta):
         out_features: int,
     ):
         super().__init__()
+        
+    def cat_modes(self, x):
+        if isinstance(x, OrderedDict):
+            return torch.cat([value for key, value in modes_dict.items()], dim=1)
+        elif isinstance(x, torch.Tensor):
+            return x
+        else:
+            raise ValueError(f"Input of unexpected type {type(x)}")
         
     @abstractmethod
     def forward(self):
@@ -56,6 +65,7 @@ class DefaultFCNet(AbstractTabularNetwork):
 
 
     def forward(self, x):
+        x = self.cat_modes(x)
         return self.model(x)
     
     
@@ -153,6 +163,7 @@ class TabNet(AbstractTabularNetwork):
         #loss = self.compute_loss(output, y)
         # Add the overall sparsity loss
         #loss = loss - self.lambda_sparse * M_loss
+        x = self.cat_modes(x)
         out1, M_loss = self._tabnet(x)
         out2 = self._simple_model(x)
         return self.activation(out1+out2)
@@ -208,6 +219,7 @@ class ResFCNet(AbstractTabularNetwork):
 
 
     def forward(self, x):
+        x = self.cat_modes(x)
         return self.model(x)
     
 class ResFCNet2(AbstractTabularNetwork):
@@ -231,6 +243,7 @@ class ResFCNet2(AbstractTabularNetwork):
         fc_hidden_features: int = 128,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
+        **kwargs,
     ):
         
 
@@ -238,8 +251,6 @@ class ResFCNet2(AbstractTabularNetwork):
                 
         model = [
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
-            nn.BatchNorm1d(fc_hidden_features),
-            nn.ReLU(),
         ]
         
         for i in range(n_res_blocks):
@@ -251,6 +262,7 @@ class ResFCNet2(AbstractTabularNetwork):
             ]
                 
         model += [
+            nn.LeakyReLU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
             nn.LeakyReLU(negative_slope=0.01),
         ]
@@ -259,7 +271,46 @@ class ResFCNet2(AbstractTabularNetwork):
 
 
     def forward(self, x):
+        x = self.cat_modes(x)
         return self.model(x)
+    
+    
+class SNN(nn.Module):
+    """Self normalising neural network implementation borrowed from [1] and proposed in [2].
+    
+    Sources
+    -------
+        [1] https://github.com/tonyduan/snn/blob/master/snn/models.py
+        [2] https://arxiv.org/pdf/1706.02515v5.pdf
+    """
+
+    def __init__(self, in_dim, out_dim, hidden_dim, n_layers, dropout_prob=0.0):
+        super().__init__()
+        layers = OrderedDict()
+        for i in range(n_layers - 1):
+            if i == 0:
+                layers[f"fc{i}"] = nn.Linear(in_dim, hidden_dim, bias=False)
+            else:
+                layers[f"fc{i}"] = nn.Linear(hidden_dim, hidden_dim, bias=False)
+            layers[f"selu_{i}"] = nn.SELU()
+            layers[f"dropout_{i}"] = nn.AlphaDropout(p=dropout_prob)
+        layers[f"fc_{i+1}"] = nn.Linear(hidden_dim, out_dim, bias=True)
+        self.network = nn.Sequential(layers)
+        self.reset_parameters()
+
+    def forward(self, x):
+        x = self.cat_modes(x)
+        return self.network(x)
+
+    def reset_parameters(self):
+        for layer in self.network:
+            if not isinstance(layer, nn.Linear):
+                continue
+            nn.init.normal_(layer.weight, std=1 / math.sqrt(layer.out_features))
+            if layer.bias is not None:
+                fan_in, _ = nn.init._calculate_fan_in_and_fan_out(layer.weight)
+                bound = 1 / math.sqrt(fan_in)
+                nn.init.uniform_(layer.bias, -bound, bound)
 
     
 
