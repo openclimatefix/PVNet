@@ -1,4 +1,5 @@
 import logging
+import wandb
 
 import numpy as np
 import pandas as pd
@@ -26,16 +27,23 @@ if torch.cuda.is_available():
 
     
 class PredAccumulator:
+    """A class for accumulating y-predictions when using grad accumulation and the batch size is
+    small. 
+    
+    Attributes:
+        _y_hats (list[torch.Tensor]): List of prediction tensors
+    """
     def __init__(self):
         self._y_hats = []
 
     def __bool__(self):
-        return self._y_hats!=[]
+        return len(self._y_hats)>0
         
-    def append(self, y_hat):
+    def append(self, y_hat: torch.Tensor):
+        """Append a sub-batch of predictions"""
         self._y_hats += [y_hat]
     
-    def flush(self):
+    def flush(self) -> torch.Tensor:
         y_hat = torch.cat(self._y_hats, dim=0)
         self._y_hats = []
         return y_hat
@@ -53,26 +61,38 @@ class DictListAccumulator:
         return {k:[v] for k, v in d.items()}
     
 
-class LossAccumulator(DictListAccumulator):
+class MetricAccumulator(DictListAccumulator):
+    """A class for accumulating, and finding the mean of logging metrics when using grad 
+    accumulation and the batch size is small. 
+    
+    Attributes:
+        _metrics (Dict[str, list[float]]): Dictionary containing lists of metrics.
+    """
+    
     def __init__(self):
-        self._losses = {}
+        self._metrics = {}
         
     def __bool__(self):
-        return self._losses!={}
+        return self._metrics!={}
     
-    def append(self, loss_dict):
+    def append(self, loss_dict: dict[str, float]):
         if not self:
-            self._losses = self.dict_init_list(loss_dict)
+            self._metrics = self.dict_init_list(loss_dict)
         else:
-            self.dict_list_append(self._losses, loss_dict)
+            self.dict_list_append(self._metrics, loss_dict)
             
-    def flush(self):
-        losses = {k:np.mean(v) for k, v in self._losses.items()}
-        self._losses = {}
-        return losses
+    def flush(self) -> dict[str, float]:
+        mean_metrics = {k:np.mean(v) for k, v in self._metrics.items()}
+        self._metrics = {}
+        return mean_metrics
         
 
 class BatchAccumulator(DictListAccumulator):
+    """A class for accumulating batches when using grad accumulation and the batch size is small. 
+    
+    Attributes:
+        _batches (Dict[BatchKey, list[torch.Tensor]]): Dictionary containing lists of metrics.
+    """
     
     def __init__(self):
         self._batches = {}
@@ -85,13 +105,13 @@ class BatchAccumulator(DictListAccumulator):
         keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
         return {k:v for k, v in d.items() if k in keep_keys}
     
-    def append(self, batch):
+    def append(self, batch: dict[BatchKey, list[torch.Tensor]]):
         if not self:
             self._batches = self.dict_init_list(self.filter_batch_dict(batch))
         else:
             self.dict_list_append(self._batches, self.filter_batch_dict(batch))
             
-    def flush(self):
+    def flush(self) -> dict[BatchKey, list[torch.Tensor]]:
         batch = {}
         for k, v in self._batches.items():
             if k==BatchKey.gsp_t0_idx:
@@ -140,7 +160,7 @@ class BaseModel(pl.LightningModule):
         
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
         
-        self._accumulated_losses = LossAccumulator()
+        self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator()
         self._accumulated_y_hat = PredAccumulator()
         
@@ -171,15 +191,15 @@ class BaseModel(pl.LightningModule):
     
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
-        mse_each_forecast_horizon_metric = mse_each_forecast_horizon(output=y_hat, target=y)
-        mae_each_forecast_horizon_metric = mae_each_forecast_horizon(output=y_hat, target=y)
+        mse_each_step = mse_each_forecast_horizon(output=y_hat, target=y)
+        mae_each_step = mae_each_forecast_horizon(output=y_hat, target=y)
 
         losses = {
-            f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_forecast_horizon_metric)
+            f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)
         }
         losses.update(
             {
-                f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_forecast_horizon_metric)
+                f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_step)
             }
         )
         return losses
@@ -202,25 +222,28 @@ class BaseModel(pl.LightningModule):
         losses = {k:v.detach().cpu() for k, v in losses.items()}
         y_hat = y_hat.detach().cpu()
         
-        self._accumulated_losses.append(losses)
+        self._accumulated_metrics.append(losses)
         self._accumulated_batches.append(batch)
         self._accumulated_y_hat.append(y_hat)
         
         if not self.trainer.fit_loop._should_accumulate():
             
-            losses = self._accumulated_losses.flush()
+            losses = self._accumulated_metrics.flush()
             batch = self._accumulated_batches.flush()
             y_hat = self._accumulated_y_hat.flush()
             
             self.log_dict(
                 losses,
                 on_step=True, 
-                on_epoch=False,
+                on_epoch=True,
             )
             
             # Number of accumulated grad batches
             grad_batch_num = (batch_idx+1)/self.trainer.accumulate_grad_batches
-            if grad_batch_num%self.trainer.log_every_n_steps==0:
+            
+            # We only create the figure every 8 log steps
+            # This was reduced as it was creating figures too often
+            if grad_batch_num%(8*self.trainer.log_every_n_steps)==0:
                 fig = plot_batch_forecasts(batch, y_hat, batch_idx)
                 fig.savefig(f"latest_logged_train_batch.png")
 
@@ -254,29 +277,29 @@ class BaseModel(pl.LightningModule):
         )
         
         
-        accum_batch_num = (batch_idx+1)/self.trainer.accumulate_grad_batches
+        accum_batch_num = batch_idx//self.trainer.accumulate_grad_batches
         
         if accum_batch_num in [0, 1]:
             
             # Store these temporarily under self
-            if not hasattr(self, "self._val_y_hats"):
+            if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
                 self._val_batches = BatchAccumulator()
             
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
             
-            if (accum_batch_num+1)%self.trainer.accumulate_grad_batches==0:
+            # if batch had accumulated
+            if (batch_idx+1)%self.trainer.accumulate_grad_batches==0:
 
                 y_hat = self._val_y_hats.flush()
                 batch = self._val_batches.flush()
                 
                 fig = plot_batch_forecasts(batch, y_hat)
-                self.logger.experiment.add_figure(
-                    f"val_forecast_samples/batch_idx_{accum_batch_num}",
-                    fig,
-                    self.trainer.global_step,
-                )
+                
+                self.logger.experiment.log({
+                    f"val_forecast_samples/batch_idx_{accum_batch_num}": wandb.Image(fig),
+                })
                 del self._val_y_hats
                 del self._val_batches
 
