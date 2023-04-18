@@ -22,6 +22,7 @@ class Model(BaseModel):
     ):
         super().__init__(history_minutes, forecast_minutes, optimizer)
         self._dummy_parameters = nn.Parameter(torch.zeros(1), requires_grad=True)
+        self.save_hyperparameters()
 
     def forward(self, x: dict):
         # Returns a single value at all steps

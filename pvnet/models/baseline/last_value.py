@@ -16,6 +16,7 @@ class Model(BaseModel):
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
         super().__init__(history_minutes, forecast_minutes, optimizer)
+        self.save_hyperparameters()
 
 
     def forward(self, x: dict):

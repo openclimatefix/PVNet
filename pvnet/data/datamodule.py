@@ -121,13 +121,14 @@ class DataModule(LightningDataModule):
             worker_prefetch_cnt=prefetch_factor,
         )
         
-    def _get_datapipe(self, start_time, end_time):
+    def _get_datapipe(self, start_time, end_time, experimental=False):
         data_pipeline = pvnet_datapipe(
             self.configuration, 
             start_time=start_time,
             end_time=end_time,
             block_sat=self.block_nwp_and_sat,
             block_nwp=self.block_nwp_and_sat,
+            experimental=experimental,
         )
 
         data_pipeline = (
