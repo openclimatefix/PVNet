@@ -2,9 +2,9 @@
 
 tensorboard:
   _target_: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
-  save_dir: "tensorboard/"
+  save_dir: "/mnt/disks/batches/tensorboard"
   name: "default"
-  version: null
+  version: "${model_name}"
   log_graph: False
   default_hp_metric: False
   prefix: ""
