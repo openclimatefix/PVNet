@@ -37,14 +37,15 @@ class AdamW(AbstractOptimizer):
     
 class AdamWReduceLROnPlateau(AbstractOptimizer):
     
-    def __init__(self, lr=0.0005, patience=3, factor=0.5, threshold=2e-4):
+    def __init__(self, lr=0.0005, patience=3, factor=0.5, threshold=2e-4, **opt_kwargs):
         self.lr = lr
         self.patience = patience
         self.factor = factor
         self.threshold = threshold
+        self.opt_kwargs = opt_kwargs
         
     def __call__(self, model_parameters):
-        opt = torch.optim.AdamW(model_parameters, lr=self.lr)
+        opt = torch.optim.AdamW(model_parameters, lr=self.lr, **self.opt_kwargs)
         sch = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt,
             factor=self.factor,

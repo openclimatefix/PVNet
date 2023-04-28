@@ -22,10 +22,10 @@ class Model(BaseModel):
 
     Architecture is roughly as follows:
 
-    - Satellite data is put through an encoder which transforms it from 4D, with time, channel,
-        heigh and width dimensions to become a 1D feature vector.
+    - Satellite data, if included, is put through an encoder which transforms it from 4D, with time, 
+        channel, height, and width dimensions to become a 1D feature vector.
     - NWP, if included, is put through a similar encoder.
-    - The satellite data, NWP data*, GSP history*, GSP ID embedding*, and sun paramters* are 
+    - The satellite data*, NWP data*, GSP history*, GSP ID embedding*, and sun paramters* are 
         concatenated into a 1D feature vector and passed through another neural network to combine
         them and produce a forecast. 
         
@@ -60,6 +60,10 @@ class Model(BaseModel):
         nwp_image_size_pixels: Image size (assumed square) of the NWP data.
         number_sat_channels: Number of satellite channels used.
         number_nwp_channels: Number of NWP channels used.
+        
+        source_dropout: Fraction of samples where each data source will be completely dropped out.
+        
+        optimizer: Optimizer factory function used for network.
     """
 
     name = "conv3d_sat_nwp"
@@ -92,7 +96,6 @@ class Model(BaseModel):
         number_nwp_channels: int = 10,
         
         source_dropout=0.,
-        cat_dropout=0.,
         
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
@@ -161,13 +164,10 @@ class Model(BaseModel):
         if include_sun:
             fc_in_features += 16
     
-        self.output_network = nn.Sequential(
-            nn.Dropout(cat_dropout),
-            output_network(
+        self.output_network = output_network(
                 in_features=fc_in_features,
                 out_features=self.forecast_len,
                 **output_network_kwargs,
-            )
         )
         
         self.source_dropout_0d = CompleteDropoutNd(0, p=source_dropout)
@@ -223,7 +223,7 @@ class Model(BaseModel):
             ).float()
             sun = self.source_dropout_0d(sun)
             sun = self.sun_fc1(sun)
-            modes["sun"] = sun_out
+            modes["sun"] = sun
          
         out = self.output_network(modes)
 
