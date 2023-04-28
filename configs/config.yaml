@@ -3,10 +3,10 @@
 # specify here default training configuration
 defaults:
   - trainer: default.yaml
-  - model: conv3d_sat_nwp_v5.yaml
+  - model: conv3d_sat_nwp_v1.yaml
   - datamodule: ocf_datapipes.yaml
   - callbacks: default.yaml # set this to null if you don't want to use callbacks
-  - logger: tensorboard.yaml # set logger here or use command line (e.g. `python run.py logger=wandb`)
+  - logger: wandb.yaml # set logger here or use command line (e.g. `python run.py logger=wandb`)
   - experiment: null
   - hparams_search: null
   - hydra: default.yaml
@@ -21,8 +21,7 @@ defaults:
 # learn more here: https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
 work_dir: ${hydra:runtime.cwd}
 
-# path to folder with data
-data_dir: ${work_dir}/data/
+model_name: "default"
 
 # use `python run.py debug=true` for easy debugging!
 # this will run 1 train, val and test loop with only 1 batch
