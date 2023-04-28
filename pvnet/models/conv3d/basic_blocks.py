@@ -97,6 +97,7 @@ class ResidualLinearBlock2(nn.Module):
         self,
         in_features: int,
         n_layers: int = 2,
+        dropout_frac: float = 0.,
     ):
         
         super().__init__()
@@ -105,6 +106,7 @@ class ResidualLinearBlock2(nn.Module):
         for i in range(n_layers):
             layers += [
                 nn.BatchNorm1d(in_features),
+                nn.Dropout(p=dropout_frac),
                 nn.LeakyReLU(),
                 nn.Linear(
                     in_features=in_features, 

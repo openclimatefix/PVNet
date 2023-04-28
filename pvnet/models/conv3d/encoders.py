@@ -123,6 +123,105 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         return out
     
     
+class DefaultPVNet2(AbstractNWPSatelliteEncoder):
+    """
+    This is the original encoding module used in PVNet, with a few minor tweaks, and added batchnorm
+
+    Args:
+        sequence_length: The time sequence length of the data.
+        image_size_pixels: The spatial size of the image. Assumed square.
+        in_channels: Number of input channels.
+        out_features: Number of output features.
+        number_of_conv3d_layers: Number of convolution 3d layers that are used.
+        conv3d_channels: Number of channels used in each conv3d layer.
+        fc_features: number of output nodes out of the hidden fully connected layer.
+    """
+
+    def __init__(
+        self,
+        sequence_length: int,
+        image_size_pixels: int,
+        in_channels: int,
+        out_features: int,
+        number_of_conv3d_layers: int = 4,
+        conv3d_channels: int = 32,
+        fc_features: int = 128,
+        batch_norm=True,
+        fc_dropout=0.2,
+    ):
+
+
+        super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
+
+        cnn_spatial_output_size = (image_size_pixels - 2 * number_of_conv3d_layers)
+        if not (cnn_spatial_output_size>0):
+            raise ValueError(
+                f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
+                f"spatial size ({image_size_pixels})"
+            )
+                
+        conv_layers = [
+            nn.Conv3d(
+                in_channels=in_channels,
+                out_channels=conv3d_channels,
+                kernel_size=(3, 3, 3),
+                padding=(1, 0, 0),
+            ),
+            nn.LeakyReLU(),
+        ]
+        if batch_norm:
+            # Inserted before activation using position -1
+            conv_layers.insert(-1, nn.BatchNorm3d(conv3d_channels))
+        for i in range(0, number_of_conv3d_layers - 1):
+            conv_layers += [
+                nn.Conv3d(
+                    in_channels=conv3d_channels,
+                    out_channels=conv3d_channels,
+                    kernel_size=(3, 3, 3),
+                    padding=(1, 0, 0),
+                ),
+                nn.LeakyReLU(),
+            ]
+            if batch_norm:
+                # Inserted before activation using position -1
+                conv_layers.insert(-1, nn.BatchNorm3d(conv3d_channels))
+        
+        self.conv_layers = nn.Sequential(*conv_layers)
+        
+        cnn_output_size = (
+            conv3d_channels
+            * cnn_spatial_output_size**2
+            * sequence_length
+        )
+        
+        final_block = [
+            nn.Linear(
+                in_features=cnn_output_size, out_features=fc_features
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=fc_features, out_features=out_features
+            ),
+            nn.LeakyReLU(),
+        ]
+        
+        if fc_dropout>0:
+            # Insert after the lienar layers
+            final_block.insert(1, nn.Dropout(fc_dropout))
+            final_block.insert(-1, nn.Dropout(fc_dropout))
+        
+        self.final_block = nn.Sequential(*final_block)
+
+    def forward(self, x):
+                
+        out = self.conv_layers(x)
+        out = out.reshape(x.shape[0], -1)
+
+        # Fully connected layers
+        out = self.final_block(out)
+        
+        return out
+    
     
 class EncoderUNET(AbstractNWPSatelliteEncoder):
     """

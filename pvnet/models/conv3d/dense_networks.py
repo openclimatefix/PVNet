@@ -25,7 +25,7 @@ class AbstractTabularNetwork(nn.Module, metaclass=ABCMeta):
         
     def cat_modes(self, x):
         if isinstance(x, OrderedDict):
-            return torch.cat([value for key, value in modes_dict.items()], dim=1)
+            return torch.cat([value for key, value in x.items()], dim=1)
         elif isinstance(x, torch.Tensor):
             return x
         else:
@@ -243,6 +243,7 @@ class ResFCNet2(AbstractTabularNetwork):
         fc_hidden_features: int = 128,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
+        dropout_frac=0.,
         **kwargs,
     ):
         
@@ -258,6 +259,7 @@ class ResFCNet2(AbstractTabularNetwork):
                 ResidualLinearBlock2(
                     in_features=fc_hidden_features,
                     n_layers=res_block_layers,
+                    dropout_frac=dropout_frac,
                 )
             ]
                 
