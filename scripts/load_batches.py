@@ -58,7 +58,7 @@ def get_batch_datapipe(folder, rebatch=False):
 
 if __name__=="__main__":
 
-    dp = get_batch_datapipe("/mnt/disks/batches/batches_v1/train")
-    batch_0 = next(iter(dp1))
+    dp = get_batch_datapipe("../tests/data/sample_batches/train")
+    batch_0 = next(iter(dp))
 
 

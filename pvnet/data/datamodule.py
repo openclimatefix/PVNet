@@ -90,7 +90,6 @@ class DataModule(LightningDataModule):
         self.configuration = configuration
         self.batch_size = batch_size
         self.block_nwp_and_sat = block_nwp_and_sat
-        self.use_premade_batches = use_premade_batches
         self.batch_dir = batch_dir
         
         if not((batch_dir is not None) ^ (configuration is not None)):
@@ -100,19 +99,6 @@ class DataModule(LightningDataModule):
             
             if any([period!=[None, None] for period in [train_period, val_period, test_period]]):
                 raise ValueError("Cannot set `(train/val/test)_period` with presaved batches")
-            
-            print(
-                f"Loading batches from: {batch_dir}\n"
-                "These batches were saved with the following configs:"
-            )
-            print_yaml(f"{batch_dir}/datamodule.yaml")
-            print_yaml(f"{batch_dir}/data_configuration.yaml")
-
-            n_train = len(glob(f"{batch_dir}/train/*.pt"))
-            n_val = len(glob(f"{batch_dir}/val/*.pt"))
-            
-            print(f"There are {n_train} training batches")
-            print(f"There are {n_val} validation batches")
 
                     
         self.train_period = [
@@ -182,7 +168,7 @@ class DataModule(LightningDataModule):
         return data_pipeline
         
     def train_dataloader(self):
-        if self.use_premade_batches:
+        if self.batch_dir is not None:
             datapipe = self._get_premade_batches_datapipe("train", shuffle=True)
         else:
             datapipe = self._get_datapipe(*self.train_period)
@@ -190,7 +176,7 @@ class DataModule(LightningDataModule):
         return DataLoader2(datapipe, reading_service=rs)
         
     def val_dataloader(self):
-        if self.use_premade_batches:
+        if self.batch_dir is not None:
             datapipe = self._get_premade_batches_datapipe("val")
         else:
             datapipe = self._get_datapipe(*self.val_period)
@@ -199,7 +185,7 @@ class DataModule(LightningDataModule):
         
 
     def test_dataloader(self):
-        if self.use_premade_batches:
+        if self.batch_dir is not None:
             datapipe = self._get_premade_batches_datapipe("test")
         else:
             datapipe = self._get_datapipe(*self.test_period)

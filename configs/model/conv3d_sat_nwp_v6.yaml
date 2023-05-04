@@ -1,4 +1,4 @@
-_target_: pvnet.models.conv3d.model_sat_nwp.Model
+_target_: pvnet.models.multimodal.multimodal.Model
 
 
 #--------------------------------------------
@@ -6,7 +6,7 @@ _target_: pvnet.models.conv3d.model_sat_nwp.Model
 #--------------------------------------------
 
 image_encoder: 
-    _target_: pvnet.models.conv3d.encoders.DefaultPVNet
+    _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
     _partial_: True
 encoder_out_features: 256
 encoder_kwargs:
@@ -27,7 +27,7 @@ number_nwp_channels: 2
 #--------------------------------------------
 
 output_network: 
-    _target_: pvnet.models.conv3d.dense_networks.ResFCNet2
+    _target_: pvnet.models.multimodal.linear_networks.networks.ResFCNet2
     _partial_: True
 output_network_kwargs:
     fc_hidden_features: 128

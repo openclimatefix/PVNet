@@ -1,5 +1,6 @@
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer
+import pvnet
 
 from ocf_datapipes.utils.consts import BatchKey
 

@@ -300,12 +300,13 @@ then
     
 fi
 
+cd scripts
 
 # Re-train this model after refactoring
-
 python save_batches.py \
     +batch_output_dir="/mnt/disks/batches2/batches_v3.2" \
-    +num_train_batches=200_000 +num_val_batches=4_000 \
+    +num_train_batches=200_000 \
+    +num_val_batches=4_000
 
 cd ..
     

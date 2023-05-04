@@ -1,9 +1,0 @@
-seed: 518
-
-trainer:
-  min_epochs: 1
-  max_epochs: 2
-
-datamodule:
-  n_train_data: 2
-  n_val_data: 2
