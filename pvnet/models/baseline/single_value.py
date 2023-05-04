@@ -21,10 +21,10 @@ class Model(BaseModel):
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
         super().__init__(history_minutes, forecast_minutes, optimizer)
-        self._dummy_parameters = nn.Parameter(torch.zeros(1), requires_grad=True)
+        self._value = nn.Parameter(torch.zeros(1), requires_grad=True)
         self.save_hyperparameters()
 
     def forward(self, x: dict):
         # Returns a single value at all steps
-        y_hat = torch.zeros_like(x[BatchKey.gsp][:, :self.forecast_len, 0]) + self._dummy_parameters
+        y_hat = torch.zeros_like(x[BatchKey.gsp][:, :self.forecast_len, 0]) + self._value
         return y_hat

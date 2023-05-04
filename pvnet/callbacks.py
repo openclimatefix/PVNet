@@ -1,10 +1,6 @@
-r"""
-Early Stopping
-^^^^^^^^^^^^^^
-Monitor a metric and _____ when it stops improving.
+"""Custom callbacks developed to be able to use early stopping and learning rate finder even when 
+pretraining parts of the network.
 """
-import logging
-from typing import Any, Callable, Dict, Optional, Tuple
 from lightning.pytorch.trainer.states import TrainerFn
 from lightning.pytorch.callbacks import EarlyStopping, BaseFinetuning
 from lightning.pytorch.callbacks import LearningRateFinder

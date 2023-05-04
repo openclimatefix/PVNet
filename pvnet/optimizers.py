@@ -1,3 +1,6 @@
+"""Optimizer factory-function classes.
+"""
+
 from abc import ABC, abstractmethod
 import torch
 

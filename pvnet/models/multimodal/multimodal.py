@@ -9,9 +9,11 @@ from ocf_datapipes.utils.consts import BatchKey
 
 import pvnet
 from pvnet.models.base_model import BaseModel
-from pvnet.models.conv3d.encoders import AbstractNWPSatelliteEncoder
-from pvnet.models.conv3d.dense_networks import AbstractTabularNetwork
-from pvnet.models.conv3d.basic_blocks import ImageEmbedding, CompleteDropoutNd
+from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
+from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
+from pvnet.models.multimodal.encoders.encoders3d import DefaultPVNet
+from pvnet.models.multimodal.linear_networks.networks import DefaultFCNet
+from pvnet.models.multimodal.basic_blocks import ImageEmbedding, CompleteDropoutNd
 from pvnet.optimizers import AbstractOptimizer
 
 
@@ -48,14 +50,14 @@ class Model(BaseModel):
         include_sun: Include sun azimuth and altitude data.
         embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
             `None`.
-        forecast_len: The amount of minutes that should be forecasted.
-        history_len: The default amount of historical minutes that are used.
+        forecast_minutes: The amount of minutes that should be forecasted.
+        history_minutes: The default amount of historical minutes that are used.
         sat_history_minutes: Period of historical data to use for satellite data. Defaults to 
-            `history_len` if not provided.
-        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to  `forecast_len` 
-            if not provided.
+            `history_minutes` if not provided.
+        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to  
+            `forecast_minutes` if not provided.
         nwp_history_minutes: Period of historical data to use for NWP data. Defaults to  
-            `history_len` if not provided.
+            `history_minutes` if not provided.
         sat_image_size_pixels: Image size (assumed square) of the satellite data.
         nwp_image_size_pixels: Image size (assumed square) of the NWP data.
         number_sat_channels: Number of satellite channels used.
@@ -71,11 +73,11 @@ class Model(BaseModel):
     
     def __init__(
         self,
-        image_encoder: AbstractNWPSatelliteEncoder = pvnet.models.conv3d.encoders.DefaultPVNet,
+        image_encoder: AbstractNWPSatelliteEncoder = DefaultPVNet,
         encoder_out_features: int = 128,
         encoder_kwargs: dict = dict(),
         
-        output_network: AbstractTabularNetwork = pvnet.models.conv3d.dense_networks.DefaultFCNet,
+        output_network: AbstractLinearNetwork = DefaultFCNet,
         output_network_kwargs: dict = dict(),
         
         include_sat: bool = True,
@@ -123,7 +125,7 @@ class Model(BaseModel):
                 **encoder_kwargs,
             )
             if add_image_embedding_channel:
-                self.sat_embed = ImageEmbedding(318, sat_image_size_pixels, self.sat_sequence_len)
+                self.sat_embed = ImageEmbedding(318, self.sat_sequence_len, sat_image_size_pixels)
 
         if include_nwp:
             if nwp_history_minutes is None: nwp_history_minutes = history_minutes
@@ -138,7 +140,7 @@ class Model(BaseModel):
                 **encoder_kwargs,
             )
             if add_image_embedding_channel:
-                self.nwp_embed = ImageEmbedding(318, nwp_image_size_pixels, nwp_sequence_len)
+                self.nwp_embed = ImageEmbedding(318, nwp_sequence_len, nwp_image_size_pixels)
 
         if self.embedding_dim:
             self.embed = nn.Embedding(
@@ -255,12 +257,12 @@ if __name__=="__main__":
 
 
     model = Model(
-        image_encoder = pvnet.models.conv3d.encoders.DefaultPVNet,
+        image_encoder = pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
         encoder_kwargs = dict(),
         #image_encoder = pvnet.models.conv3d.encoders.EncoderUNET,
         #encoder_kwargs = dict(n_downscale=3),
         
-        output_network = pvnet.models.conv3d.dense_networks.DefaultFCNet,
+        output_network = pvnet.models.multimodal.linear_networks.networks.DefaultFCNet,
         output_network_kwargs = dict(),
         #output_network = pvnet.models.conv3d.dense_networks.ResFCNet,
         #output_network_kwargs = dict(),

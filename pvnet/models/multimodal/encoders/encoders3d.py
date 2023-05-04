@@ -1,41 +1,17 @@
+"""Encoder modules for the satellite/NWP data based on 3D concolutions.
+"""
 import torch
-from torch import nn
-import torch.nn.functional as F
-from abc import ABCMeta
-from abc import ABCMeta, abstractmethod
+from torch import nn, Tensor
+
+from torchvision.transforms import CenterCrop
 
 from pvnet.models.base_model import BaseModel
-from torchvision.transforms import CenterCrop
-from torchvision.transforms.functional import center_crop
+from pvnet.models.multimodal.encoders.basic_blocks import (
+    AbstractNWPSatelliteEncoder, ResidualConv3dBlock
+)
 
-from pvnet.models.conv3d.basic_blocks import ResidualConv3dBlock
 
 
-class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
-    """Abstract class for NWP/satellite encoder. The encoder will take an input of shape
-    (batch_size, sequence_length, channels, height, width) and return an output of shape
-    (batch_size, out_features).
-    
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-    """
-    def __init__(
-        self,
-        sequence_length: int,
-        image_size_pixels: int,
-        in_channels: int,
-        out_features: int,
-    ):
-        super().__init__()
-        
-    @abstractmethod
-    def forward(self):
-        pass
-        
-    
 class DefaultPVNet(AbstractNWPSatelliteEncoder):
     """
     This is the original encoding module used in PVNet, with a few minor tweaks.
@@ -63,9 +39,10 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
 
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-
+        
+        # Check that the output shape of the convolutional layers will be at least 1x1
         cnn_spatial_output_size = (image_size_pixels - 2 * number_of_conv3d_layers)
-        if not (cnn_spatial_output_size>0):
+        if not (cnn_spatial_output_size>=1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
                 f"spatial size ({image_size_pixels})"
@@ -95,6 +72,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         
         self.conv_layers = nn.Sequential(*conv_layers)
         
+        # Calculate the size of the output of the 3D convolutional layers
         cnn_output_size = (
             conv3d_channels
             * cnn_spatial_output_size**2
@@ -121,11 +99,12 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         out = self.final_block(out)
         
         return out
-    
-    
+
+
 class DefaultPVNet2(AbstractNWPSatelliteEncoder):
     """
-    This is the original encoding module used in PVNet, with a few minor tweaks, and added batchnorm
+    This is the original encoding module used in PVNet, with a few minor tweaks, and added 
+    batchnorm.
 
     Args:
         sequence_length: The time sequence length of the data.
@@ -135,6 +114,9 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         number_of_conv3d_layers: Number of convolution 3d layers that are used.
         conv3d_channels: Number of channels used in each conv3d layer.
         fc_features: number of output nodes out of the hidden fully connected layer.
+        batch_norm: Whether to include 3D batch normalisation.
+        fc_dropout: Probability of an element to be zeroed before the last two fully connected 
+            layers.
     """
 
     def __init__(
@@ -153,6 +135,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
 
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
+        # Check that the output shape of the convolutional layers will be at least 1x1
         cnn_spatial_output_size = (image_size_pixels - 2 * number_of_conv3d_layers)
         if not (cnn_spatial_output_size>0):
             raise ValueError(
@@ -188,6 +171,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         
         self.conv_layers = nn.Sequential(*conv_layers)
         
+        # Calculate the size of the output of the 3D convolutional layers
         cnn_output_size = (
             conv3d_channels
             * cnn_spatial_output_size**2
@@ -206,7 +190,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         ]
         
         if fc_dropout>0:
-            # Insert after the lienar layers
+            # Insert after the linear layers
             final_block.insert(1, nn.Dropout(fc_dropout))
             final_block.insert(-1, nn.Dropout(fc_dropout))
         
@@ -221,8 +205,8 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         out = self.final_block(out)
         
         return out
-    
-    
+
+
 class EncoderUNET(AbstractNWPSatelliteEncoder):
     """
     An encoder for satellite and/or NWP data taking inspiration from the kinds of skip 
@@ -259,7 +243,6 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
                 f"cannot use this many downscaling layers ({n_downscale}) with this input "
                 f"spatial size ({image_size_pixels})"
             )
-        self.cnn_spatial_output = cnn_spatial_output
             
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
@@ -300,7 +283,7 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
             
         self.downscale_layers = nn.ModuleList(downscale_layers)
         
-        #self.crop_fn = CenterCrop(image_size_pixels//(2**n_downscale))
+        self.crop_fn = CenterCrop(cnn_spatial_output)
         
         cat_channels = conv3d_channels*(1+n_downscale)
         self.post_cat_conv = nn.Sequential(
@@ -334,65 +317,14 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
     def forward(self, x):
                 
         out = self.first_layer(x)
-        outputs = [center_crop(out, self.cnn_spatial_output)]
+        outputs = [self.crop_fn(out)]
             
         for layer in self.downscale_layers:
             out = layer(out)
-            outputs += [center_crop(out, self.cnn_spatial_output)]
-            #outputs += [self.crop_fn(out)]
+            outputs += [self.crop_fn(out)]
         
         out = torch.cat(outputs, dim=1)
         out = self.post_cat_conv(out)
         out = torch.flatten(out, start_dim=1)
         out = self.final_layer(out)
         return out
-    
-    
-class EncoderNaiveEfficientNet(AbstractNWPSatelliteEncoder):
-    """
-    A naive implementation of EfficientNet as an encoder for the satellite/NWP data.
-    Stacks the time dimension into extra channels.
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-        model_name: Name for efficientnet.
-    """
-    
-    def __init__(
-        self,
-        sequence_length: int,
-        image_size_pixels: int,
-        in_channels: int,
-        out_features: int,
-        model_name: str = "efficientnet-b0",
-    ):
-        
-        try:
-            from efficientnet_pytorch import EfficientNet
-        except:
-            raise ImportError(
-                "The efficientnet_pytorch package must be installed to use the " 
-                "EncoderNaiveEfficientNet encoder. See "
-                "https://github.com/lukemelas/EfficientNet-PyTorch for install instructions."
-            )
-
-        super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-        
-
-        self.model = EfficientNet.from_name(
-            model_name, 
-            in_channels=in_channels*sequence_length, 
-            image_size=image_size_pixels, 
-            num_classes=out_features
-        )
-
-    def forward(self, x):
-        
-        bs, s, c, h, w = x.shape
-        
-        x = x.reshape((bs, s*c, h, w))
-        
-        return self.model(x)
