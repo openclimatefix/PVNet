@@ -1,7 +1,8 @@
 """
 Constructs batches and saves them to disk.
 
-Currently a slightly hacky implementation due to the way the configs are done. 
+Currently a slightly hacky implementation due to the way the configs are done. This script will use
+the same config file currently set to train the model.
 
 use:
 ```
@@ -9,10 +10,8 @@ python save_batches.py +batch_output_dir="/mnt/disks/batches/batches_v0" +num_tr
 ```
 
 """
-
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from lightning.pytorch import LightningDataModule
 import torch
 
 from pvnet.data.datamodule import batch_to_tensor
