@@ -14,8 +14,9 @@ flake8
 jedi
 tables
 tilemapbase
-neptune
+wandb
 tensorboard
+tqdm
 rich
 omegaconf
 hydra-core
