@@ -9,15 +9,15 @@ then
     ################################################################################################
     # These have already been run.
     #
-    # Note that this library has been refactored since these runs. So they will not work as they 
+    # Note that this library has been refactored since these runs. So they will not work as they
     # are written here
     #
     # A few small changes would be required to re-run these. For example, in the first model below
     # `pvnet.models.conv3d.encoders.DefaultPVNet2` should be replaced with
-    # `pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet2` and 
-    # `pvnet.models.conv3d.dense_networks.ResFCNet2` should be replaced with 
+    # `pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet2` and
+    # `pvnet.models.conv3d.dense_networks.ResFCNet2` should be replaced with
     # `pvnet.models.multimodal.linear_networks.networks.ResFCNet2`
-    
+
     ################################################################################################
 
     # Save pre-made batches
@@ -28,7 +28,7 @@ then
         +num_train_batches=50_000 +num_val_batches=2_000 \
 
     cd ..
-    
+
     # Set baseline to compare to
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -48,7 +48,7 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="pvnet2+ResFC2_slow_regx25_amsgrad_v0"
-        
+
     # Use deep supervision to help break down the sources usefulness
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -109,7 +109,7 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="pvnet2+ResFC2_slow_regx1_amsgrad_v0"
-        
+
     # Set this baseline using NWP alone
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -142,7 +142,7 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="EffNet+ResFC2_slow_regx25_amsgrad_v1"
-        
+
     # Use deep supervision and pvnet1 encoder so we can compare to pvnet2+deepsuper
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -163,7 +163,7 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="pvnet+ResFC2_deepsuper_slow_regx25_amsgrad_v0"
-        
+
     # Reset this baseline for model trained under PVNet2.0 project
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -183,8 +183,8 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="pvnet+ResFC_weatherRes_slow_regx25_amsgrad_v1"
-        
-    
+
+
     # What if we exclude historical GSP as input?
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -227,7 +227,7 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="pvnet_shal+ResFC2_slow_regx25_amsgrad_v1"
-        
+
 
     # How about a bigger outout model?
     python run.py \
@@ -270,7 +270,7 @@ then
         datamodule.batch_size=32 \
         trainer.accumulate_grad_batches=4 \
         model_name="pvnet+SNN_slow_regx25_amsgrad_v0"
-    
+
     # Try using ResNet encoder
     python run.py \
         datamodule.batch_dir="/mnt/disks/batches2/batches_v3.1" \
@@ -297,7 +297,7 @@ then
         datamodule.batch_size=4 \
         trainer.accumulate_grad_batches=32 \
         model_name="ResNet+ResFC2_deepsup_slow_regx25_amsgrad_v1"
-    
+
 fi
 
 cd scripts
@@ -309,7 +309,7 @@ python save_batches.py \
     +num_val_batches=4_000
 
 cd ..
-    
+
 
 python run.py \
     datamodule=premade_batches \

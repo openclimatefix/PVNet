@@ -12,7 +12,6 @@ defaults:
   - override /hparams_search: null
   - override /hydra: default.yaml
 
-
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
@@ -27,4 +26,4 @@ datamodule:
   n_val_data: 2
   fake_data: 1
 
-validate_only: '1'  # by putting this key in the config file, the model does not get trained.
+validate_only: "1" # by putting this key in the config file, the model does not get trained.

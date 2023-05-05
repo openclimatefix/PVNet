@@ -1,16 +1,16 @@
-import torch
 from torch import nn
 
 from pvnet.models.multimodal.linear_networks.basic_blocks import (
-    AbstractLinearNetwork, ResidualLinearBlock, ResidualLinearBlock2
+    AbstractLinearNetwork,
+    ResidualLinearBlock,
+    ResidualLinearBlock2,
 )
-
 
 
 class DefaultFCNet(AbstractLinearNetwork):
     """
     Similar to the original FCNet module used in PVNet, with a few minor tweaks.
-    A 2-layer 
+    A 2-layer
 
     Args:
         in_features: Number of input features.
@@ -22,11 +22,11 @@ class DefaultFCNet(AbstractLinearNetwork):
         self,
         in_features: int,
         out_features: int,
-        fc_hidden_features: int=128,
+        fc_hidden_features: int = 128,
     ):
 
         super().__init__(in_features, out_features)
-    
+
         self.model = nn.Sequential(
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
             nn.ELU(),
@@ -34,18 +34,16 @@ class DefaultFCNet(AbstractLinearNetwork):
             nn.ReLU(),
         )
 
-
     def forward(self, x):
         x = self.cat_modes(x)
         return self.model(x)
-
 
 
 class ResFCNet(AbstractLinearNetwork):
     """
     Fully-connected deep network based on ResNet architecture. Internally, this network uses ELU
     activations throughout the residual blocks.
-    
+
     With n_res_blocks=0 this becomes equivalent to `DefaultFCNet`.
 
     Args:
@@ -66,14 +64,13 @@ class ResFCNet(AbstractLinearNetwork):
         res_block_layers: int = 2,
         dropout_frac: float = 0.2,
     ):
-        
 
         super().__init__(in_features, out_features)
-                
+
         model = [
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
         ]
-        
+
         for i in range(n_res_blocks):
             model += [
                 ResidualLinearBlock(
@@ -82,7 +79,7 @@ class ResFCNet(AbstractLinearNetwork):
                     dropout_frac=dropout_frac,
                 )
             ]
-        
+
         model += [
             nn.ELU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
@@ -90,19 +87,17 @@ class ResFCNet(AbstractLinearNetwork):
         ]
         self.model = nn.Sequential(*model)
 
-
     def forward(self, x):
         x = self.cat_modes(x)
         return self.model(x)
 
-    
 
 class ResFCNet2(AbstractLinearNetwork):
     """
-    Fully connected deep network based on ResNet architecture. This architecture is similar to 
+    Fully connected deep network based on ResNet architecture. This architecture is similar to
     `ResFCNet`, except that it uses LeakyReLU activations internally, and batchnorm in the residual
     branches. The residual blocks are implemented based on the best performing block in [1].
-    
+
     Sources:
         [1] https://arxiv.org/pdf/1603.05027.pdf
 
@@ -122,17 +117,16 @@ class ResFCNet2(AbstractLinearNetwork):
         fc_hidden_features: int = 128,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
-        dropout_frac=0.,
+        dropout_frac=0.0,
         **kwargs,
     ):
-        
 
         super().__init__(in_features, out_features)
-                
+
         model = [
             nn.Linear(in_features=in_features, out_features=fc_hidden_features),
         ]
-        
+
         for i in range(n_res_blocks):
             model += [
                 ResidualLinearBlock2(
@@ -141,46 +135,45 @@ class ResFCNet2(AbstractLinearNetwork):
                     dropout_frac=dropout_frac,
                 )
             ]
-                
+
         model += [
             nn.LeakyReLU(),
             nn.Linear(in_features=fc_hidden_features, out_features=out_features),
             nn.LeakyReLU(negative_slope=0.01),
         ]
-        
-        self.model = nn.Sequential(*model)
 
+        self.model = nn.Sequential(*model)
 
     def forward(self, x):
         x = self.cat_modes(x)
         return self.model(x)
 
 
-    
 class SNN(AbstractLinearNetwork):
     """Self normalising neural network implementation borrowed from [1] and proposed in [2].
-    
+
     Sources:
         [1] https://github.com/tonyduan/snn/blob/master/snn/models.py
         [2] https://arxiv.org/pdf/1706.02515v5.pdf
-        
+
     Args:
         in_features: Number of input features.
         out_features: Number of output features.
         fc_hidden_features: Number of features in middle hidden layers.
         n_layers: Number of fully-connected layers used in the network.
         dropout_frac: Probability of an element to be zeroed.
-        
+
     """
 
-    def __init__(self,
-            in_features: int,
-            out_features: int,
-            fc_hidden_features: int = 128,
-            n_layers: int = 10,
-            dropout_frac: float = 0.,
-            **kwargs,
-        ):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        fc_hidden_features: int = 128,
+        n_layers: int = 10,
+        dropout_frac: float = 0.0,
+        **kwargs,
+    ):
         super().__init__(in_features, out_features)
 
         layers = [
@@ -189,7 +182,7 @@ class SNN(AbstractLinearNetwork):
             nn.AlphaDropout(p=dropout_frac),
         ]
         for i in range(1, n_layers - 1):
-            layers += [ 
+            layers += [
                 nn.Linear(fc_hidden_features, fc_hidden_features, bias=False),
                 nn.SELU(),
                 nn.AlphaDropout(p=dropout_frac),
@@ -198,7 +191,7 @@ class SNN(AbstractLinearNetwork):
             nn.Linear(fc_hidden_features, out_features, bias=True),
             nn.LeakyReLU(negative_slope=0.01),
         ]
-        
+
         self.network = nn.Sequential(*layers)
         self.reset_parameters()
 
@@ -214,21 +207,20 @@ class SNN(AbstractLinearNetwork):
                     fan_in, _ = nn.init._calculate_fan_in_and_fan_out(layer.weight)
                     bound = fan_in**-0.5
                     nn.init.uniform_(layer.bias, -bound, bound)
-                    
-                    
+
 
 class TabNet(AbstractLinearNetwork):
     """
     An implmentation of TabNet [1].
-    
+
     Sources:
         [1] https://arxiv.org/abs/1908.07442
-    
+
     Args:
         in_features: int
             Number of input features.
         out_features: int
-            Number of output features.        
+            Number of output features.
         n_d : int
             Dimension of the prediction  layer (usually between 4 and 64)
         n_a : int
@@ -281,7 +273,7 @@ class TabNet(AbstractLinearNetwork):
         from pytorch_tabnet.tab_network import TabNet as _TabNetModel
 
         super().__init__(in_features, out_features)
-        
+
         self._tabnet = _TabNetModel(
             input_dim=in_features,
             output_dim=out_features,
@@ -299,14 +291,14 @@ class TabNet(AbstractLinearNetwork):
             momentum=momentum,
             mask_type=mask_type,
         )
-        
+
         self.activation = nn.LeakyReLU(negative_slope=0.01)
-    
+
     def forward(self, x):
         # TODO: USE THIS LOSS COMPONENT
-        #loss = self.compute_loss(output, y)
+        # loss = self.compute_loss(output, y)
         # Add the overall sparsity loss
-        #loss = loss - self.lambda_sparse * M_loss
+        # loss = loss - self.lambda_sparse * M_loss
         x = self.cat_modes(x)
         out1, M_loss = self._tabnet(x)
         return self.activation(out1)

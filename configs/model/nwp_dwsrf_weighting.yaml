@@ -17,5 +17,5 @@ dwsrf_channel: 1
 # ----------------------------------------------
 
 optimizer:
-    _target_: pvnet.optimizers.AdamW
-    lr: 0.0005
+  _target_: pvnet.optimizers.AdamW
+  lr: 0.0005

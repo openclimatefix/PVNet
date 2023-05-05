@@ -1,37 +1,34 @@
 from typing import Optional
 
 import torch
-from torch import nn
-
 from ocf_datapipes.utils.consts import BatchKey
+from torch import nn
 
 import pvnet
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer
 
 
-
 class Model(BaseModel):
-    """This model learns to compute a weighted average of the downward short-wave radiation flux for 
+    """This model learns to compute a weighted average of the downward short-wave radiation flux for
     each GSP. The same averaging is used for each step in the NWP input sequence. It also learns
-    a linear time-interpolation scheme to map between the NWP-step weighted average and the 
+    a linear time-interpolation scheme to map between the NWP-step weighted average and the
     predicted GSP output.
-    
+
     Args:
         forecast_minutes: The amount of minutes that should be forecasted.
         history_minutes: The default amount of historical minutes that are used.
-        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to  
+        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
             `forecast_minutes` if not provided.
-        nwp_history_minutes: Period of historical data to use for NWP data. Defaults to  
+        nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
             `history_minutes` if not provided.
         nwp_image_size_pixels: Image size (assumed square) of the NWP data.
-        dwsrf_channel: Which index of the NWP input is the dwsrf channel.        
-        optimizer: Optimizer factory function used for network.   
-        """
+        dwsrf_channel: Which index of the NWP input is the dwsrf channel.
+        optimizer: Optimizer factory function used for network.
+    """
 
     name = "nwp_weighting"
 
-    
     def __init__(
         self,
         forecast_minutes: int = 30,
@@ -44,78 +41,76 @@ class Model(BaseModel):
     ):
 
         super().__init__(history_minutes, forecast_minutes, optimizer)
-        
+
         self.dwsrf_channel = dwsrf_channel
-        
-    
-        if nwp_history_minutes is None: nwp_history_minutes = history_minutes
-        if nwp_forecast_minutes is None: nwp_forecast_minutes = forecast_minutes
-        nwp_sequence_len = nwp_history_minutes//60 + nwp_forecast_minutes//60 + 1
-        
-        
+
+        if nwp_history_minutes is None:
+            nwp_history_minutes = history_minutes
+        if nwp_forecast_minutes is None:
+            nwp_forecast_minutes = forecast_minutes
+        nwp_sequence_len = nwp_history_minutes // 60 + nwp_forecast_minutes // 60 + 1
+
         self.nwp_embed = nn.Embedding(
-            num_embeddings=318, 
+            num_embeddings=318,
             embedding_dim=nwp_image_size_pixels**2,
         )
-        
+
         self.interpolate = nn.Sequential(
             nn.Linear(
-                in_features=nwp_sequence_len, 
+                in_features=nwp_sequence_len,
                 out_features=self.forecast_len,
             ),
-            nn.LeakyReLU(negative_slope=0.01)
+            nn.LeakyReLU(negative_slope=0.01),
         )
-        
+
         with torch.no_grad():
             # Initate the embedding to be all ones and thus take a simple mean
             self.nwp_embed.weight.copy_(torch.ones(self.nwp_embed.weight.shape))
             # Initiate the linear layer to take a mean across all time steps for each output
             self.interpolate[0].weight.copy_(
-                torch.ones(self.interpolate[0].weight.shape)/nwp_sequence_len
+                torch.ones(self.interpolate[0].weight.shape) / nwp_sequence_len
             )
-            self.interpolate[0].bias.copy_(
-                torch.zeros(self.interpolate[0].bias.shape)
-            )
-        
-        self.save_hyperparameters()
+            self.interpolate[0].bias.copy_(torch.zeros(self.interpolate[0].bias.shape))
 
+        self.save_hyperparameters()
 
     def forward(self, x):
 
-        nwp_data = x[BatchKey.nwp].float() 
-        
-        # This hack is specific to the current pvnet pipeline. In the pipeline, the dwsrf is 
+        nwp_data = x[BatchKey.nwp].float()
+
+        # This hack is specific to the current pvnet pipeline. In the pipeline, the dwsrf is
         # standardised, so has mean zero and some negative values. I want all values to be >=0 for
         # this model, so we can calculate a weighted mean for each time step.
-        dwsrf = nwp_data[:,:,self.dwsrf_channel]
+        dwsrf = nwp_data[:, :, self.dwsrf_channel]
         mn = 111.28265039
         std = 190.47216887
-        dwsrf = dwsrf+(mn/std)
-        
+        dwsrf = dwsrf + (mn / std)
+
         id = x[BatchKey.gsp_id][:, 0].int()
 
         mask = self.nwp_embed(id)
         mask = mask.reshape((-1, 1, *dwsrf.shape[-2:]))
-        
-        weighted_dwsrf = (mask*dwsrf).mean(dim=-1).mean(dim=-1)
-        
+
+        weighted_dwsrf = (mask * dwsrf).mean(dim=-1).mean(dim=-1)
+
         out = self.interpolate(weighted_dwsrf)
 
         return out
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     from torch.optim import SGD
+
     history = 60
     forecast = 30
 
-    sun_in = torch.rand((3, (history+forecast)//30+1)) #0D
-    gsp_id = torch.randint(1, 317, (3,1))
+    sun_in = torch.rand((3, (history + forecast) // 30 + 1))  # 0D
+    gsp_id = torch.randint(1, 317, (3, 1))
     # Shape: batch_size, seq_length, channel, height, width
-    sat_data = torch.rand((3, history//5 +1 - 3, 11, 24, 24)) #3D
+    sat_data = torch.rand((3, history // 5 + 1 - 3, 11, 24, 24))  # 3D
     # shape: batch_size, seq_len, n_chans, height, width
-    nwp_data = torch.zeros((3, (history+forecast)//60+1, 2, 24, 24))
-    gsp = torch.rand((3, (history+forecast)//30+1)) #0D
+    nwp_data = torch.zeros((3, (history + forecast) // 60 + 1, 2, 24, 24))
+    gsp = torch.rand((3, (history + forecast) // 30 + 1))  # 0D
 
     batch = {
         BatchKey.gsp_solar_azimuth: sun_in,
@@ -127,19 +122,17 @@ if __name__=="__main__":
         BatchKey.gsp: gsp,
     }
 
-
     model = Model(
-        forecast_minutes = 30,
-        history_minutes = 60,
-        nwp_forecast_minutes = None,
-        nwp_history_minutes = None,
-        nwp_image_size_pixels = 24,
-        dwsrf_channel = 0,
+        forecast_minutes=30,
+        history_minutes=60,
+        nwp_forecast_minutes=None,
+        nwp_history_minutes=None,
+        nwp_image_size_pixels=24,
+        dwsrf_channel=0,
     )
-    
+
     opt = SGD(model.parameters(), lr=0.001)
-    
-    #print(model)
+
+    # print(model)
     print(model(batch))
     model(batch).sum().backward()
-

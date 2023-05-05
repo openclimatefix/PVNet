@@ -1,17 +1,15 @@
-from torch import nn
 import torch
+from ocf_datapipes.utils.consts import BatchKey
+from torch import nn
 
+import pvnet
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer
-import pvnet
-
-from ocf_datapipes.utils.consts import BatchKey
 
 
 class Model(BaseModel):
-    """Simple baseline model that predicts always the same value. Mainly used for testing.
-    """
-        
+    """Simple baseline model that predicts always the same value. Mainly used for testing."""
+
     name = "single_value"
 
     def __init__(
@@ -26,5 +24,5 @@ class Model(BaseModel):
 
     def forward(self, x: dict):
         # Returns a single value at all steps
-        y_hat = torch.zeros_like(x[BatchKey.gsp][:, :self.forecast_len, 0]) + self._value
+        y_hat = torch.zeros_like(x[BatchKey.gsp][:, : self.forecast_len, 0]) + self._value
         return y_hat

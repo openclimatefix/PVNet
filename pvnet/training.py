@@ -2,7 +2,6 @@ from typing import Optional
 
 import hydra
 import torch
-from omegaconf import DictConfig
 from lightning.pytorch import (
     Callback,
     LightningDataModule,
@@ -11,13 +10,14 @@ from lightning.pytorch import (
     seed_everything,
 )
 from lightning.pytorch.loggers import Logger
-import numpy as np
+from omegaconf import DictConfig
+
 from pvnet import utils
-import pvnet
 
 log = utils.get_logger(__name__)
 
 torch.set_default_dtype(torch.float32)
+
 
 def callbacks_to_phase(callbacks, phase):
     for c in callbacks:
@@ -56,8 +56,6 @@ def train(config: DictConfig) -> Optional[float]:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
                 logger.append(hydra.utils.instantiate(lg_conf))
 
-
-    
     # Init lightning callbacks
     callbacks: list[Callback] = []
     if "callbacks" in config:
@@ -65,29 +63,31 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in cb_conf:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
-    
-    
+
     should_pretrain = False
     for c in callbacks:
-        should_pretrain |= (hasattr(c, "training_phase") and c.training_phase=="pretrain")
-    
+        should_pretrain |= hasattr(c, "training_phase") and c.training_phase == "pretrain"
+
     if should_pretrain:
         callbacks_to_phase(callbacks, "pretrain")
-        
+
     trainer: Trainer = hydra.utils.instantiate(
-        config.trainer, logger=logger, _convert_="partial", callbacks=callbacks,
+        config.trainer,
+        logger=logger,
+        _convert_="partial",
+        callbacks=callbacks,
     )
-    
+
     if should_pretrain:
         # Pre-train the model
         datamodule.block_nwp_and_sat = True
         trainer.fit(model=model, datamodule=datamodule)
-        
+
     callbacks_to_phase(callbacks, "main")
-    
+
     datamodule.block_nwp_and_sat = False
     trainer.should_stop = False
-    
+
     # Train the model completely
     trainer.fit(model=model, datamodule=datamodule)
 

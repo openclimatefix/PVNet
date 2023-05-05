@@ -3,14 +3,14 @@ _target_: pvnet.models.conv3d.model_sat_nwp.Model
 #--------------------------------------------
 # Sat/NWP encoder settings
 #--------------------------------------------
-    
-image_encoder: 
-    _target_: pvnet.models.conv3d.encoders.DefaultPVNet
-    _partial_: True
+
+image_encoder:
+  _target_: pvnet.models.conv3d.encoders.DefaultPVNet
+  _partial_: True
 encoder_out_features: 128
 encoder_kwargs:
-    number_of_conv3d_layers: 3
-    conv3d_channels: 32
+  number_of_conv3d_layers: 3
+  conv3d_channels: 32
 
 include_sat: True
 include_nwp: True
@@ -23,11 +23,11 @@ number_nwp_channels: 2
 # Tabular network settings
 #--------------------------------------------
 
-output_network: 
-    _target_: pvnet.models.conv3d.dense_networks.DefaultFCNet
-    _partial_: True
+output_network:
+  _target_: pvnet.models.conv3d.dense_networks.DefaultFCNet
+  _partial_: True
 output_network_kwargs:
-    fc_hidden_features: 64
+  fc_hidden_features: 64
 
 embedding_dim: 16
 include_sun: True
@@ -43,5 +43,5 @@ nwp_forecast_minutes: 480
 # ----------------------------------------------
 
 optimizer:
-    _target_: pvnet.optimizers.AdamW
-    lr: 0.0005
+  _target_: pvnet.optimizers.AdamW
+  lr: 0.0005

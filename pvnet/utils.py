@@ -3,22 +3,20 @@ import os
 import warnings
 from collections.abc import Sequence
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
 import yaml
-from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.utilities import rank_zero_only
-from pytorch_lightning.loggers import Logger
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
-import pvnet
-import datetime
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.geospatial import osgb_to_lat_lon
+from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning.loggers import Logger
+from pytorch_lightning.utilities import rank_zero_only
+
+import pvnet
 
 
 def load_config(config_file):
@@ -209,8 +207,8 @@ def finish(
 
             wandb.finish()
 
-def plot_batch_forecasts(batch, y_hat, batch_idx=None):
 
+def plot_batch_forecasts(batch, y_hat, batch_idx=None):
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
@@ -223,39 +221,28 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None):
     times_utc = batch[BatchKey.gsp_time_utc].cpu().numpy().squeeze().astype("datetime64[s]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
 
-    n_times = len(times_utc[0])-t0_idx-1
+    len(times_utc[0]) - t0_idx - 1
     batch_size = y.shape[0]
 
-    fig, axes = plt.subplots(4,4, figsize=(8,8))
+    fig, axes = plt.subplots(4, 4, figsize=(8, 8))
 
     for i, ax in enumerate(axes.ravel()):
-        if i>=batch_size:
+        if i >= batch_size:
             ax.axis("off")
             continue
-        ax.plot(
-            times_utc[i], 
-            y[i], 
-            marker='.', 
-            color="k", 
-            label=r"$y$"
-        )
-        ax.plot(
-            times_utc[i][-len(y_hat[i]):], 
-            y_hat[i], marker='.', 
-            color="r", 
-            label=r"$\hat{y}$"
-        )
+        ax.plot(times_utc[i], y[i], marker=".", color="k", label=r"$y$")
+        ax.plot(times_utc[i][-len(y_hat[i]) :], y_hat[i], marker=".", color="r", label=r"$\hat{y}$")
         ax.set_title(f"ID: {gsp_ids[i]} | {times_utc[i][0].date()}", fontsize="small")
 
-        xticks = [t for t in times_utc[i] if t.minute==0][::2]
+        xticks = [t for t in times_utc[i] if t.minute == 0][::2]
         ax.set_xticks(ticks=xticks, labels=[f"{t.hour:02}" for t in xticks], rotation=90)
         ax.grid()
 
-    axes[0,0].legend(loc="best")
+    axes[0, 0].legend(loc="best")
 
-    for ax in axes[-1,:]:
+    for ax in axes[-1, :]:
         ax.set_xlabel("Time (hour of day)")
-    
+
     if batch_idx is not None:
         title = f"Normed GSP output : batch_idx={batch_idx}"
     else:
@@ -263,19 +250,19 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None):
     plt.suptitle(title)
     plt.tight_layout()
 
-    return fig 
+    return fig
+
 
 def construct_ocf_ml_metrics_batch_df(batch, y, y_hat):
-    
     def _repeat(x):
         return np.repeat(x.squeeze(), n_times)
 
     def _get_numpy(key):
-        return batch[key].cpu().numpy().squeeze()   
+        return batch[key].cpu().numpy().squeeze()
 
     t0_idx = batch[BatchKey.gsp_t0_idx]
     times_utc = _get_numpy(BatchKey.gsp_time_utc)
-    n_times = len(times_utc[0])-t0_idx-1
+    n_times = len(times_utc[0]) - t0_idx - 1
 
     y_osgb_centre = _get_numpy(BatchKey.gsp_y_osgb)
     x_osgb_centre = _get_numpy(BatchKey.gsp_x_osgb)
@@ -285,23 +272,22 @@ def construct_ocf_ml_metrics_batch_df(batch, y, y_hat):
     df_dict = {}
 
     # Repeat these features for each forecast time
-    df_dict['latitude'] = _repeat(latitude)
-    df_dict['longitude'] = _repeat(longitude)
-    df_dict['id'] = _repeat(_get_numpy(BatchKey.gsp_id))
-    df_dict['t0_datetime_utc'] = _repeat(times_utc[:, t0_idx]).astype("datetime64[s]")
-    df_dict['capacity_mwp'] = _repeat(_get_numpy(BatchKey.gsp_capacity_megawatt_power))
+    df_dict["latitude"] = _repeat(latitude)
+    df_dict["longitude"] = _repeat(longitude)
+    df_dict["id"] = _repeat(_get_numpy(BatchKey.gsp_id))
+    df_dict["t0_datetime_utc"] = _repeat(times_utc[:, t0_idx]).astype("datetime64[s]")
+    df_dict["capacity_mwp"] = _repeat(_get_numpy(BatchKey.gsp_capacity_megawatt_power))
 
     # TODO: Some (10%) of these values are NaN -> 0 for time t0 for pvnet pipeline
     #       Better to search for last non-nan (non-zero)?
-    df_dict['t0_actual_pv_outturn_mw'] = _repeat(
-        (
-            _get_numpy(BatchKey.gsp_capacity_megawatt_power)[:, None]
-            *_get_numpy(BatchKey.gsp)
-        )[:, t0_idx]
+    df_dict["t0_actual_pv_outturn_mw"] = _repeat(
+        (_get_numpy(BatchKey.gsp_capacity_megawatt_power)[:, None] * _get_numpy(BatchKey.gsp))[
+            :, t0_idx
+        ]
     )
 
     # Flatten the forecasts times to 1D
-    df_dict['target_datetime_utc'] = times_utc[:,t0_idx+1:].flatten().astype("datetime64[s]")
-    df_dict['actual_pv_outturn_mw'] = y.cpu().numpy().flatten()*df_dict['capacity_mwp']
-    df_dict['forecast_pv_outturn_mw'] = y_hat.cpu().numpy().flatten()*df_dict['capacity_mwp']
+    df_dict["target_datetime_utc"] = times_utc[:, t0_idx + 1 :].flatten().astype("datetime64[s]")
+    df_dict["actual_pv_outturn_mw"] = y.cpu().numpy().flatten() * df_dict["capacity_mwp"]
+    df_dict["forecast_pv_outturn_mw"] = y_hat.cpu().numpy().flatten() * df_dict["capacity_mwp"]
     return pd.DataFrame(df_dict)

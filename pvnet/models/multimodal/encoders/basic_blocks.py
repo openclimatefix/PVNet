@@ -1,18 +1,20 @@
-from torch import nn
 from abc import ABCMeta, abstractmethod
+
+from torch import nn
 
 
 class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
     """Abstract class for NWP/satellite encoder. The encoder will take an input of shape
     (batch_size, sequence_length, channels, height, width) and return an output of shape
     (batch_size, out_features).
-    
+
     Args:
         sequence_length: The time sequence length of the data.
         image_size_pixels: The spatial size of the image. Assumed square.
         in_channels: Number of input channels.
         out_features: Number of output features.
     """
+
     def __init__(
         self,
         sequence_length: int,
@@ -21,7 +23,7 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
         out_features: int,
     ):
         super().__init__()
-        
+
     @abstractmethod
     def forward(self):
         pass
@@ -30,19 +32,20 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
 class ResidualConv3dBlock(nn.Module):
     """Fully-connected deep network based on ResNet architecture. Internally, this network uses ELU
     activations throughout the residual blocks.
-        
+
     Args:
         in_features: Number of input features.
         n_layers: Number of layers in residual pathway.
         dropout_frac: Probability of an element to be zeroed.
     """
+
     def __init__(
         self,
         in_channels,
         n_layers: int = 2,
         dropout_frac: float = 0.0,
     ):
-        
+
         super().__init__()
 
         layers = []
@@ -57,8 +60,8 @@ class ResidualConv3dBlock(nn.Module):
                 ),
                 nn.Dropout3d(p=dropout_frac),
             ]
-        
+
         self.model = nn.Sequential(*layers)
-        
+
     def forward(self, x):
-        return self.model(x)+x
+        return self.model(x) + x

@@ -6,22 +6,24 @@ import pvnet
 @pytest.fixture(scope="session")
 def sample_datamodule():
     dm = DataModule(
-            configuration=None,
-            batch_size=2,
-            num_workers=0,
-            prefetch_factor=2,
-            train_period=[None, None],
-            val_period=[None, None],
-            test_period=[None, None],
-            block_nwp_and_sat=False,
-            batch_dir="tests/data/sample_batches",
+        configuration=None,
+        batch_size=2,
+        num_workers=0,
+        prefetch_factor=2,
+        train_period=[None, None],
+        val_period=[None, None],
+        test_period=[None, None],
+        block_nwp_and_sat=False,
+        batch_dir="tests/data/sample_batches",
     )
     return dm
-    
+
+
 @pytest.fixture(scope="session")
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
     return batch
+
 
 @pytest.fixture(scope="session")
 def model_minutes_kwargs():
@@ -30,7 +32,8 @@ def model_minutes_kwargs():
         history_minutes=120,
     )
     return kwargs
-    
+
+
 @pytest.fixture(scope="session")
 def multimodal_model_kwargs(model_minutes_kwargs):
     kwargs = dict(
@@ -47,7 +50,6 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         nwp_image_size_pixels=24,
         number_sat_channels=11,
         number_nwp_channels=2,
-
         output_network=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
         output_network_kwargs=dict(
             fc_hidden_features=128,
@@ -58,7 +60,6 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         embedding_dim=16,
         include_sun=True,
         include_gsp_yield_history=True,
-
         sat_history_minutes=90,
         nwp_history_minutes=120,
         nwp_forecast_minutes=480,

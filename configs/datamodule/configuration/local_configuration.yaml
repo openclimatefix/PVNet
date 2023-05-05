@@ -1,19 +1,19 @@
 general:
   description: Config for producing batches on OCF's on-premises hardware.
   name: local_pvnet
-  
+
 input_data:
   data_source_which_defines_geospatial_locations: gsp
   default_forecast_minutes: 120
   default_history_minutes: 60
-  
+
   gsp:
     gsp_zarr_path: /mnt/storage_ssd_4tb/metnet_train/pv_gsp.zarr
     history_minutes: 60
     forecast_minutes: 120
     time_resolution_minutes: 30
-    start_datetime: '2020-01-01T00:00:00'
-    end_datetime: '2021-09-01T00:00:00'
+    start_datetime: "2020-01-01T00:00:00"
+    end_datetime: "2021-09-01T00:00:00"
     gsp_image_size_pixels_height: 64
     gsp_image_size_pixels_width: 64
     gsp_meters_per_pixel: 2000
@@ -23,7 +23,7 @@ input_data:
     live_load_extra_minutes: 60
     log_level: ERROR
     metadata_only: false
-    
+
   nwp:
     nwp_zarr_path: /mnt/leonardo/storage_ssd_8tb/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/NWP/UK_Met_Office/UKV/zarr/UKV_intermediate_version_7.zarr
     history_minutes: 60
@@ -45,14 +45,14 @@ input_data:
     history_minutes: 60
     forecast_minutes: 120
     time_resolution_minutes: 5
-    start_datetime: '2020-01-01T00:00:00'
-    end_datetime: '2021-09-01T00:00:00'
+    start_datetime: "2020-01-01T00:00:00"
+    end_datetime: "2021-09-01T00:00:00"
     pv_image_size_meters_height: 64
     pv_image_size_meters_width: 64
     n_pv_systems_per_example: 128
     get_center: false
     is_live: false
-    
+
   satellite:
     satellite_zarr_path: "/mnt/leonardo/storage_c/2020_nonhrv.zarr"
     history_minutes: 60
@@ -87,15 +87,15 @@ input_data:
       - HRV
     hrvsatellite_image_size_pixels_height: 128
     hrvsatellite_image_size_pixels_width: 256
-    
+
   topographic:
     topographic_filename: /mnt/storage_ssd_4tb/metnet_train/Topo/europe_dem_1km_osgb.tif
     topographic_image_size_pixels_width: 300
     topographic_image_size_pixels_height: 300
 
 output_data:
-  filepath: 'not-needed'
-  
+  filepath: "not-needed"
+
 process:
   batch_size: 2
   local_temp_path: /home/james/tmp

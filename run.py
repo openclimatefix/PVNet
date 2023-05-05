@@ -1,30 +1,31 @@
 import os
 
 import torch
+
 try:
-    torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method("spawn")
     import torch.multiprocessing as mp
-    mp.set_start_method('spawn')
+
+    mp.set_start_method("spawn")
 except RuntimeError:
     pass
-
-import dotenv
-import hydra
-from omegaconf import DictConfig
 
 import logging
 import sys
 
-
 # Tired of seeing these warnings
 import warnings
+
+import dotenv
+import hydra
+from omegaconf import DictConfig
 from sqlalchemy import exc as sa_exc
+
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 os.environ["HYDRA_FULL_ERROR"] = "1"
-
 
 
 # this file can be run for example using

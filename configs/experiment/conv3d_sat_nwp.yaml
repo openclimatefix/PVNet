@@ -25,5 +25,3 @@ datamodule:
 
 model:
   conv3d_channels: 32
-
-

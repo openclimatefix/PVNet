@@ -1,18 +1,17 @@
 _target_: pvnet.models.multimodal.multimodal.Model
 
-
 #--------------------------------------------
 # Sat/NWP encoder settings
 #--------------------------------------------
 
-image_encoder: 
-    _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
-    _partial_: True
+image_encoder:
+  _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+  _partial_: True
 encoder_out_features: 256
 encoder_kwargs:
-    number_of_conv3d_layers: 6
-    conv3d_channels: 32
-    
+  number_of_conv3d_layers: 6
+  conv3d_channels: 32
+
 include_sat: True
 include_nwp: True
 add_image_embedding_channel: True
@@ -21,19 +20,18 @@ nwp_image_size_pixels: 24
 number_sat_channels: 11
 number_nwp_channels: 2
 
-
 #--------------------------------------------
 # Tabular network settings
 #--------------------------------------------
 
-output_network: 
-    _target_: pvnet.models.multimodal.linear_networks.networks.ResFCNet2
-    _partial_: True
+output_network:
+  _target_: pvnet.models.multimodal.linear_networks.networks.ResFCNet2
+  _partial_: True
 output_network_kwargs:
-    fc_hidden_features: 128
-    n_res_blocks: 6
-    res_block_layers: 2
-    dropout_frac: 0.0
+  fc_hidden_features: 128
+  n_res_blocks: 6
+  res_block_layers: 2
+  dropout_frac: 0.0
 
 embedding_dim: 16
 include_sun: True
@@ -49,10 +47,10 @@ nwp_forecast_minutes: 480
 # ----------------------------------------------
 
 optimizer:
-    _target_: pvnet.optimizers.AdamWReduceLROnPlateau
-    lr: 0.0001
-    weight_decay: 0.25 
-    amsgrad: True
-    patience: 5
-    factor: 0.1
-    threshold: 0.002
+  _target_: pvnet.optimizers.AdamWReduceLROnPlateau
+  lr: 0.0001
+  weight_decay: 0.25
+  amsgrad: True
+  patience: 5
+  factor: 0.1
+  threshold: 0.002

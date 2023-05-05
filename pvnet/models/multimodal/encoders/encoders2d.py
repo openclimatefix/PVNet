@@ -2,24 +2,21 @@
 channels before putting through these architectures.
 """
 
-import torch
-from torch import nn, Tensor
-
 from typing import Callable, List, Optional, Type, Union
 
+import torch
+from torch import Tensor, nn
+from torchvision.models.convnext import CNBlock, CNBlockConfig, LayerNorm2d
+from torchvision.models.resnet import BasicBlock, Bottleneck, conv1x1
 from torchvision.ops.misc import Conv2dNormActivation
 from torchvision.utils import _log_api_usage_once
-from torchvision.models.resnet import conv1x1, BasicBlock, Bottleneck
-from torchvision.models.convnext import LayerNorm2d, CNBlock, CNBlockConfig
 
-from pvnet.models.base_model import BaseModel
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
-
 
 
 class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
     """
-    An implementation of EfficientNet from `efficientnet_pytorch`. This model is quite naive, and 
+    An implementation of EfficientNet from `efficientnet_pytorch`. This model is quite naive, and
     just stacks the sequence into channels.
 
     Args:
@@ -29,7 +26,7 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         out_features: Number of output features.
         model_name: Name of EfficientNet model to construct.
     """
-    
+
     def __init__(
         self,
         sequence_length: int,
@@ -38,83 +35,79 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         out_features: int,
         model_name: str = "efficientnet-b0",
     ):
-        
+
         try:
             from efficientnet_pytorch import EfficientNet
         except:
             raise ImportError(
-                "The efficientnet_pytorch package must be installed to use the " 
+                "The efficientnet_pytorch package must be installed to use the "
                 "EncoderNaiveEfficientNet encoder. See "
                 "https://github.com/lukemelas/EfficientNet-PyTorch for install instructions."
             )
 
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-        
 
         self.model = EfficientNet.from_name(
-            model_name, 
-            in_channels=in_channels*sequence_length, 
-            image_size=image_size_pixels, 
-            num_classes=out_features
+            model_name,
+            in_channels=in_channels * sequence_length,
+            image_size=image_size_pixels,
+            num_classes=out_features,
         )
 
     def forward(self, x):
         bs, s, c, h, w = x.shape
-        x = x.reshape((bs, s*c, h, w))
+        x = x.reshape((bs, s * c, h, w))
         return self.model(x)
 
 
-
 class NaiveResNet(nn.Module):
-    """A ResNet model modified from one in torchvision [1] to allow different number of input 
+    """A ResNet model modified from one in torchvision [1] to allow different number of input
     channels. This model is quite naive, and just stacks the sequence into channels.
-    
+
     Example use:
         ```
         resnet18 = ResNet(BasicBlock, [2, 2, 2, 2])
         resnet50 = ResNet(Bottleneck, [3, 4, 6, 3])
         ```
-    
+
     Sources:
          [1] https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
          [2] https://pytorch.org/hub/pytorch_vision_resnet
-         
+
     Args:
         sequence_length: The time sequence length of the data.
         image_size_pixels: The spatial size of the image. Assumed square.
         in_channels: Number of input channels.
         out_features: Number of output features.
-        
+
         For other args see [1] and [2].
-    
+
     """
+
     def __init__(
         self,
         sequence_length: int,
         image_size_pixels: int,
         in_channels: int,
         out_features: int,
-        
         layers: List[int] = [2, 2, 2, 2],
         block: str = "bottleneck",
-
         zero_init_residual: bool = False,
         groups: int = 1,
         width_per_group: int = 64,
         replace_stride_with_dilation: Optional[List[bool]] = None,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
-        
     ):
-        
+
         super().__init__()
         _log_api_usage_once(self)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
-        
-        # Account for stacking sequences into more channels
-        in_channels = in_channels*sequence_length
-        
+
+        # Account for stacking sequences into more channels
+        in_channels = in_channels * sequence_length
+
         block = {
             "basic": BasicBlock,
             "bottleneck": Bottleneck,
@@ -133,14 +126,22 @@ class NaiveResNet(nn.Module):
             )
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(in_channels, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False
+        )
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
-        #self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0])
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1])
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2])
+        self.layer2 = self._make_layer(
+            block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0]
+        )
+        self.layer3 = self._make_layer(
+            block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1]
+        )
+        self.layer4 = self._make_layer(
+            block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2]
+        )
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, out_features)
         self.final_act = nn.LeakyReLU()
@@ -185,7 +186,14 @@ class NaiveResNet(nn.Module):
         layers = []
         layers.append(
             block(
-                self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation, norm_layer
+                self.inplanes,
+                planes,
+                stride,
+                downsample,
+                self.groups,
+                self.base_width,
+                previous_dilation,
+                norm_layer,
             )
         )
         self.inplanes = planes * block.expansion
@@ -208,7 +216,7 @@ class NaiveResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        #x = self.maxpool(x)
+        # x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.layer2(x)
@@ -224,18 +232,16 @@ class NaiveResNet(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         bs, s, c, h, w = x.shape
-        x = x.reshape((bs, s*c, h, w))
+        x = x.reshape((bs, s * c, h, w))
         return self._forward_impl(x)
 
 
-
 class ConvNeXt(nn.Module):
-    
     """
-    A ConvNeXt model [1] modified from one in torchvision [2] to allow different number of input 
-    channels, and smaller spatial inputs. This model is quite naive, and just stacks the sequence 
+    A ConvNeXt model [1] modified from one in torchvision [2] to allow different number of input
+    channels, and smaller spatial inputs. This model is quite naive, and just stacks the sequence
     into channels.
-    
+
     Example usage:
         ```
         block_setting = [
@@ -254,33 +260,33 @@ class ConvNeXt(nn.Module):
             image_size_pixels=24,
             in_channels=2,
             out_features=128,
-            block_setting=block_setting, 
+            block_setting=block_setting,
             stochastic_depth_prob=0.1,
         )
         ```
-        
+
     Sources:
         [1] https://arxiv.org/abs/2201.03545
         [2] https://github.com/pytorch/vision/blob/main/torchvision/models/convnext.py
         [3] https://pytorch.org/vision/main/models/convnext.html
-        
-         
+
+
     Args:
         sequence_length: The time sequence length of the data.
         image_size_pixels: The spatial size of the image. Assumed square.
         in_channels: Number of input channels.
         out_features: Number of output features.
-        
+
         For other args see [2] and [3].
-    
+
     """
+
     def __init__(
         self,
         sequence_length: int,
         image_size_pixels: int,
         in_channels: int,
         out_features: int,
-        
         block_setting: List[CNBlockConfig],
         stochastic_depth_prob: float = 0.0,
         layer_scale: float = 1e-6,
@@ -293,7 +299,10 @@ class ConvNeXt(nn.Module):
 
         if not block_setting:
             raise ValueError("The block_setting should not be empty")
-        elif not (isinstance(block_setting, Sequence) and all([isinstance(s, CNBlockConfig) for s in block_setting])):
+        elif not (
+            isinstance(block_setting, Sequence)
+            and all([isinstance(s, CNBlockConfig) for s in block_setting])
+        ):
             raise TypeError("The block_setting should be List[CNBlockConfig]")
 
         if block is None:
@@ -303,9 +312,9 @@ class ConvNeXt(nn.Module):
             norm_layer = partial(LayerNorm2d, eps=1e-6)
 
         layers: List[nn.Module] = []
-        
-        # Account for stacking sequences into more channels
-        in_channels = in_channels*sequence_length
+
+        # Account for stacking sequences into more channels
+        in_channels = in_channels * sequence_length
 
         # Stem
         firstconv_output_channels = block_setting[0].input_channels
@@ -347,12 +356,14 @@ class ConvNeXt(nn.Module):
 
         lastblock = block_setting[-1]
         lastconv_output_channels = (
-            lastblock.out_channels if lastblock.out_channels is not None else lastblock.input_channels
+            lastblock.out_channels
+            if lastblock.out_channels is not None
+            else lastblock.input_channels
         )
         self.classifier = nn.Sequential(
-            norm_layer(lastconv_output_channels), 
-            nn.Flatten(1), 
-            nn.Linear(lastconv_output_channels, out_features)
+            norm_layer(lastconv_output_channels),
+            nn.Flatten(1),
+            nn.Linear(lastconv_output_channels, out_features),
         )
 
         for m in self.modules():
@@ -369,7 +380,5 @@ class ConvNeXt(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         bs, s, c, h, w = x.shape
-        x = x.reshape((bs, s*c, h, w))
+        x = x.reshape((bs, s * c, h, w))
         return self._forward_impl(x)
-
-    

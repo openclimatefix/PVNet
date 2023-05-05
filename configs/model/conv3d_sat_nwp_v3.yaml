@@ -4,13 +4,13 @@ _target_: pvnet.models.conv3d.model_sat_nwp.Model
 # Sat/NWP encoder settings
 #--------------------------------------------
 
-image_encoder: 
-    _target_: pvnet.models.conv3d.encoders.EncoderNaiveEfficientNet
-    _partial_: True
+image_encoder:
+  _target_: pvnet.models.conv3d.encoders.EncoderNaiveEfficientNet
+  _partial_: True
 encoder_out_features: 128
-encoder_kwargs: 
-    model_name: "efficientnet-b0"
-    
+encoder_kwargs:
+  model_name: "efficientnet-b0"
+
 include_sat: True
 include_nwp: True
 sat_image_size_pixels: 24
@@ -18,19 +18,18 @@ nwp_image_size_pixels: 24
 number_sat_channels: 11
 number_nwp_channels: 2
 
-
 #--------------------------------------------
 # Tabular network settings
 #--------------------------------------------
 
-output_network: 
-    _target_: pvnet.models.conv3d.dense_networks.ResFCNet
-    _partial_: True
+output_network:
+  _target_: pvnet.models.conv3d.dense_networks.ResFCNet
+  _partial_: True
 output_network_kwargs:
-    fc_hidden_features: 64
-    n_res_blocks: 3
-    res_block_layers: 2
-    dropout_frac: 0.0
+  fc_hidden_features: 64
+  n_res_blocks: 3
+  res_block_layers: 2
+  dropout_frac: 0.0
 
 embedding_dim: 16
 include_sun: True
@@ -46,5 +45,5 @@ nwp_forecast_minutes: 480
 # ----------------------------------------------
 
 optimizer:
-    _target_: pvnet.optimizers.AdamW
-    lr: 0.0005
+  _target_: pvnet.optimizers.AdamW
+  lr: 0.0005

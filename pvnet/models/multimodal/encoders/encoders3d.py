@@ -1,15 +1,13 @@
 """Encoder modules for the satellite/NWP data based on 3D concolutions.
 """
 import torch
-from torch import nn, Tensor
-
+from torch import nn
 from torchvision.transforms import CenterCrop
 
-from pvnet.models.base_model import BaseModel
 from pvnet.models.multimodal.encoders.basic_blocks import (
-    AbstractNWPSatelliteEncoder, ResidualConv3dBlock
+    AbstractNWPSatelliteEncoder,
+    ResidualConv3dBlock,
 )
-
 
 
 class DefaultPVNet(AbstractNWPSatelliteEncoder):
@@ -37,19 +35,18 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         fc_features: int = 128,
     ):
 
-
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-        
+
         # Check that the output shape of the convolutional layers will be at least 1x1
-        cnn_spatial_output_size = (image_size_pixels - 2 * number_of_conv3d_layers)
-        if not (cnn_spatial_output_size>=1):
+        cnn_spatial_output_size = image_size_pixels - 2 * number_of_conv3d_layers
+        if not (cnn_spatial_output_size >= 1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
                 f"spatial size ({image_size_pixels})"
             )
-        
+
         conv_layers = []
-        
+
         conv_layers += [
             nn.Conv3d(
                 in_channels=in_channels,
@@ -69,41 +66,33 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
                 ),
                 nn.ELU(),
             ]
-        
+
         self.conv_layers = nn.Sequential(*conv_layers)
-        
-        # Calculate the size of the output of the 3D convolutional layers
-        cnn_output_size = (
-            conv3d_channels
-            * cnn_spatial_output_size**2
-            * sequence_length
-        )
-        
+
+        # Calculate the size of the output of the 3D convolutional layers
+        cnn_output_size = conv3d_channels * cnn_spatial_output_size**2 * sequence_length
+
         self.final_block = nn.Sequential(
-            nn.Linear(
-                in_features=cnn_output_size, out_features=fc_features
-            ),
+            nn.Linear(in_features=cnn_output_size, out_features=fc_features),
             nn.ELU(),
-            nn.Linear(
-                in_features=fc_features, out_features=out_features
-            ),
+            nn.Linear(in_features=fc_features, out_features=out_features),
             nn.ELU(),
         )
 
     def forward(self, x):
-                
+
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
 
         # Fully connected layers
         out = self.final_block(out)
-        
+
         return out
 
 
 class DefaultPVNet2(AbstractNWPSatelliteEncoder):
     """
-    This is the original encoding module used in PVNet, with a few minor tweaks, and added 
+    This is the original encoding module used in PVNet, with a few minor tweaks, and added
     batchnorm.
 
     Args:
@@ -115,7 +104,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         conv3d_channels: Number of channels used in each conv3d layer.
         fc_features: number of output nodes out of the hidden fully connected layer.
         batch_norm: Whether to include 3D batch normalisation.
-        fc_dropout: Probability of an element to be zeroed before the last two fully connected 
+        fc_dropout: Probability of an element to be zeroed before the last two fully connected
             layers.
     """
 
@@ -132,17 +121,16 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         fc_dropout=0.2,
     ):
 
-
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
         # Check that the output shape of the convolutional layers will be at least 1x1
-        cnn_spatial_output_size = (image_size_pixels - 2 * number_of_conv3d_layers)
-        if not (cnn_spatial_output_size>0):
+        cnn_spatial_output_size = image_size_pixels - 2 * number_of_conv3d_layers
+        if not (cnn_spatial_output_size > 0):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
                 f"spatial size ({image_size_pixels})"
             )
-                
+
         conv_layers = [
             nn.Conv3d(
                 in_channels=in_channels,
@@ -153,7 +141,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
             nn.LeakyReLU(),
         ]
         if batch_norm:
-            # Inserted before activation using position -1
+            # Inserted before activation using position -1
             conv_layers.insert(-1, nn.BatchNorm3d(conv3d_channels))
         for i in range(0, number_of_conv3d_layers - 1):
             conv_layers += [
@@ -166,50 +154,42 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
                 nn.LeakyReLU(),
             ]
             if batch_norm:
-                # Inserted before activation using position -1
+                # Inserted before activation using position -1
                 conv_layers.insert(-1, nn.BatchNorm3d(conv3d_channels))
-        
+
         self.conv_layers = nn.Sequential(*conv_layers)
-        
-        # Calculate the size of the output of the 3D convolutional layers
-        cnn_output_size = (
-            conv3d_channels
-            * cnn_spatial_output_size**2
-            * sequence_length
-        )
-        
+
+        # Calculate the size of the output of the 3D convolutional layers
+        cnn_output_size = conv3d_channels * cnn_spatial_output_size**2 * sequence_length
+
         final_block = [
-            nn.Linear(
-                in_features=cnn_output_size, out_features=fc_features
-            ),
+            nn.Linear(in_features=cnn_output_size, out_features=fc_features),
             nn.LeakyReLU(),
-            nn.Linear(
-                in_features=fc_features, out_features=out_features
-            ),
+            nn.Linear(in_features=fc_features, out_features=out_features),
             nn.LeakyReLU(),
         ]
-        
-        if fc_dropout>0:
+
+        if fc_dropout > 0:
             # Insert after the linear layers
             final_block.insert(1, nn.Dropout(fc_dropout))
             final_block.insert(-1, nn.Dropout(fc_dropout))
-        
+
         self.final_block = nn.Sequential(*final_block)
 
     def forward(self, x):
-                
+
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
 
         # Fully connected layers
         out = self.final_block(out)
-        
+
         return out
 
 
 class EncoderUNET(AbstractNWPSatelliteEncoder):
     """
-    An encoder for satellite and/or NWP data taking inspiration from the kinds of skip 
+    An encoder for satellite and/or NWP data taking inspiration from the kinds of skip
     connections in UNet. This differs from an actual UNet in that it does not have upsampling
     layers, instead it concats features from different spatial scales, and applies a few extra
     conv3d layers.
@@ -224,6 +204,7 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         fc_features: number of output nodes out of the hidden fully connected layer.
         dropout_frac: Probability of an element to be zeroed in the residual pathways.
     """
+
     def __init__(
         self,
         sequence_length: int,
@@ -235,18 +216,17 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         conv3d_channels: int = 32,
         dropout_frac: float = 0.1,
     ):
-        
-        cnn_spatial_output = image_size_pixels//(2**n_downscale)
-        
-        if not (cnn_spatial_output>0):
+
+        cnn_spatial_output = image_size_pixels // (2**n_downscale)
+
+        if not (cnn_spatial_output > 0):
             raise ValueError(
                 f"cannot use this many downscaling layers ({n_downscale}) with this input "
                 f"spatial size ({image_size_pixels})"
             )
-            
+
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
-                
         self.first_layer = nn.Sequential(
             nn.Conv3d(
                 in_channels=in_channels,
@@ -255,18 +235,18 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
                 padding=(0, 0, 0),
             ),
             ResidualConv3dBlock(
-                in_channels=conv3d_channels, 
+                in_channels=conv3d_channels,
                 n_layers=res_block_layers,
                 dropout_frac=dropout_frac,
             ),
         )
-        
+
         downscale_layers = []
         for _ in range(n_downscale):
             downscale_layers += [
                 nn.Sequential(
                     ResidualConv3dBlock(
-                        in_channels=conv3d_channels, 
+                        in_channels=conv3d_channels,
                         n_layers=res_block_layers,
                         dropout_frac=dropout_frac,
                     ),
@@ -276,53 +256,50 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
                         out_channels=conv3d_channels,
                         kernel_size=(1, 2, 2),
                         padding=(0, 0, 0),
-                        stride=(1,2,2),
+                        stride=(1, 2, 2),
                     ),
                 )
             ]
-            
+
         self.downscale_layers = nn.ModuleList(downscale_layers)
-        
+
         self.crop_fn = CenterCrop(cnn_spatial_output)
-        
-        cat_channels = conv3d_channels*(1+n_downscale)
+
+        cat_channels = conv3d_channels * (1 + n_downscale)
         self.post_cat_conv = nn.Sequential(
             ResidualConv3dBlock(
-                in_channels=cat_channels, 
+                in_channels=cat_channels,
                 n_layers=res_block_layers,
             ),
             nn.ELU(),
             nn.Conv3d(
-                in_channels=cat_channels, 
-                out_channels=conv3d_channels, 
-                kernel_size=(1,1,1),
+                in_channels=cat_channels,
+                out_channels=conv3d_channels,
+                kernel_size=(1, 1, 1),
             ),
         )
-        
+
         final_channels = (
-            (image_size_pixels//(2**n_downscale))**2
-            *conv3d_channels
-            *sequence_length
+            (image_size_pixels // (2**n_downscale)) ** 2 * conv3d_channels * sequence_length
         )
         self.final_layer = nn.Sequential(
             nn.ELU(),
             nn.Linear(
-                in_features=final_channels, 
+                in_features=final_channels,
                 out_features=out_features,
             ),
             nn.ELU(),
         )
 
-
     def forward(self, x):
-                
+
         out = self.first_layer(x)
         outputs = [self.crop_fn(out)]
-            
+
         for layer in self.downscale_layers:
             out = layer(out)
             outputs += [self.crop_fn(out)]
-        
+
         out = torch.cat(outputs, dim=1)
         out = self.post_cat_conv(out)
         out = torch.flatten(out, start_dim=1)
