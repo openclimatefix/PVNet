@@ -3,7 +3,7 @@ from pvnet.data.datamodule import DataModule
 import pvnet
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def sample_datamodule():
     dm = DataModule(
             configuration=None,
@@ -18,12 +18,12 @@ def sample_datamodule():
     )
     return dm
     
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
     return batch
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def model_minutes_kwargs():
     kwargs = dict(
         forecast_minutes=480,
@@ -31,7 +31,7 @@ def model_minutes_kwargs():
     )
     return kwargs
     
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def multimodal_model_kwargs(model_minutes_kwargs):
     kwargs = dict(
         image_encoder=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,

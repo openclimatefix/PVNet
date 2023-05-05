@@ -2,10 +2,11 @@
 config_tree.txt
 lightning_logs/
 logs/
-checkpoints
+checkpoints*
+csv/
+notebooks/
 *.html
 *.csv
-csv/*
 latest_logged_train_batch.png
 
 # Byte-compiled / optimized / DLL files

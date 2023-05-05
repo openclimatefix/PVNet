@@ -8,7 +8,7 @@ def single_value_model(model_minutes_kwargs):
     return model
 
 
-def test_model_forward(last_value_model, sample_batch):
+def test_model_forward(single_value_model, sample_batch):
 
     y = single_value_model(sample_batch)
 

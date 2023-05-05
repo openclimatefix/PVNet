@@ -1,11 +1,10 @@
 from pvnet.models.multimodal.multimodal import Model
 import pytest
 
+
 @pytest.fixture()
 def multimodal_model(multimodal_model_kwargs):
-    model = Model(
-        **multimodal_model_kwargs
-    )
+    model = Model(**multimodal_model_kwargs)
     return model
 
 
