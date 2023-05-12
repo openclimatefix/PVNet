@@ -258,10 +258,10 @@ class Model(BaseModel):
 
         loss = 0
         for key, y_hat in y_hats.items():
-            l = F.l1_loss(y_hat, y)
+            loss_component = F.l1_loss(y_hat, y)
             if key != "all":
-                losses[f"MAE/train/{key}"] = l
-            loss += l
+                losses[f"MAE/train/{key}"] = loss_component
+            loss += loss_component
         loss = loss / len(y_hats)
 
         losses["MAE/train/multi-mode"] = loss

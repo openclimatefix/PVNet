@@ -6,7 +6,10 @@ the same config file currently set to train the model.
 
 use:
 ```
-python save_batches.py +batch_output_dir="/mnt/disks/batches/batches_v0" +num_train_batches=10_000 +num_val_batches=2_000
+python save_batches.py \
+    +batch_output_dir="/mnt/disks/batches/batches_v0" \
+    +num_train_batches=10_000 \
+    +num_val_batches=2_000
 ```
 
 """
