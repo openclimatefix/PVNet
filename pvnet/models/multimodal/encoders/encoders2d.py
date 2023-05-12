@@ -2,8 +2,8 @@
 channels before putting through these architectures.
 """
 
-from typing import Callable, List, Optional, Type, Union, Any, Sequence
 from functools import partial
+from typing import Any, Callable, List, Optional, Sequence, Type, Union
 
 import torch
 from torch import Tensor, nn
@@ -37,12 +37,10 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         model_name: str = "efficientnet-b0",
     ):
 
-        
         # The efficientnet_pytorch package must be installed to use the
         # EncoderNaiveEfficientNet encoder. See
         # https://github.com/lukemelas/EfficientNet-PyTorch for install instructions.
         from efficientnet_pytorch import EfficientNet
-
 
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
@@ -153,8 +151,8 @@ class NaiveResNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
         # Zero-initialize the last BN in each residual branch,
-        # so that the residual branch starts with zeros, and each residual block behaves like an 
-        # identity. This improves the model by 0.2~0.3% according to 
+        # so that the residual branch starts with zeros, and each residual block behaves like an
+        # identity. This improves the model by 0.2~0.3% according to
         # https://arxiv.org/abs/1706.02677
         if zero_init_residual:
             for m in self.modules():

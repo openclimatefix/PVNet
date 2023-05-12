@@ -1,9 +1,10 @@
 """Custom callbacks developed to be able to use early stopping and learning rate finder even when
 pretraining parts of the network.
 """
+from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import BaseFinetuning, EarlyStopping, LearningRateFinder
 from lightning.pytorch.trainer.states import TrainerFn
-from lightning.pytorch import Trainer
+
 
 class PhaseEarlyStopping(EarlyStopping):
 
