@@ -6,6 +6,24 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
+import hydra
+
+from huggingface_hub import PyTorchModelHubMixin
+from huggingface_hub.utils import validate_hf_hub_args
+from huggingface_hub.utils._deprecation import _deprecate_positional_args
+from huggingface_hub.hub_mixin import T
+from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
+from huggingface_hub.file_download import hf_hub_download
+
+import json
+import os
+import warnings
+from pathlib import Path
+from typing import Dict, Optional, Type, Union
+
+import requests
+
+
 from nowcasting_utils.models.loss import WeightedLosses
 from nowcasting_utils.models.metrics import (
     mae_each_forecast_horizon,
@@ -16,6 +34,11 @@ from ocf_ml_metrics.evaluation.evaluation import evaluation
 
 from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
 
+
+from pvnet.models.utils import (
+    PredAccumulator, DictListAccumulator, MetricAccumulator, BatchAccumulator
+)
+
 logger = logging.getLogger(__name__)
 
 activities = [torch.profiler.ProfilerActivity.CPU]
@@ -23,103 +46,97 @@ if torch.cuda.is_available():
     activities.append(torch.profiler.ProfilerActivity.CUDA)
 
 
-class PredAccumulator:
-    """A class for accumulating y-predictions when using grad accumulation and the batch size is
-    small.
-
-    Attributes:
-        _y_hats (list[torch.Tensor]): List of prediction tensors
+    
+    
+class PVNetModelHubMixin(PyTorchModelHubMixin):
+    """
+    Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities to 
+    PVNet models.
     """
 
-    def __init__(self):
-        self._y_hats = []
-
-    def __bool__(self):
-        return len(self._y_hats) > 0
-
-    def append(self, y_hat: torch.Tensor):
-        """Append a sub-batch of predictions"""
-        self._y_hats += [y_hat]
-
-    def flush(self) -> torch.Tensor:
-        y_hat = torch.cat(self._y_hats, dim=0)
-        self._y_hats = []
-        return y_hat
-
-
-class DictListAccumulator:
-    @staticmethod
-    def dict_list_append(d1, d2):
-        for k, v in d2.items():
-            d1[k] += [v]
-
-    @staticmethod
-    def dict_init_list(d):
-        return {k: [v] for k, v in d.items()}
-
-
-class MetricAccumulator(DictListAccumulator):
-    """A class for accumulating, and finding the mean of logging metrics when using grad
-    accumulation and the batch size is small.
-
-    Attributes:
-        _metrics (Dict[str, list[float]]): Dictionary containing lists of metrics.
-    """
-
-    def __init__(self):
-        self._metrics = {}
-
-    def __bool__(self):
-        return self._metrics != {}
-
-    def append(self, loss_dict: dict[str, float]):
-        if not self:
-            self._metrics = self.dict_init_list(loss_dict)
+    @classmethod
+    @_deprecate_positional_args(version="0.16")
+    def _from_pretrained(
+        cls,
+        *,
+        model_id: str,
+        revision: str,
+        cache_dir: str,
+        force_download: bool,
+        proxies: Optional[Dict],
+        resume_download: bool,
+        local_files_only: bool,
+        token: Union[str, bool, None],
+        map_location: str = "cpu",
+        strict: bool = False,
+        **model_kwargs,
+    ):
+        """Load Pytorch pretrained weights and return the loaded model."""
+        if os.path.isdir(model_id):
+            print("Loading weights from local directory")
+            model_file = os.path.join(model_id, PYTORCH_WEIGHTS_NAME)
         else:
-            self.dict_list_append(self._metrics, loss_dict)
+            model_file = hf_hub_download(
+                repo_id=model_id,
+                filename=PYTORCH_WEIGHTS_NAME,
+                revision=revision,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                token=token,
+                local_files_only=local_files_only,
+            )
+        
+        if 'config' not in model_kwargs:
+            raise ValueError("Config must be supplied to instantiate model")
+        
+        model_kwargs.update(model_kwargs.pop('config'))
+        model = hydra.utils.instantiate(model_kwargs)
 
-    def flush(self) -> dict[str, float]:
-        mean_metrics = {k: np.mean(v) for k, v in self._metrics.items()}
-        self._metrics = {}
-        return mean_metrics
+        state_dict = torch.load(model_file, map_location=torch.device(map_location))
+        model.load_state_dict(state_dict, strict=strict)  # type: ignore
+        model.eval()  # type: ignore
+
+        return model
+    
+    @_deprecate_positional_args(version="0.16")
+    def save_pretrained(
+        self,
+        save_directory: Union[str, Path],
+        config: dict,
+        *,
+        repo_id: Optional[str] = None,
+        push_to_hub: bool = False,
+        **kwargs,
+    ) -> Optional[str]:
+        """
+        Save weights in local directory.
+
+        Args:
+            save_directory (`str` or `Path`):
+                Path to directory in which the model weights and configuration will be saved.
+            config `dict`:
+                Model configuration specified as a key/value dictionary.
+            push_to_hub (`bool`, *optional*, defaults to `False`):
+                Whether or not to push your model to the Huggingface Hub after saving it.
+            repo_id (`str`, *optional*):
+                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to the folder name if
+                not provided.
+            kwargs:
+                Additional key word arguments passed along to the [`~ModelHubMixin._from_pretrained`] method.
+        """
+        # For PVNet the Config must be supplied. Not optional
+        return super().save_pretrained(        
+            save_directory,
+            config=config,
+            repo_id=repo_id,
+            push_to_hub=push_to_hub,
+            **kwargs
+        )
 
 
-class BatchAccumulator(DictListAccumulator):
-    """A class for accumulating batches when using grad accumulation and the batch size is small.
-
-    Attributes:
-        _batches (Dict[BatchKey, list[torch.Tensor]]): Dictionary containing lists of metrics.
-    """
-
-    def __init__(self):
-        self._batches = {}
-
-    def __bool__(self):
-        return self._batches != {}
-
-    @staticmethod
-    def filter_batch_dict(d):
-        keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
-        return {k: v for k, v in d.items() if k in keep_keys}
-
-    def append(self, batch: dict[BatchKey, list[torch.Tensor]]):
-        if not self:
-            self._batches = self.dict_init_list(self.filter_batch_dict(batch))
-        else:
-            self.dict_list_append(self._batches, self.filter_batch_dict(batch))
-
-    def flush(self) -> dict[BatchKey, list[torch.Tensor]]:
-        batch = {}
-        for k, v in self._batches.items():
-            if k == BatchKey.gsp_t0_idx:
-                batch[k] = v[0]
-            else:
-                batch[k] = torch.cat(v, dim=0)
-        self._batches = {}
-        return batch
-
-
-class BaseModel(pl.LightningModule):
+class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def __init__(
         self,
         history_minutes,
