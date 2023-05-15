@@ -9,4 +9,4 @@ max_epochs: 10
 
 resume_from_checkpoint: null
 fast_dev_run: false
-profiler: 'simple'
+profiler: "simple"

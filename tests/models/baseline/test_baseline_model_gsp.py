@@ -10,14 +10,11 @@ from ocf_datapipes.transform.numpy.batch.add_length import AddLengthIterDataPipe
 from torch.utils.data import DataLoader
 
 
-
 def test_init():
-
     _ = Model(output_variable="gsp_yield")
 
 
 def test_model_forward(configuration):
-
     # start model
     model = Model(
         forecast_minutes=configuration.input_data.default_forecast_minutes,
@@ -38,7 +35,6 @@ def test_model_forward(configuration):
 
 
 def test_model_validation(configuration):
-
     # start model
     model = Model(
         forecast_minutes=configuration.input_data.default_forecast_minutes,
@@ -54,7 +50,6 @@ def test_model_validation(configuration):
 
 
 def test_trainer(configuration):
-
     # start model
     model = Model(
         forecast_minutes=configuration.input_data.default_forecast_minutes,
@@ -63,7 +58,9 @@ def test_trainer(configuration):
     )
 
     # create fake data loader
-    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=configuration), length=2)
+    data_pipeline = AddLengthIterDataPipe(
+        source_datapipe=fake_data_pipeline(configuration=configuration), length=2
+    )
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # set up trainer
@@ -74,7 +71,6 @@ def test_trainer(configuration):
 
 
 def test_trainer_validation(configuration):
-
     # start model
     model = Model(
         forecast_minutes=configuration.input_data.default_forecast_minutes,
@@ -83,24 +79,29 @@ def test_trainer_validation(configuration):
     )
 
     # create fake data loader
-    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=configuration), length=2)
+    data_pipeline = AddLengthIterDataPipe(
+        source_datapipe=fake_data_pipeline(configuration=configuration), length=2
+    )
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # set up trainer
     trainer = pl.Trainer(gpus=0, max_epochs=1)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        model.results_file_name = f'{tmpdirname}/temp'
+        model.results_file_name = f"{tmpdirname}/temp"
 
         # test over validation set
         _ = trainer.validate(model, train_dataloader)
 
         # check csv file of validation results has been made
-        results_df = pd.read_csv(f'{model.results_file_name}_0.csv')
+        results_df = pd.read_csv(f"{model.results_file_name}_0.csv")
 
-        assert len(results_df) == len(train_dataloader) * configuration.process.batch_size * model.forecast_len_30
-        assert 't0_datetime_utc' in results_df.keys()
-        assert 'target_datetime_utc' in results_df.keys()
-        assert 'gsp_id' in results_df.keys()
+        assert (
+            len(results_df)
+            == len(train_dataloader) * configuration.process.batch_size * model.forecast_len_30
+        )
+        assert "t0_datetime_utc" in results_df.keys()
+        assert "target_datetime_utc" in results_df.keys()
+        assert "gsp_id" in results_df.keys()
         assert "actual_gsp_pv_outturn_mw" in results_df.keys()
         assert "forecast_gsp_pv_outturn_mw" in results_df.keys()

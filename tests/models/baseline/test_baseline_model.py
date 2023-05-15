@@ -7,12 +7,10 @@ from torch.utils.data import DataLoader
 
 
 def test_init():
-
     _ = Model()
 
 
 def test_model_forward(configuration):
-
     # start model
     model = Model(forecast_minutes=configuration.input_data.default_forecast_minutes)
 
@@ -29,12 +27,13 @@ def test_model_forward(configuration):
 
 
 def test_trainer(configuration):
-
     # start model
     model = Model(forecast_minutes=configuration.input_data.default_forecast_minutes)
 
     # create fake data loader
-    data_pipeline = AddLengthIterDataPipe(source_datapipe=fake_data_pipeline(configuration=configuration), length=2)
+    data_pipeline = AddLengthIterDataPipe(
+        source_datapipe=fake_data_pipeline(configuration=configuration), length=2
+    )
     train_dataloader = DataLoader(data_pipeline, batch_size=None)
 
     # set up trainer
