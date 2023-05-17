@@ -1,4 +1,4 @@
-_target_: pvnet.models.conv3d.nwp_weighting.Model
+_target_: pvnet.models.multimodal.nwp_weighting.Model
 
 #--------------------------------------------
 # Network settings

@@ -1,6 +1,6 @@
 general:
-  description: Config for producing batches on OCF's on-premises hardware.
-  name: local_pvnet
+  description: Template including all settings
+  name: template
 
 input_data:
   data_source_which_defines_geospatial_locations: gsp
@@ -30,8 +30,16 @@ input_data:
     forecast_minutes: 120
     time_resolution_minutes: 60
     nwp_channels:
-      - t
+      - t # live = t2m
       - dswrf
+      - dlwrf
+      - hcc
+      - mcc
+      - lcc
+      - vis
+      - r # live = r2
+      - prate # live ~= rprate
+      - si10 # 10-metre wind speed | live = unknown
     nwp_image_size_pixels_height: 24
     nwp_image_size_pixels_width: 24
     nwp_meters_per_pixel: 2000
@@ -54,8 +62,7 @@ input_data:
     is_live: false
 
   satellite:
-    #satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
-    satellite_zarr_path: /home/jupyter/2020_hrv_rechunked.zarr
+    satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
     history_minutes: 60
     forecast_minutes: 0
     time_resolution_minutes: 5
