@@ -20,7 +20,6 @@ def get_dataloaders(
     temp_path=".",
     data_path="prepared_ML_training_data/v4/",
 ) -> tuple:
-
     # configuration = load_yaml_configuration(filename=f"{data_path}/configuration.yaml")
 
     data_module = NetCDFDataModule(

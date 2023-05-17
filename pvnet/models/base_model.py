@@ -31,7 +31,6 @@ default_output_variable = "pv_yield"
 
 
 class BaseModel(pl.LightningModule):
-
     # default batch_size
     batch_size = 32
 
@@ -151,14 +150,12 @@ class BaseModel(pl.LightningModule):
             return nmae_loss
 
     def training_step(self, batch, batch_idx):
-
         if (batch_idx == 0) and (self.current_epoch == 0):
             return self._training_or_validation_step(batch, tag="Train")
         else:
             return self._training_or_validation_step(batch, tag="Train")
 
     def validation_step(self, batch: dict, batch_idx):
-
         # get model outputs
         nmae_loss, model_output = self._training_or_validation_step(
             batch, tag="Validation", return_model_outputs=True
@@ -167,7 +164,6 @@ class BaseModel(pl.LightningModule):
         INTERESTING_EXAMPLES = (1, 5, 6, 7, 9, 11, 17, 19)
         name = f"validation/plot/epoch_{self.current_epoch}_{batch_idx}"
         if batch_idx in [0, 1, 2, 3, 4]:
-
             # make sure the interesting example doesnt go above the batch size
             INTERESTING_EXAMPLES = (i for i in INTERESTING_EXAMPLES if i < self.batch_size)
 
@@ -247,7 +243,6 @@ class BaseModel(pl.LightningModule):
         return nmae_loss
 
     def validation_epoch_end(self, outputs):
-
         logger.info("Validation epoch end")
 
         save_validation_results_to_logger(

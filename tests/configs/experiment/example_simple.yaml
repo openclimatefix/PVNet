@@ -23,6 +23,5 @@ datamodule:
   n_train_data: 2
   n_val_data: 2
 
-
 model:
   conv3d_channels: 4

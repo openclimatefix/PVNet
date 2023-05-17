@@ -12,7 +12,6 @@ _LOG = logging.getLogger("pvnet")
 
 
 class Model(BaseModel):
-
     name = "conv3d_sat_nwp"
 
     def __init__(
@@ -177,7 +176,6 @@ class Model(BaseModel):
         # self.fc6 = nn.Linear(in_features=8, out_features=1)
 
     def forward(self, x):
-
         # ******************* Satellite imagery *************************
         # Shape: batch_size, seq_length, channel, height, width
         sat_data = x[BatchKey.satellite_actual]
@@ -236,7 +234,6 @@ class Model(BaseModel):
 
         # *********************** NWP Data ************************************
         if self.include_nwp:
-
             # shape: batch_size, seq_len, n_chans, height, width
             nwp_data = x[BatchKey.nwp].float()
             nwp_data = torch.swapaxes(nwp_data, 1, 2)

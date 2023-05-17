@@ -7,7 +7,6 @@ from pvnet.training import train
 
 
 def test_train():
-
     os.environ["NEPTUNE_API_TOKEN"] = "not_a_token"
 
     # for Github actions need to create this

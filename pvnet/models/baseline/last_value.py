@@ -29,7 +29,6 @@ class Model(BaseModel):
         super().__init__()
 
     def forward(self, x: dict):
-
         # Shape: batch_size, seq_length, n_sites
         if self.output_variable == "gsp_yield":
             gsp_yield = x[BatchKey.gsp]
