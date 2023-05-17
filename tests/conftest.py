@@ -1,9 +1,12 @@
 import pytest
+from ocf_datapipes.utils.consts import BatchKey
+import torch
+
 from pvnet.data.datamodule import DataModule
 import pvnet
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def sample_datamodule():
     dm = DataModule(
         configuration=None,
@@ -19,13 +22,18 @@ def sample_datamodule():
     return dm
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
     return batch
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
+def sample_satellite_batch(sample_batch):
+    sat_image = sample_batch[BatchKey.satellite_actual]
+    return torch.swapaxes(sat_image, 1, 2)
+
+@pytest.fixture()
 def model_minutes_kwargs():
     kwargs = dict(
         forecast_minutes=480,
@@ -34,11 +42,23 @@ def model_minutes_kwargs():
     return kwargs
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
+def encoder_model_kwargs():
+    # Used to test encoder model on satellite data
+    kwargs = dict(
+        sequence_length=90//5 - 2,
+        image_size_pixels=24,
+        in_channels=11,
+        out_features=128,
+    )
+    return kwargs
+
+
+@pytest.fixture()
 def multimodal_model_kwargs(model_minutes_kwargs):
     kwargs = dict(
         image_encoder=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
-        encoder_out_features=256,
+        encoder_out_features=128,
         encoder_kwargs=dict(
             number_of_conv3d_layers=6,
             conv3d_channels=32,
