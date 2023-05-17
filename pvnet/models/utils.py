@@ -1,8 +1,7 @@
-
-
 import numpy as np
 import torch
 from ocf_datapipes.utils.consts import BatchKey
+
 
 class PredAccumulator:
     """A class for accumulating y-predictions when using grad accumulation and the batch size is

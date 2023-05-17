@@ -1,29 +1,19 @@
 import logging
+import os
+from pathlib import Path
+from typing import Dict, Optional, Union
 
+import hydra
 import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
-import hydra
-
 from huggingface_hub import PyTorchModelHubMixin
-from huggingface_hub.utils import validate_hf_hub_args
-from huggingface_hub.utils._deprecation import _deprecate_positional_args
-from huggingface_hub.hub_mixin import T
-from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
+from huggingface_hub.constants import PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
-
-import json
-import os
-import warnings
-from pathlib import Path
-from typing import Dict, Optional, Type, Union
-
-import requests
-
-
+from huggingface_hub.utils._deprecation import _deprecate_positional_args
 from nowcasting_utils.models.loss import WeightedLosses
 from nowcasting_utils.models.metrics import (
     mae_each_forecast_horizon,
@@ -32,12 +22,12 @@ from nowcasting_utils.models.metrics import (
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
 
-from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
-
-
 from pvnet.models.utils import (
-    PredAccumulator, DictListAccumulator, MetricAccumulator, BatchAccumulator
+    BatchAccumulator,
+    MetricAccumulator,
+    PredAccumulator,
 )
+from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +36,9 @@ if torch.cuda.is_available():
     activities.append(torch.profiler.ProfilerActivity.CUDA)
 
 
-    
-    
 class PVNetModelHubMixin(PyTorchModelHubMixin):
     """
-    Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities to 
+    Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities to
     PVNet models.
     """
 
@@ -87,11 +75,11 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 token=token,
                 local_files_only=local_files_only,
             )
-        
-        if 'config' not in model_kwargs:
+
+        if "config" not in model_kwargs:
             raise ValueError("Config must be supplied to instantiate model")
-        
-        model_kwargs.update(model_kwargs.pop('config'))
+
+        model_kwargs.update(model_kwargs.pop("config"))
         model = hydra.utils.instantiate(model_kwargs)
 
         state_dict = torch.load(model_file, map_location=torch.device(map_location))
@@ -99,7 +87,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         model.eval()  # type: ignore
 
         return model
-    
+
     @_deprecate_positional_args(version="0.16")
     def save_pretrained(
         self,
@@ -126,13 +114,9 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             kwargs:
                 Additional key word arguments passed along to the [`~ModelHubMixin._from_pretrained`] method.
         """
-        # For PVNet the Config must be supplied. Not optional
-        return super().save_pretrained(        
-            save_directory,
-            config=config,
-            repo_id=repo_id,
-            push_to_hub=push_to_hub,
-            **kwargs
+        # For PVNet the Config must be supplied. Not optional
+        return super().save_pretrained(
+            save_directory, config=config, repo_id=repo_id, push_to_hub=push_to_hub, **kwargs
         )
 
 
