@@ -20,13 +20,12 @@ def test_model_forward(nwp_weighting_model, sample_batch):
     # check output is the correct shape
     # batch size=2, forecast_len=15
     assert tuple(y.shape) == (2, 16), y.shape
-    
-    
+
 
 def test_model_backwards(nwp_weighting_model, sample_batch):
     opt = SGD(nwp_weighting_model.parameters(), lr=0.001)
 
     y = nwp_weighting_model(sample_batch)
-    
+
     # Backwards on sum drives sum to zero
     y.sum().backward()

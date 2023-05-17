@@ -33,6 +33,7 @@ def sample_satellite_batch(sample_batch):
     sat_image = sample_batch[BatchKey.satellite_actual]
     return torch.swapaxes(sat_image, 1, 2)
 
+
 @pytest.fixture()
 def model_minutes_kwargs():
     kwargs = dict(
@@ -46,7 +47,7 @@ def model_minutes_kwargs():
 def encoder_model_kwargs():
     # Used to test encoder model on satellite data
     kwargs = dict(
-        sequence_length=90//5 - 2,
+        sequence_length=90 // 5 - 2,
         image_size_pixels=24,
         in_channels=11,
         out_features=128,
