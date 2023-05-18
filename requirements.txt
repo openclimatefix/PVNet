@@ -1,5 +1,6 @@
 nowcasting_utils
 ocf_datapipes
+ocf_ml_metrics
 numpy
 pandas
 matplotlib
@@ -7,7 +8,7 @@ xarray
 ipykernel
 h5netcdf
 torch>=2.0
-pytorch-lightning>=2.0
+lightning>=2.0.1
 pytest
 pytest-cov
 flake8
