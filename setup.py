@@ -7,9 +7,7 @@ from setuptools import find_packages, setup
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 install_requires = (this_directory / "requirements.txt").read_text().splitlines()
-extras_require = {
-        'all_models':  ["pytorch-tabnet", "efficientnet_pytorch"]
-}
+extras_require = {"all_models": ["pytorch-tabnet", "efficientnet_pytorch"]}
 
 setup(
     name="PVNet",
