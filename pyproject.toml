@@ -22,3 +22,7 @@ addopts = "-ra -q"
 testpaths = [
     "tests",
 ]
+
+[tool.ruff]
+line-length = 100
+exclude = [".ipynb_checkpoints", "tests"]

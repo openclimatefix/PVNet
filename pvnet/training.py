@@ -2,21 +2,27 @@ from typing import Optional
 
 import hydra
 import torch
-from omegaconf import DictConfig
-from pytorch_lightning import (
+from lightning.pytorch import (
     Callback,
     LightningDataModule,
     LightningModule,
     Trainer,
     seed_everything,
 )
-from pytorch_lightning.loggers import LightningLoggerBase
+from lightning.pytorch.loggers import Logger
+from omegaconf import DictConfig
 
 from pvnet import utils
 
 log = utils.get_logger(__name__)
 
 torch.set_default_dtype(torch.float32)
+
+
+def callbacks_to_phase(callbacks, phase):
+    for c in callbacks:
+        if hasattr(c, "switch_phase"):
+            c.switch_phase(phase)
 
 
 def train(config: DictConfig) -> Optional[float]:
@@ -42,6 +48,14 @@ def train(config: DictConfig) -> Optional[float]:
     log.info(f"Instantiating model <{config.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(config.model)
 
+    # Init lightning loggers
+    logger: list[Logger] = []
+    if "logger" in config:
+        for _, lg_conf in config.logger.items():
+            if "_target_" in lg_conf:
+                log.info(f"Instantiating logger <{lg_conf._target_}>")
+                logger.append(hydra.utils.instantiate(lg_conf))
+
     # Init lightning callbacks
     callbacks: list[Callback] = []
     if "callbacks" in config:
@@ -50,42 +64,37 @@ def train(config: DictConfig) -> Optional[float]:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
 
-    # Init lightning loggers
-    logger: list[LightningLoggerBase] = []
-    if "logger" in config:
-        for _, lg_conf in config.logger.items():
-            if "_target_" in lg_conf:
-                log.info(f"Instantiating logger <{lg_conf._target_}>")
-                logger.append(hydra.utils.instantiate(lg_conf))
+    should_pretrain = False
+    for c in callbacks:
+        should_pretrain |= hasattr(c, "training_phase") and c.training_phase == "pretrain"
 
-    # Init lightning trainer
-    log.info(f"Instantiating trainer <{config.trainer._target_}>")
+    if should_pretrain:
+        callbacks_to_phase(callbacks, "pretrain")
+
     trainer: Trainer = hydra.utils.instantiate(
-        config.trainer, callbacks=callbacks, logger=logger, _convert_="partial"
-    )
-
-    # Send some parameters from config to all lightning loggers
-    log.info("Logging hyperparameters!")
-    utils.log_hyperparameters(
-        config=config,
-        model=model,
-        datamodule=datamodule,
-        trainer=trainer,
-        callbacks=callbacks,
+        config.trainer,
         logger=logger,
+        _convert_="partial",
+        callbacks=callbacks,
     )
 
-    # Train the model
-    log.info("Starting training!")
-    if "validate_only" in config:
-        trainer.validate(model=model, datamodule=datamodule)
-    else:
+    if should_pretrain:
+        # Pre-train the model
+        datamodule.block_nwp_and_sat = True
         trainer.fit(model=model, datamodule=datamodule)
 
-    # Evaluate model on test set, using the best model achieved during training
-    if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
+    callbacks_to_phase(callbacks, "main")
+
+    datamodule.block_nwp_and_sat = False
+    trainer.should_stop = False
+
+    # Train the model completely
+    trainer.fit(model=model, datamodule=datamodule)
+
+    if config.test_after_training:
+        # Evaluate model on test set, using the best model achieved during training
         log.info("Starting testing!")
-        trainer.test()
+        trainer.test(model=model, datamodule=datamodule, ckpt_path="best")
 
     # Make sure everything closed properly
     log.info("Finalizing!")

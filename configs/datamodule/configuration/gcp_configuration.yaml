@@ -1,0 +1,50 @@
+general:
+  description: Config for producing batches on GCP
+  name: gcp_pvnet
+
+input_data:
+  default_history_minutes: 120
+  default_forecast_minutes: 480
+
+  gsp:
+    gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v5/pv_gsp.zarr
+    history_minutes: 120
+    forecast_minutes: 480
+    time_resolution_minutes: 30
+    metadata_only: false
+
+  nwp:
+    nwp_zarr_path: /mnt/disks/nwp/UKV_intermediate_version_7.zarr
+    history_minutes: 120
+    forecast_minutes: 480
+    time_resolution_minutes: 60
+    nwp_channels:
+      - t # live = t2m
+      - dswrf
+    nwp_image_size_pixels_height: 24
+    nwp_image_size_pixels_width: 24
+
+  satellite:
+    satellite_zarr_path:
+      - /mnt/disks/data_ssd/2017_nonhrv.zarr
+      - /mnt/disks/data_ssd/2018_nonhrv.zarr
+      - /mnt/disks/data_ssd/2019_nonhrv.zarr
+      - /mnt/disks/data_ssd/2020_nonhrv.zarr
+      - /mnt/disks/data_ssd/2021_nonhrv.zarr
+    history_minutes: 90
+    forecast_minutes: 0
+    time_resolution_minutes: 5
+    satellite_channels:
+      - IR_016
+      - IR_039
+      - IR_087
+      - IR_097
+      - IR_108
+      - IR_120
+      - IR_134
+      - VIS006
+      - VIS008
+      - WV_062
+      - WV_073
+    satellite_image_size_pixels_height: 24
+    satellite_image_size_pixels_width: 24

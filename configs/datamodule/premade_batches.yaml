@@ -1,0 +1,6 @@
+_target_: pvnet.data.datamodule.DataModule
+configuration: null
+batch_dir: "/mnt/disks/batches2/batches_v3.1"
+num_workers: 20
+prefetch_factor: 2
+batch_size: 8

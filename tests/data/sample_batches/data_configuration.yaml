@@ -1,0 +1,81 @@
+general:
+  description: Config for producing batches on GCP
+  name: gcp_pvnet
+
+input_data:
+  default_history_minutes: 120
+  default_forecast_minutes: 480
+
+  gsp:
+    gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v5/pv_gsp.zarr
+    history_minutes: 120
+    forecast_minutes: 480
+    time_resolution_minutes: 30
+    start_datetime: "2020-01-01T00:00:00"
+    end_datetime: "2021-09-01T00:00:00"
+    gsp_image_size_pixels_height: 64
+    gsp_image_size_pixels_width: 64
+    gsp_meters_per_pixel: 2000
+    n_gsp_per_example: 32
+    is_live: false
+    log_level: DEBUG
+    metadata_only: false
+
+  nwp:
+    nwp_zarr_path: /mnt/disks/nwp/UKV_intermediate_version_7.zarr
+    history_minutes: 120
+    forecast_minutes: 480
+    time_resolution_minutes: 60
+    nwp_channels:
+      - t # live = t2m
+      - dswrf
+    nwp_image_size_pixels_height: 24
+    nwp_image_size_pixels_width: 24
+    nwp_meters_per_pixel: 2000
+    log_level: DEBUG
+
+  satellite:
+    satellite_zarr_path:
+      - /mnt/disks/data_ssd/2017_nonhrv.zarr
+      - /mnt/disks/data_ssd/2018_nonhrv.zarr
+      - /mnt/disks/data_ssd/2019_nonhrv.zarr
+      - /mnt/disks/data_ssd/2020_nonhrv.zarr
+      - /mnt/disks/data_ssd/2021_nonhrv.zarr
+    history_minutes: 90
+    forecast_minutes: 0
+    time_resolution_minutes: 5
+    satellite_channels:
+      - IR_016
+      - IR_039
+      - IR_087
+      - IR_097
+      - IR_108
+      - IR_120
+      - IR_134
+      - VIS006
+      - VIS008
+      - WV_062
+      - WV_073
+    satellite_image_size_pixels_height: 24
+    satellite_image_size_pixels_width: 24
+    satellite_meters_per_pixel: 6000
+    keep_dawn_dusk_hours: 4
+    live_delay_minutes: 30
+    is_live: false
+    log_level: DEBUG
+
+  hrvsatellite:
+    hrvsatellite_zarr_path:
+      - gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2019_hrv.zarr
+      - gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_hrv.zarr
+      - gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_hrv.zarr
+    history_minutes: 60
+    forecast_minutes: 0
+    time_resolution_minutes: 5
+    hrvsatellite_channels:
+      - HRV
+    hrvsatellite_image_size_pixels_height: 24
+    hrvsatellite_image_size_pixels_width: 24
+
+output_data:
+  filepath: "not-needed"

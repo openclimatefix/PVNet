@@ -1,39 +1,27 @@
-import logging
-
 from ocf_datapipes.utils.consts import BatchKey
 
+import pvnet
 from pvnet.models.base_model import BaseModel
-
-logging.basicConfig()
-_LOG = logging.getLogger("pvnet")
-_LOG.setLevel(logging.DEBUG)
+from pvnet.optimizers import AbstractOptimizer
 
 
 class Model(BaseModel):
+    """Simple baseline model that takes the last gsp yield value and copies it forward."""
+
     name = "last_value"
 
     def __init__(
         self,
         forecast_minutes: int = 12,
         history_minutes: int = 6,
-        output_variable="pv_yield",
+        optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-        """
-        Simple baseline model that takes the last pv yield value and copies it forward
-        """
-
-        self.forecast_minutes = forecast_minutes
-        self.history_minutes = history_minutes
-        self.output_variable = output_variable
-
-        super().__init__()
+        super().__init__(history_minutes, forecast_minutes, optimizer)
+        self.save_hyperparameters()
 
     def forward(self, x: dict):
         # Shape: batch_size, seq_length, n_sites
-        if self.output_variable == "gsp_yield":
-            gsp_yield = x[BatchKey.gsp]
-        else:
-            gsp_yield = x[BatchKey.pv]
+        gsp_yield = x[BatchKey.gsp]
 
         # take the last value non forecaster value and the first in the pv yeild
         # (this is the pv site we are preditcting for)
@@ -41,6 +29,4 @@ class Model(BaseModel):
 
         # expand the last valid forward n predict steps
         out = y_hat.unsqueeze(1).repeat(1, self.forecast_len)
-        # shape: batch_size, forecast_len
-
         return out

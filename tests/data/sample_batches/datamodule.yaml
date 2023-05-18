@@ -1,0 +1,14 @@
+_target_: pvnet.data.datamodule.DataModule
+configuration: /home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml
+num_workers: 20
+prefetch_factor: 2
+batch_size: 8
+train_period:
+  - null
+  - "2020-12-31"
+val_period:
+  - "2021-01-01"
+  - "2021-12-31"
+test_period:
+  - "2021-01-01"
+  - "2021-12-31"

@@ -2,4 +2,3 @@ _target_: pvnet.models.baseline.last_value.Model
 
 forecast_minutes: 120
 history_minutes: 30
-output_variable: gsp_yield

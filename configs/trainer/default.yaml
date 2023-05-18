@@ -1,12 +1,17 @@
-_target_: pytorch_lightning.Trainer
+_target_: lightning.pytorch.trainer.trainer.Trainer
 
 # set `1` to train on GPU, `0` to train on CPU only
-gpus: 0
-auto_select_gpus: False
+accelerator: gpu
+devices: auto
 
-min_epochs: 1
-max_epochs: 10
-
-resume_from_checkpoint: null
+min_epochs: null
+max_epochs: null
+reload_dataloaders_every_n_epochs: 0
+num_sanity_val_steps: 8
 fast_dev_run: false
-profiler: "simple"
+#profiler: 'simple'
+
+accumulate_grad_batches: 4
+#val_check_interval: 800
+#limit_val_batches: 800
+log_every_n_steps: 50

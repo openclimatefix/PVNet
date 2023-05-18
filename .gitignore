@@ -2,8 +2,12 @@
 config_tree.txt
 lightning_logs/
 logs/
+checkpoints*
+csv/
+notebooks/
 *.html
 *.csv
+latest_logged_train_batch.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

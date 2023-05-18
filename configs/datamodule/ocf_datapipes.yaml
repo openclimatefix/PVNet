@@ -1,11 +1,14 @@
-_target_: ocf_datapipes.training.datamodules.default.DataModule
-
-data_pipeline: "pv_satellite_nwp"
-configuration: "configuration.yaml"
-#n_train_data: 4000
-#n_val_data: 400
-#num_workers: 8
-#pin_memory: True
-#data_path: "/mnt/storage_ssd_4tb/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/prepared_ML_training_data/v15/"
-fake_data: False
-#shuffle_train: True
+_target_: pvnet.data.datamodule.DataModule
+configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
+num_workers: 20
+prefetch_factor: 2
+batch_size: 8
+train_period:
+  - null
+  - 2020-12-31
+val_period:
+  - 2021-01-01
+  - 2021-12-31
+test_period:
+  - 2021-01-01
+  - 2021-12-31
