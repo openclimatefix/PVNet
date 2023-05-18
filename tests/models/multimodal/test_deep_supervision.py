@@ -10,7 +10,6 @@ def deepsupervision_model(multimodal_model_kwargs):
 
 
 def test_model_forward(deepsupervision_model, sample_batch):
-
     y = deepsupervision_model(sample_batch)
 
     # check output is the correct shape

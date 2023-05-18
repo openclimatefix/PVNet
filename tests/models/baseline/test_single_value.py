@@ -9,7 +9,6 @@ def single_value_model(model_minutes_kwargs):
 
 
 def test_model_forward(single_value_model, sample_batch):
-
     y = single_value_model(sample_batch)
 
     # check output is the correct shape

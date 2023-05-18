@@ -64,7 +64,6 @@ def get_datapipe(config_path, start_time, end_time, batch_size):
 
 
 def save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
-
     save_func = save_batch_func_factory(batch_dir)
     filenumber_pipe = IterableWrapper(range(num_batches)).sharding_filter()
     save_pipe = filenumber_pipe.zip(batch_pipe).map(save_func)
@@ -81,7 +80,6 @@ def save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
 
 @hydra.main(config_path="../configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
-
     config_dm = config.datamodule
 
     # Set up directory

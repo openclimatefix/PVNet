@@ -213,7 +213,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._accumulated_y_hat.append(y_hat)
 
         if not self.trainer.fit_loop._should_accumulate():
-
             losses = self._accumulated_metrics.flush()
             batch = self._accumulated_batches.flush()
             y_hat = self._accumulated_y_hat.flush()
@@ -234,7 +233,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 fig.savefig("latest_logged_train_batch.png")
 
     def training_step(self, batch, batch_idx):
-
         y_hat = self(batch)
         y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
 
@@ -264,7 +262,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
 
         if accum_batch_num in [0, 1]:
-
             # Store these temporarily under self
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
@@ -275,7 +272,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # if batch had accumulated
             if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:
-
                 y_hat = self._val_y_hats.flush()
                 batch = self._val_batches.flush()
 

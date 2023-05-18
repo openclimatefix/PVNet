@@ -10,7 +10,6 @@ def weather_residual_model(multimodal_model_kwargs):
 
 
 def test_model_forward(weather_residual_model, sample_batch):
-
     y = weather_residual_model(sample_batch)
 
     # check output is the correct shape

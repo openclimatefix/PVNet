@@ -34,7 +34,6 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         conv3d_channels: int = 32,
         fc_features: int = 128,
     ):
-
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
         # Check that the output shape of the convolutional layers will be at least 1x1
@@ -80,7 +79,6 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         )
 
     def forward(self, x):
-
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
 
@@ -120,7 +118,6 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         batch_norm=True,
         fc_dropout=0.2,
     ):
-
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
         # Check that the output shape of the convolutional layers will be at least 1x1
@@ -177,7 +174,6 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         self.final_block = nn.Sequential(*final_block)
 
     def forward(self, x):
-
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
 
@@ -216,7 +212,6 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         conv3d_channels: int = 32,
         dropout_frac: float = 0.1,
     ):
-
         cnn_spatial_output = image_size_pixels // (2**n_downscale)
 
         if not (cnn_spatial_output > 0):
@@ -292,7 +287,6 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         )
 
     def forward(self, x):
-
         out = self.first_layer(x)
         outputs = [self.crop_fn(out)]
 

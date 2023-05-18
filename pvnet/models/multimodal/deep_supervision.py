@@ -97,7 +97,6 @@ class Model(BaseModel):
         source_dropout=0.0,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = include_sat
         self.include_nwp = include_nwp
@@ -185,7 +184,6 @@ class Model(BaseModel):
         self.save_hyperparameters()
 
     def encode(self, x):
-
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -249,7 +247,6 @@ class Model(BaseModel):
         return outs
 
     def training_step(self, batch, batch_idx):
-
         y_hats = self.multi_mode_forward(batch)
         y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
 

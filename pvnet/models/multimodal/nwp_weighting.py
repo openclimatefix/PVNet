@@ -39,7 +39,6 @@ class Model(BaseModel):
         dwsrf_channel: int = 0,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-
         super().__init__(history_minutes, forecast_minutes, optimizer)
 
         self.dwsrf_channel = dwsrf_channel
@@ -75,7 +74,6 @@ class Model(BaseModel):
         self.save_hyperparameters()
 
     def forward(self, x):
-
         nwp_data = x[BatchKey.nwp].float()
 
         # This hack is specific to the current pvnet pipeline. In the pipeline, the dwsrf is
