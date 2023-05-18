@@ -38,7 +38,6 @@ dotenv.load_dotenv(override=True)
 
 @hydra.main(config_path="configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
-
     # Imports should be nested inside @hydra.main to optimize tab completion
     # Read more here: https://github.com/facebookresearch/hydra/issues/934
     from pvnet.training import train
