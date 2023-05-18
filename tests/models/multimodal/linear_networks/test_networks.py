@@ -68,6 +68,8 @@ def test_snn_forward(multiple_batch_types, linear_network_kwargs):
 
 
 def test_tabnet_forward(multiple_batch_types, linear_network_kwargs):
+    # Skip if optional dependency not installed
+    pytest.importorskip("pytorch_tabnet") 
     _test_model_forward(multiple_batch_types, TabNet, linear_network_kwargs)
 
 
@@ -89,4 +91,6 @@ def test_snn_backward(simple_linear_batch, linear_network_kwargs):
 
 
 def test_tabnet_backward(simple_linear_batch, linear_network_kwargs):
+    # Skip if optional dependency not installed
+    pytest.importorskip("pytorch_tabnet") 
     _test_model_backward(simple_linear_batch, TabNet, linear_network_kwargs)

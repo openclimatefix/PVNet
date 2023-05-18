@@ -23,3 +23,5 @@ hydra-core
 python-dotenv
 hydra-optuna-sweeper
 black
+pytorch-tabnet[extra_models]
+efficientnet_pytorch[extra_models]
