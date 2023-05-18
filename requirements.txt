@@ -7,7 +7,7 @@ xarray
 ipykernel
 h5netcdf
 torch>=2.0
-pytorch-lightning>=2.0
+pytorch-lightning>=2.0.1
 pytest
 pytest-cov
 flake8
