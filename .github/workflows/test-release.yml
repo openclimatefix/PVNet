@@ -1,10 +1,9 @@
 name: Test and release
 
 on:
-  push
-#  push:
-#    branches:
-#      - main
+  push:
+    branches:
+      - main
 
 jobs:
   test:
