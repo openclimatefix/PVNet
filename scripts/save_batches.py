@@ -54,7 +54,6 @@ def get_datapipe(config_path, start_time, end_time, batch_size):
         config_path,
         start_time=start_time,
         end_time=end_time,
-        experimental=False,
     )
 
     data_pipeline = (
