@@ -1,34 +1,21 @@
 """App to run inference
 
-This app expects these evironmental variables to be available: 
+This app expects these evironmental variables to be available:
     - DB_URL
     - NWP_ZARR_PATH
     - SATELLITE_ZARR_PATH
 """
 
+import logging
+import os
+from datetime import timedelta, timezone
+
+import boto3
 import numpy as np
 import pandas as pd
 import torch
-
-import os
-from tqdm import tqdm
-from pyaml_env import parse_config
-from datetime import timedelta, timezone
 import typer
-import logging 
-
-import boto3
-from sqlalchemy.orm import Session
-
-from torchdata.datapipes.iter import IterableWrapper
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
-
-from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
-from ocf_datapipes.utils.consts import Location, BatchKey
-from ocf_datapipes.utils.utils import stack_np_examples_into_batch
-from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
-from ocf_datapipes.load import OpenGSPFromDatabase
-
+from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
     ForecastSQL,
     ForecastValue,
@@ -39,12 +26,19 @@ from nowcasting_datamodel.read.read import (
     get_model,
 )
 from nowcasting_datamodel.save.save import save as save_sql_forecasts
-from nowcasting_datamodel.connection import DatabaseConnection
+from ocf_datapipes.load import OpenGSPFromDatabase
+from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
+from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
+from ocf_datapipes.utils.consts import BatchKey, Location
+from ocf_datapipes.utils.utils import stack_np_examples_into_batch
+from sqlalchemy.orm import Session
+from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
+from torchdata.datapipes.iter import IterableWrapper
+from tqdm import tqdm
 
 import pvnet
-from pvnet.models.base_model import BaseModel
 from pvnet.data.datamodule import batch_to_tensor
-
+from pvnet.models.base_model import BaseModel
 
 # ---------------------------------------------------------------------------
 # GLOBAL SETTINGS
@@ -53,10 +47,10 @@ data_config_filename = "../configs/datamodule/configuration/app_configuration.ya
 
 # Model will use GPU if available
 if torch.cuda.is_available():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Use multiple workers for data loading
-num_workers = min(os.cpu_count()-1, 16)
+num_workers = min(os.cpu_count() - 1, 16)
 
 # If the solar elevation is less than this the predictions are set to zero
 MIN_DAY_ELEVATION = 0
@@ -76,6 +70,7 @@ model_version = "7cc7e9f8e5fc472a753418c45b2af9f123547b6c"
 
 # ---------------------------------------------------------------------------
 # HELPER FUNCTIONS
+
 
 def copy_batch_to_device(batch, device):
     """Moves a dict-batch of tensors to new device."""
@@ -123,19 +118,18 @@ def convert_df_to_forecasts(
 
     # get model name
     model = get_model(name=model_name, version=version, session=session)
-    
+
     forecasts = []
-    
+
     for gsp_id in forecast_values_df.gsp_id.unique():
-    
         # make forecast values
         forecast_values = []
-        
+
         # get location
         location = get_location(session=session, gsp_id=gsp_id)
-        
+
         gsp_forecast_values_df = forecast_values_df.query(f"gsp_id=={gsp_id}")
-    
+
         for i, forecast_value in gsp_forecast_values_df.iterrows():
             # add timezone
             target_time = forecast_value.target_datetime_utc.replace(tzinfo=timezone.utc)
@@ -155,153 +149,145 @@ def convert_df_to_forecasts(
             forecast_values=forecast_values,
             historic=False,
         )
-        
+
         forecasts.append(forecast)
 
     return forecasts
 
 
-
-def main(t0 = None):
-
+def main(t0=None):
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
         t0 = pd.Timestamp.now(tz=None).floor(timedelta(minutes=30))
-    else: 
+    else:
         t0 = pd.to_datetime(t0).floor(timedelta(minutes=30))
-        
+
     logger.info(f"Making forecast for init time: {t0}")
-    
+
     # ---------------------------------------------------------------------------
     # 1. Prepare data sources
-    logger.info(f"Loading GSP metadata")
-    
+    logger.info("Loading GSP metadata")
+
     ds_gsp = next(iter(OpenGSPFromDatabase()))
-    
-    # DataFrame of most recent GSP capacities
+
+    # DataFrame of most recent GSP capacities
     gsp_capacities = (
         ds_gsp.sel(
             time_utc=t0,
-            method="ffill", 
+            method="ffill",
         )
         .sel(gsp_id=slice(1, None))
         .to_dataframe()
         .capacity_megawatt_power
     )
-    
+
     # Download satellite data - can't load zipped zarr straight from s3 bucket
-    logger.info(f"Downloading zipped satellite data")
-    bucket, *path = os.environ["SATELLITE_ZARR_PATH"].removeprefix('s3://').split("/")
+    logger.info("Downloading zipped satellite data")
+    bucket, *path = os.environ["SATELLITE_ZARR_PATH"].removeprefix("s3://").split("/")
     path = "/".join(path)
-    
+
     client = boto3.client("s3")
-    client.download_file(
-        Bucket=bucket, Key=path, Filename="latest.zarr.zip"
-    )
+    client.download_file(Bucket=bucket, Key=path, Filename="latest.zarr.zip")
     client.close()
-    
+
     # ---------------------------------------------------------------------------
     # 2. Set up data loader
-    logger.info(f"Creating DataLoader")
-    
+    logger.info("Creating DataLoader")
+
     # Location and time datapipes
     location_pipe = IterableWrapper([id2loc(gsp_id, ds_gsp) for gsp_id in gsp_ids])
     t0_datapipe = IterableWrapper([t0]).repeat(len(location_pipe))
-    
+
     location_pipe = location_pipe.sharding_filter()
     t0_datapipe = t0_datapipe.sharding_filter()
-    
+
     # Batch datapipe
     batch_datapipe = (
         construct_sliced_data_pipeline(
             config_filename=data_config_filename,
-            location_pipe=location_pipe, 
+            location_pipe=location_pipe,
             t0_datapipe=t0_datapipe,
             production=True,
         )
         .batch(10)
         .map(stack_np_examples_into_batch)
     )
-    
+
     # Set up dataloader for parallel loading
     rs = MultiProcessingReadingService(
         num_workers=num_workers,
         multiprocessing_context="spawn",
-        worker_prefetch_cnt=0 if num_workers==0 else 2,
+        worker_prefetch_cnt=0 if num_workers == 0 else 2,
     )
     dataloader = DataLoader2(batch_datapipe, reading_service=rs)
 
     # ---------------------------------------------------------------------------
     # 3. set up model
     logger.info(f"Loading model: {model_name} - {model_version}")
-    
+
     model = BaseModel.from_pretrained(model_name, revision=model_version).to(device)
 
     # 4. Make prediction
-    logger.info(f"Processing batches")
+    logger.info("Processing batches")
     normed_preds = []
-    
+
     with torch.no_grad():
         for batch in tqdm(dataloader):
-            
-            # Run batch through model
+            # Run batch through model
             device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
             preds = model(device_batch).detach().cpu().numpy()
-            
+
             # Calculate unnormalised elevation and sun-dowm mask
-            elevation = (batch[BatchKey.gsp_solar_elevation]*ELEVATION_STD+ELEVATION_MEAN)
+            elevation = batch[BatchKey.gsp_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
             # We only need elevation mask for forecasted values, not history
-            elevation = elevation[:, -preds.shape[-1]:]
-            sun_down_mask = elevation<MIN_DAY_ELEVATION
-            
+            elevation = elevation[:, -preds.shape[-1] :]
+            sun_down_mask = elevation < MIN_DAY_ELEVATION
+
             # Zero out after sundown
             preds[sun_down_mask] = 0
-            
+
             normed_preds += [preds]
-    
+
     normed_preds = np.concatenate(normed_preds)
-    
+
     # ---------------------------------------------------------------------------
     # 5. Merge batch results to pandas df
-    logger.info(f"Processing raw predictions to DataFrame")
-    
+    logger.info("Processing raw predictions to DataFrame")
+
     n_times = normed_preds.shape[1]
-    
+
     df_normed = pd.DataFrame(
-        normed_preds.T, 
-        columns=gsp_ids, 
+        normed_preds.T,
+        columns=gsp_ids,
         index=pd.Index(
-            [t0+timedelta(minutes=30*(i+1)) for i in range(n_times)], 
-            name='target_datetime_utc'
-        )
+            [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
+            name="target_datetime_utc",
+        ),
     )
     # Multiply normalised forecasts by capacities and clip negatives
     df_abs = df_normed.clip(0, None) * gsp_capacities.T
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
-    logger.info(f"Summing to national forecast")
+    logger.info("Summing to national forecast")
     df_abs.insert(0, 0, df_abs.sum(axis=1))
-    
+
     # ---------------------------------------------------------------------------
     # 7. Write predictions to database
-    logger.info(f"Writing to database")
-    
+    logger.info("Writing to database")
+
     # Flatten DataFrame
     df = df_abs.reset_index().melt(
-        'target_datetime_utc', 
-        var_name='gsp_id', 
-        value_name='forecast_mw',
+        "target_datetime_utc",
+        var_name="gsp_id",
+        value_name="forecast_mw",
     )
-    
+
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
         sql_forecasts = convert_df_to_forecasts(
-            df, 
-            session, 
-            model_name=model_name, 
-            version=model_version
+            df, session, model_name=model_name, version=model_version
         )
 
         save_sql_forecasts(
@@ -310,7 +296,7 @@ def main(t0 = None):
             update_national=True,
             update_gsp=True,
         )
-    
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     typer.run(main)

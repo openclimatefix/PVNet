@@ -7,7 +7,7 @@ input_data:
   default_forecast_minutes: 480
 
   gsp:
-    gsp_zarr_path:  !ENV ${DB_URL}
+    gsp_zarr_path: !ENV ${DB_URL}
     history_minutes: 120
     forecast_minutes: 480
     time_resolution_minutes: 30
@@ -35,7 +35,7 @@ input_data:
     log_level: DEBUG
 
   satellite:
-    satellite_zarr_path:  latest.zarr.zip
+    satellite_zarr_path: latest.zarr.zip
     history_minutes: 90
     forecast_minutes: 0
     time_resolution_minutes: 5
