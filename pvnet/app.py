@@ -17,7 +17,8 @@ from datetime import timedelta, timezone
 import typer
 import logging 
 
-import boto3 
+import boto3
+from sqlalchemy.orm import Session
 
 from torchdata.datapipes.iter import IterableWrapper
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
@@ -40,6 +41,7 @@ from nowcasting_datamodel.read.read import (
 from nowcasting_datamodel.save.save import save as save_sql_forecasts
 from nowcasting_datamodel.connection import DatabaseConnection
 
+import pvnet
 from pvnet.models.base_model import BaseModel
 from pvnet.data.datamodule import batch_to_tensor
 
@@ -64,6 +66,7 @@ gsp_ids = np.arange(1, 318)
 
 # Set up logger
 logger = logging.getLogger("PVNet App")
+logger.setLevel(logging.INFO)
 logger.info(f"Using PVNet library version: {pvnet.__version__}")
 
 # Huggingfacehub model repo and commit
