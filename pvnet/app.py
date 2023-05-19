@@ -8,7 +8,7 @@ This app expects these evironmental variables to be available:
 
 import logging
 import os
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import boto3
 import numpy as np
@@ -187,6 +187,7 @@ def main(t0=None):
     bucket, *path = os.environ["SATELLITE_ZARR_PATH"].removeprefix("s3://").split("/")
     path = "/".join(path)
 
+    # fsspec instead of boto3,
     client = boto3.client("s3")
     client.download_file(Bucket=bucket, Key=path, Filename="latest.zarr.zip")
     client.close()
