@@ -1,7 +1,6 @@
 name: Test and release
 
-on:
-  push
+on: push
 #  push:
 #    branches:
 #      - main
