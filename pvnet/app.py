@@ -59,6 +59,9 @@ num_workers = min(os.cpu_count()-1, 16)
 # If the solar elevation is less than this the predictions are set to zero
 MIN_DAY_ELEVATION = 0
 
+# Forecast made for these GSP IDs and summed to national with ID=>0
+gsp_ids = np.arange(1, 318)
+
 # Set up logger
 logger = logging.getLogger("PVNet App")
 logger.info(f"Using PVNet library version: {pvnet.__version__}")
@@ -171,7 +174,6 @@ def main(t0 = None):
     # 1. Prepare data sources
     logger.info(f"Loading GSP metadata")
     
-    gsp_ids = np.arange(1, 318)
     ds_gsp = next(iter(OpenGSPFromDatabase()))
     
     # DataFrame of most recent GSP capacities
@@ -306,7 +308,6 @@ def main(t0 = None):
             update_gsp=True,
         )
     
-
 
 if __name__=="__main__":
     typer.run(main)
