@@ -2,9 +2,7 @@ from pvnet.app import main
 from nowcasting_datamodel.models import ForecastSQL
 
 
-
 def test_main(db_session, nwp_data, sat_data, gsp_data):
-
     # set DB_URL
     # set NWP_ZARR_PATH
     # save nwp_data to temporary file, and set NWP_ZARR_PATH

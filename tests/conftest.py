@@ -70,7 +70,6 @@ def db_session(db_connection, engine_url):
         s.rollback()
 
 
-
 @pytest.fixture
 def nwp_data():
     # middle of the UK
@@ -171,7 +170,6 @@ def sat_data():
     sat["y_osgb"] = sat.y_geostationary
 
     return sat.to_dataset(name="data").sortby("time")
-
 
 
 @pytest.fixture()
