@@ -7,7 +7,7 @@ ARG GIT_PYTHON_REFRESH=quiet
 
 RUN apt-get update
 RUN apt-get install git -y
-RUN apt-get install gcc libgeos++-dev libproj-dev proj-data proj-bin -y
+RUN apt-get install g++ gcc libgeos++-dev libproj-dev proj-data proj-bin -y
 
 # copy files
 COPY setup.py app/setup.py
