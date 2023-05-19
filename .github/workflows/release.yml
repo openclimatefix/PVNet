@@ -14,4 +14,3 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     inputs:
       image_base_name: pvnet
-
