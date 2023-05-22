@@ -40,6 +40,7 @@ import pvnet
 from pvnet.data.datamodule import batch_to_tensor
 from pvnet.models.base_model import BaseModel
 
+    
 # ---------------------------------------------------------------------------
 # GLOBAL SETTINGS
 
@@ -49,8 +50,7 @@ this_dir = os.path.dirname(os.path.abspath(__file__))
 data_config_filename = f"{this_dir}/../configs/datamodule/configuration/app_configuration.yaml"
 
 # Model will use GPU if available
-if torch.cuda.is_available():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Use multiple workers for data loading
 num_workers = min(os.cpu_count() - 1, 16)
@@ -161,7 +161,7 @@ def convert_df_to_forecasts(
 
 def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     """Inference function for production
-
+    
     This app expects these evironmental variables to be available:
         - DB_URL
         - NWP_ZARR_PATH
@@ -202,6 +202,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     logger.info("Downloading zipped satellite data")
     fs = fsspec.open(os.environ["SATELLITE_ZARR_PATH"]).fs
     fs.get(os.environ["SATELLITE_ZARR_PATH"], "latest.zarr.zip")
+    
 
     # ---------------------------------------------------------------------------
     # 2. Set up data loader
