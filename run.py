@@ -1,3 +1,6 @@
+"""Run training
+"""
+
 import os
 
 import torch
@@ -38,6 +41,7 @@ dotenv.load_dotenv(override=True)
 
 @hydra.main(config_path="configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
+    """Runs training"""
     # Imports should be nested inside @hydra.main to optimize tab completion
     # Read more here: https://github.com/facebookresearch/hydra/issues/934
     from pvnet.training import train
@@ -50,8 +54,6 @@ def main(config: DictConfig):
     # - forcing multi-gpu friendly configuration
     # You can safely get rid of this line if you don't want those
     extras(config)
-
-    #
 
     # Pretty print config using Rich library
     if config.get("print_config"):

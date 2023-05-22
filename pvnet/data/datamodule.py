@@ -20,12 +20,6 @@ def batch_to_tensor(batch):
     return batch
 
 
-def print_yaml(path):
-    print(f"{path} :")
-    with open(path, mode="r") as stream:
-        print("".join(stream.readlines()))
-
-
 def split_batches(batch):
     """Splits a single batch of data."""
     n_samples = batch[BatchKey.gsp].shape[0]
@@ -46,6 +40,7 @@ class BatchSplitter(IterDataPipe):
     """Pipeline step to split batches of data and yield single examples"""
 
     def __init__(self, source_datapipe: IterDataPipe):
+        """Pipeline step to split batches of data and yield single examples"""
         self.source_datapipe = source_datapipe
 
     def __iter__(self):

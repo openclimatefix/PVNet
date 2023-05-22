@@ -1,5 +1,4 @@
-"""
-A test script to examine the pre-saved batches
+"""A test script to examine the pre-saved batches
 """
 
 import torch
@@ -9,6 +8,9 @@ from pvnet.data.datamodule import BatchSplitter
 
 
 def get_batch_datapipe(folder, rebatch=False):
+    """Constructs a datapipe for presaved batches
+    
+    """
 
     dp = FileLister(root=folder, masks="*.pt", recursive=False)
     if rebatch:
