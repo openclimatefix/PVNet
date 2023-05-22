@@ -7,7 +7,6 @@ import xarray as xr
 import torch
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models.base import Base_Forecast, Base_PV
-from nowcasting_dataset.data_sources.fake.batch import make_image_coords_osgb
 
 from ocf_datapipes.utils.consts import BatchKey
 from testcontainers.postgres import PostgresContainer
