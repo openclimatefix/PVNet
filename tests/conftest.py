@@ -24,9 +24,8 @@ from nowcasting_datamodel.models import (
 xr.set_options(keep_attrs=True)
 
 
-
 def time_before_present(dt: timedelta):
-    return (pd.Timestamp.now(tz=None)-dt)
+    return pd.Timestamp.now(tz=None) - dt
 
 
 @pytest.fixture(scope="session")
@@ -87,20 +86,19 @@ def db_session(db_connection, engine_url):
 
 @pytest.fixture
 def nwp_data():
-
     # Small dataset which contains coords, but only zeros in data for good compression
     ds = xr.open_zarr(
         f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/nwp_zeros.zarr"
     )
-    
+
     # Last init time was at least 2 hours ago and hour to 3-hour interval
     t0_datetime_utc = time_before_present(timedelta(hours=2)).floor(timedelta(hours=3))
     ds.init_time.values[:] = pd.date_range(
-        t0_datetime_utc-timedelta(hours=3*(len(ds.init_time)-1)), 
+        t0_datetime_utc - timedelta(hours=3 * (len(ds.init_time) - 1)),
         t0_datetime_utc,
-        freq=timedelta(hours=3)
+        freq=timedelta(hours=3),
     )
-    
+
     # This is important to avoid saving errors
     for v in list(ds.coords.keys()):
         if ds.coords[v].dtype == object:
@@ -115,31 +113,29 @@ def nwp_data():
 
 @pytest.fixture()
 def sat_data():
-    
     # Small dataset which contains coords, but only zeros in data for good compression
     ds = xr.open_zarr(
         f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/non_hrv_zeros.zarr"
     )
-    
+
     # Change times so they lead up to present. Delayed by an hour
     t0_datetime_utc = time_before_present(timedelta(hours=1)).floor(timedelta(minutes=30))
     ds.time.values[:] = pd.date_range(
-        t0_datetime_utc-timedelta(minutes=5*(len(ds.time)-1)), 
+        t0_datetime_utc - timedelta(minutes=5 * (len(ds.time) - 1)),
         t0_datetime_utc,
-        freq=timedelta(minutes=5)
+        freq=timedelta(minutes=5),
     )
-  
+
     return ds
 
 
 @pytest.fixture()
 def gsp_yields_and_systems(db_session):
-    """Create gsp yields and systems
-    """
-    
+    """Create gsp yields and systems"""
+
     # GSP data is mostly up to date
     t0_datetime_utc = time_before_present(timedelta(minutes=0)).floor(timedelta(minutes=30))
-    
+
     # this pv systems has same coordiantes as the first gsp
     gsp_yields = []
     locations = []
@@ -149,10 +145,10 @@ def gsp_yields_and_systems(db_session):
             label=f"GSP_{i}",
             installed_capacity_mw=123.0,
         ).to_orm()
-        
+
         gsp_yield_sqls = []
         # From 2 hours ago to 8.5 hours into future
-        for minute in range(-2*60, 9*60, 30):
+        for minute in range(-2 * 60, 9 * 60, 30):
             gsp_yield_sql = GSPYield(
                 datetime_utc=t0_datetime_utc + timedelta(minutes=minute),
                 solar_generation_kw=np.random.randint(low=0, high=1000),
