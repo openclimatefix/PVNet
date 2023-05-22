@@ -24,8 +24,7 @@ class PredAccumulator:
         self._y_hats += [y_hat]
 
     def flush(self) -> torch.Tensor:
-        """Return all appended predictions a single torch tensor and remove from accumulated store.
-        """
+        """Return all appended predictions a single torch tensor and remove from accumulated store."""
         y_hat = torch.cat(self._y_hats, dim=0)
         self._y_hats = []
         return y_hat
@@ -33,6 +32,7 @@ class PredAccumulator:
 
 class DictListAccumulator:
     """Abstract class for accumulating dictionaries of lists"""
+
     @staticmethod
     def _dict_list_append(d1, d2):
         for k, v in d2.items():
@@ -45,7 +45,7 @@ class DictListAccumulator:
 
 class MetricAccumulator(DictListAccumulator):
     """Dictionary of metrics accumulator.
-    
+
     A class for accumulating, and finding the mean of logging metrics when using grad
     accumulation and the batch size is small.
 

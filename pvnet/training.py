@@ -29,7 +29,7 @@ def _callbacks_to_phase(callbacks, phase):
 
 def train(config: DictConfig) -> Optional[float]:
     """Contains training pipeline.
-    
+
     Instantiates all PyTorch Lightning objects from config.
 
     Args:
