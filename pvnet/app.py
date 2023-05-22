@@ -10,7 +10,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 
-import boto3
+import fsspec
 import numpy as np
 import pandas as pd
 import torch
@@ -40,17 +40,21 @@ import pvnet
 from pvnet.data.datamodule import batch_to_tensor
 from pvnet.models.base_model import BaseModel
 
+    
 # ---------------------------------------------------------------------------
 # GLOBAL SETTINGS
 
-data_config_filename = "../configs/datamodule/configuration/app_configuration.yaml"
+# TODO: Host data config alongside model?
+this_dir = os.path.dirname(os.path.abspath(__file__))
+
+data_config_filename = f"{this_dir}/../configs/datamodule/configuration/app_configuration.yaml"
 
 # Model will use GPU if available
 if torch.cuda.is_available():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Use multiple workers for data loading
-num_workers = min(os.cpu_count() - 1, 16)
+num_workers = min(os.cpu_count() - 1, 0)
 
 # If the solar elevation is less than this the predictions are set to zero
 MIN_DAY_ELEVATION = 0
@@ -155,7 +159,7 @@ def convert_df_to_forecasts(
     return forecasts
 
 
-def main(t0=None):
+def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
@@ -184,13 +188,9 @@ def main(t0=None):
 
     # Download satellite data - can't load zipped zarr straight from s3 bucket
     logger.info("Downloading zipped satellite data")
-    bucket, *path = os.environ["SATELLITE_ZARR_PATH"].removeprefix("s3://").split("/")
-    path = "/".join(path)
-
-    # fsspec instead of boto3,
-    client = boto3.client("s3")
-    client.download_file(Bucket=bucket, Key=path, Filename="latest.zarr.zip")
-    client.close()
+    fs = fsspec.open(os.environ["SATELLITE_ZARR_PATH"]).fs
+    fs.get(os.environ["SATELLITE_ZARR_PATH"], "latest.zarr.zip")
+    
 
     # ---------------------------------------------------------------------------
     # 2. Set up data loader
@@ -296,8 +296,9 @@ def main(t0=None):
             session=session,
             update_national=True,
             update_gsp=True,
+            apply_adjuster=apply_adjuster,
         )
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    typer.run(app)

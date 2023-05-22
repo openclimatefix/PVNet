@@ -1,17 +1,33 @@
 import os
 
 import pytest
+import pandas as pd
+import numpy as np
+import xarray as xr
 import torch
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models.base import Base_Forecast, Base_PV
+from nowcasting_dataset.data_sources.fake.batch import make_image_coords_osgb
+
 from ocf_datapipes.utils.consts import BatchKey
 from testcontainers.postgres import PostgresContainer
+from datetime import timedelta
 
 import pvnet
 from pvnet.data.datamodule import DataModule
+from nowcasting_datamodel.models import (
+    ForecastSQL,
+    GSPYield,
+    Location,
+    LocationSQL,
+)
 
-# TODO copy over to this repo
-from nowcasting_forecast.utils import floor_minutes_dt
+xr.set_options(keep_attrs=True)
+
+
+
+def time_before_present(dt: timedelta):
+    return (pd.Timestamp.now(tz=None)-dt)
 
 
 @pytest.fixture(scope="session")
@@ -72,147 +88,87 @@ def db_session(db_connection, engine_url):
 
 @pytest.fixture
 def nwp_data():
-    # middle of the UK
-    x_center_osgb = 500_000
-    y_center_osgb = 500_000
-    t0_datetime_utc = floor_minutes_dt(datetime.utcnow()) - timedelta(hours=1)
-    image_size = 1000
-    time_steps = 10
 
-    x, y = make_image_coords_osgb(
-        size_x=image_size,
-        size_y=image_size,
-        x_center_osgb=x_center_osgb,
-        y_center_osgb=y_center_osgb,
-        km_spacing=2,
+    # Small dataset which contains coords, but only zeros in data for good compression
+    ds = xr.open_zarr(
+        f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/nwp_zeros.zarr"
     )
-
-    # time = pd.date_range(start=t0_datetime_utc, freq="30T", periods=10)
-    step = [timedelta(minutes=60 * i) for i in range(0, time_steps)]
-
-    coords = (
-        ("init_time", [t0_datetime_utc]),
-        ("variable", np.array(["dswrf", "t", "prate", "si10"])),
-        ("step", step),
-        ("x", x),
-        ("y", y),
+    
+    # Last init time was at least 2 hours ago and hour to 3-hour interval
+    t0_datetime_utc = time_before_present(timedelta(hours=2)).floor(timedelta(hours=3))
+    ds.init_time.values[:] = pd.date_range(
+        t0_datetime_utc-timedelta(hours=3*(len(ds.init_time)-1)), 
+        t0_datetime_utc,
+        freq=timedelta(hours=3)
     )
+    
+    # This is important to avoid saving errors
+    for v in list(ds.coords.keys()):
+        if ds.coords[v].dtype == object:
+            ds[v].encoding.clear()
 
-    nwp = xr.DataArray(
-        abs(  # to make sure average is about 100
-            np.random.uniform(
-                0,
-                200,
-                size=(1, 4, time_steps, image_size, image_size),
-            )
-        ),
-        coords=coords,
-        name="data",
-    )  # Fake data for testing!
-    return nwp.to_dataset(name="UKV")
+    for v in list(ds.variables.keys()):
+        if ds[v].dtype == object:
+            ds[v].encoding.clear()
+
+    return ds
 
 
 @pytest.fixture()
 def sat_data():
-    # middle of the UK
-    t0_datetime_utc = floor_minutes_dt(datetime.utcnow()) - timedelta(hours=1.5)
-
-    times = [t0_datetime_utc]
-    # this means there will be about 30 mins of no data.
-    # This reflects the true satellite consumer
-    time_steps = 20
-    for i in range(1, time_steps):
-        times.append(t0_datetime_utc + timedelta(minutes=5 * i))
-
-    local_path = os.path.dirname(os.path.abspath(__file__))
-    x, y = np.load(f"{local_path}/sat_data/geo.npy", allow_pickle=True)
-
-    coords = (
-        ("time", times),
-        ("x_geostationary", x),
-        ("y_geostationary", y),
-        (
-            "variable",
-            np.array(
-                [
-                    "IR_016",
-                    "IR_039",
-                    "IR_087",
-                    "IR_097",
-                    "IR_108",
-                    "IR_120",
-                    "IR_134",
-                    "VIS006",
-                    "VIS008",
-                    "WV_062",
-                    "WV_073",
-                ]
-            ),
-        ),
+    
+    # Small dataset which contains coords, but only zeros in data for good compression
+    ds = xr.open_zarr(
+        f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/non_hrv_zeros.zarr"
     )
-
-    sat = xr.DataArray(
-        abs(  # to make sure average is about 100
-            np.random.uniform(
-                0,
-                200,
-                size=(time_steps, 615, 298, 11),
-            )
-        ),
-        coords=coords,
-        name="data",
-    )  # Fake data for testing!
-
-    area_attr = np.load(f"{local_path}/sat_data/area.npy")
-    sat.attrs["area"] = area_attr
-
-    sat["x_osgb"] = sat.x_geostationary
-    sat["y_osgb"] = sat.y_geostationary
-
-    return sat.to_dataset(name="data").sortby("time")
+    
+    # Change times so they lead up to present. Delayed by an hour
+    t0_datetime_utc = time_before_present(timedelta(hours=1)).floor(timedelta(minutes=30))
+    ds.time.values[:] = pd.date_range(
+        t0_datetime_utc-timedelta(minutes=5*(len(ds.time)-1)), 
+        t0_datetime_utc,
+        freq=timedelta(minutes=5)
+    )
+  
+    return ds
 
 
 @pytest.fixture()
 def gsp_yields_and_systems(db_session):
     """Create gsp yields and systems
-
-    gsp systems: One systems
-    GSP yields:
-        For system 1, gsp yields from 2 hours ago to 8 in the future at 30 minutes intervals
-        For system 2: 1 gsp yield at 16.00
     """
-
+    
+    # GSP data is mostly up to date
+    t0_datetime_utc = time_before_present(timedelta(minutes=0)).floor(timedelta(minutes=30))
+    
     # this pv systems has same coordiantes as the first gsp
-    gsp_yield_sqls = []
+    gsp_yields = []
     locations = []
-    for i in range(N_GSP):
-        location_sql_1: LocationSQL = Location(
-            gsp_id=i + 1,
-            label=f"GSP_{i+1}",
+    for i in range(1, 11):
+        location_sql: LocationSQL = Location(
+            gsp_id=i,
+            label=f"GSP_{i}",
             installed_capacity_mw=123.0,
         ).to_orm()
-
-        t0_datetime_utc = floor_minutes_dt(datetime.now(timezone.utc)) - timedelta(hours=2)
-
+        
         gsp_yield_sqls = []
-        for hour in range(0, 10):
-            for minute in range(0, 60, 30):
-                datetime_utc = t0_datetime_utc + timedelta(hours=hour - 2, minutes=minute)
-                gsp_yield_1 = GSPYield(
-                    datetime_utc=datetime_utc,
-                    solar_generation_kw=20 + hour + minute,
-                ).to_orm()
-                gsp_yield_1.location = location_sql_1
-                gsp_yield_sqls.append(gsp_yield_1)
-                locations.append(location_sql_1)
+        # From 2 hours ago to 8.5 hours into future
+        for minute in range(-2*60, 9*60, 30):
+            gsp_yield_sql = GSPYield(
+                datetime_utc=t0_datetime_utc + timedelta(minutes=minute),
+                solar_generation_kw=np.random.randint(low=0, high=1000),
+            ).to_orm()
+            gsp_yield_sql.location = location_sql
+            gsp_yields.append(gsp_yield_sql)
+            locations.append(location_sql)
 
     # add to database
-    db_session.add_all(gsp_yield_sqls + locations)
+    db_session.add_all(gsp_yields + locations)
 
     db_session.commit()
 
     return {
-        "gsp_yields": gsp_yield_sqls,
+        "gsp_yields": gsp_yields,
         "gs_systems": locations,
     }
 
