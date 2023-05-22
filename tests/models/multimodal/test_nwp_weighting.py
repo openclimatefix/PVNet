@@ -14,7 +14,6 @@ def nwp_weighting_model(model_minutes_kwargs):
 
 
 def test_model_forward(nwp_weighting_model, sample_batch):
-
     y = nwp_weighting_model(sample_batch)
 
     # check output is the correct shape

@@ -54,7 +54,6 @@ class CompleteDropoutNd(nn.Module):
     n_dim: int
 
     def __init__(self, n_dim, p=0.5, inplace=False):
-
         super().__init__()
         if p < 0 or p > 1:
             raise ValueError(

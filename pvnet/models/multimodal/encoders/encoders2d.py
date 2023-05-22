@@ -36,7 +36,6 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         out_features: int,
         model_name: str = "efficientnet-b0",
     ):
-
         # The efficientnet_pytorch package must be installed to use the
         # EncoderNaiveEfficientNet encoder. See
         # https://github.com/lukemelas/EfficientNet-PyTorch for install instructions.
@@ -95,7 +94,6 @@ class NaiveResNet(nn.Module):
         replace_stride_with_dilation: Optional[List[bool]] = None,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
     ):
-
         super().__init__()
         _log_api_usage_once(self)
         if norm_layer is None:

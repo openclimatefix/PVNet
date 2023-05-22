@@ -10,7 +10,6 @@ class PhaseEarlyStopping(EarlyStopping):
     
     Only functions in a specific phase of training.
     """
-
     training_phase = None
 
     def switch_phase(self, phase: str):
@@ -29,7 +28,6 @@ class PhaseEarlyStopping(EarlyStopping):
         self.active = True
 
     def _should_skip_check(self, trainer: Trainer) -> bool:
-
         return (
             (trainer.state.fn != TrainerFn.FITTING) or (trainer.sanity_checking) or not self.active
         )
@@ -54,7 +52,6 @@ class MainEarlyStopping(EarlyStopping):
 class PretrainFreeze(BaseFinetuning):
     """Freeze the satellite and NWP encoders during pretraining
     """
-
     training_phase = "pretrain"
 
     def __init__(self):

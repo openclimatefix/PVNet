@@ -24,7 +24,6 @@ class DefaultFCNet(AbstractLinearNetwork):
         out_features: int,
         fc_hidden_features: int = 128,
     ):
-
         super().__init__(in_features, out_features)
 
         self.model = nn.Sequential(
@@ -64,7 +63,6 @@ class ResFCNet(AbstractLinearNetwork):
         res_block_layers: int = 2,
         dropout_frac: float = 0.2,
     ):
-
         super().__init__(in_features, out_features)
 
         model = [
@@ -120,7 +118,6 @@ class ResFCNet2(AbstractLinearNetwork):
         dropout_frac=0.0,
         **kwargs,
     ):
-
         super().__init__(in_features, out_features)
 
         model = [
@@ -269,7 +266,6 @@ class TabNet(AbstractLinearNetwork):
         momentum=0.02,
         mask_type="sparsemax",
     ):
-
         from pytorch_tabnet.tab_network import TabNet as _TabNetModel
 
         super().__init__(in_features, out_features)
