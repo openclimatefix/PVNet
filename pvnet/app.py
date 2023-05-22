@@ -54,7 +54,7 @@ if torch.cuda.is_available():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Use multiple workers for data loading
-num_workers = min(os.cpu_count() - 1, 0)
+num_workers = min(os.cpu_count() - 1, 16)
 
 # If the solar elevation is less than this the predictions are set to zero
 MIN_DAY_ELEVATION = 0
@@ -102,13 +102,14 @@ def convert_df_to_forecasts(
     """
     Make a ForecastSQL object from a dataframe.
 
-    :param forecast_values_df: Dataframe containing
-        -- target_datetime_utc
-        -- forecast_mw
-    :param: session: database session
-    :param: model_name: the name of the model
-    :param: version: the version of the model
-    :return: forecast object
+    Args:
+        config (DictConfig): Configuration composed by Hydra.
+        forecast_values_df (Dataframe): Containing `target_datetime_utc` and `forecast_mw` columns
+        session: database session
+        model_name: the name of the model
+        version: the version of the model
+    Return:
+        List of ForecastSQL objects
     """
 
     logger.debug("Converting dataframe to list of ForecastSQL")
@@ -160,6 +161,18 @@ def convert_df_to_forecasts(
 
 
 def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
+    """Inference function for production
+    
+    This app expects these evironmental variables to be available:
+        - DB_URL
+        - NWP_ZARR_PATH
+        - SATELLITE_ZARR_PATH
+    Args:
+        t0 (datetime): Datetime at which forecast is made
+        apply_adjuster (bool): Whether to apply the adjuster when saving forecast
+        gsp_ids (array_like): List of gsp_ids to make predictions for. This list of GSPs are summed
+            to national.
+    """
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
