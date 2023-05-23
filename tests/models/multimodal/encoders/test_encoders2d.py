@@ -1,7 +1,7 @@
 from pvnet.models.multimodal.encoders.encoders2d import (
     NaiveEfficientNet,
     NaiveResNet,
-    ConvNeXt,
+    NaiveConvNeXt,
     CNBlockConfig,
 )
 import pytest
@@ -44,7 +44,7 @@ def test_naiveresnet_forward(sample_satellite_batch, encoder_model_kwargs):
 
 
 def test_convnext_forward(sample_satellite_batch, convnext_model_kwargs):
-    _test_model_forward(sample_satellite_batch, ConvNeXt, convnext_model_kwargs)
+    _test_model_forward(sample_satellite_batch, NaiveConvNeXt, convnext_model_kwargs)
 
 
 # Test model backward on all models
@@ -59,4 +59,4 @@ def test_naiveresnet_backward(sample_satellite_batch, encoder_model_kwargs):
 
 
 def test_convnext_backward(sample_satellite_batch, convnext_model_kwargs):
-    _test_model_backward(sample_satellite_batch, ConvNeXt, convnext_model_kwargs)
+    _test_model_backward(sample_satellite_batch, NaiveConvNeXt, convnext_model_kwargs)

@@ -1,3 +1,4 @@
+"""Model architecture where preidction is split into climateology and weather residual"""
 from collections import OrderedDict
 from typing import Optional
 
@@ -17,8 +18,7 @@ from pvnet.optimizers import AbstractOptimizer
 
 
 class Model(BaseModel):
-    """
-    Neural network which combines information from different sources.
+    """Multi-head weather residual model.
 
     This architecture, which is similar to both the `multimodal.Model` and
     `deep_supervision.Model` is designed to force the network to use the information in the NWP and
@@ -41,43 +41,6 @@ class Model(BaseModel):
     During training we otpimise the average loss of the non-weather (i.e. not including NWP and
     satellite data) network and the weather residual network. This means the non-weather network
     should itself produce a good forecast and the weather network is forced to learn a residual.
-
-    Args:
-        image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D into
-            an 1D feature vector.
-        encoder_out_features: Number of features of the 1D vector created by the
-            `encoder_out_features` class.
-        encoder_kwargs: Dictionary of optional kwargs for the `image_encoder` module.
-        output_network: Pytorch Module class used to combine the 1D features to produce the
-            forecast. Also used for the ancillary networks.
-        output_network_kwrgs: Dictionary of optional kwargs for the `output_network` module.
-        include_sat: Include satellite data.
-        include_nwp: Include NWP data.
-        add_image_embedding_channel: Add a channel to the NWP and satellite data with the embedding
-            of the GSP ID.
-        include_gsp_yield_history: Include GSP yield data.
-        include_sun: Include sun azimuth and altitude data.
-        embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
-            `None`.
-        forecast_minutes: The amount of minutes that should be forecasted.
-        history_minutes: The default amount of historical minutes that are used.
-        sat_history_minutes: Period of historical data to use for satellite data. Defaults to
-            `history_minutes` if not provided.
-        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
-            `forecast_minutes` if not provided.
-        nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
-            `history_minutes` if not provided.
-        sat_image_size_pixels: Image size (assumed square) of the satellite data.
-        nwp_image_size_pixels: Image size (assumed square) of the NWP data.
-        number_sat_channels: Number of satellite channels used.
-        number_nwp_channels: Number of NWP channels used.
-
-        version: If `version=1` then the output of the non-weather forecast is fed as a feature into
-            the weather residual model. If `version=0` it is not.
-
-        source_dropout: Fraction of samples where each data source will be completely dropped out.
-
-        optimizer: Optimizer factory function used for network.
     """
 
     name = "conv3d_sat_nwp_weather_residual"
@@ -108,6 +71,46 @@ class Model(BaseModel):
         source_dropout=0.0,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
+        """Multi-head weather residual model.
+
+        Args:
+            image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D 
+                into an 1D feature vector.
+            encoder_out_features: Number of features of the 1D vector created by the
+                `encoder_out_features` class.
+            encoder_kwargs: Dictionary of optional kwargs for the `image_encoder` module.
+            output_network: Pytorch Module class used to combine the 1D features to produce the
+                forecast. Also used for the ancillary networks.
+            output_network_kwargs: Dictionary of optional kwargs for the `output_network` module.
+            include_sat: Include satellite data.
+            include_nwp: Include NWP data.
+            add_image_embedding_channel: Add a channel to the NWP and satellite data with the 
+                embedding of the GSP ID.
+            include_gsp_yield_history: Include GSP yield data.
+            include_sun: Include sun azimuth and altitude data.
+            embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
+                `None`.
+            forecast_minutes: The amount of minutes that should be forecasted.
+            history_minutes: The default amount of historical minutes that are used.
+            sat_history_minutes: Period of historical data to use for satellite data. Defaults to
+                `history_minutes` if not provided.
+            nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
+                `forecast_minutes` if not provided.
+            nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
+                `history_minutes` if not provided.
+            sat_image_size_pixels: Image size (assumed square) of the satellite data.
+            nwp_image_size_pixels: Image size (assumed square) of the NWP data.
+            number_sat_channels: Number of satellite channels used.
+            number_nwp_channels: Number of NWP channels used.
+
+            version: If `version=1` then the output of the non-weather forecast is fed as a feature 
+                into the weather residual model. If `version=0` it is not.
+
+            source_dropout: Fraction of samples where each data source will be completely dropped 
+                out.
+
+            optimizer: Optimizer factory function used for network.
+        """
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = include_sat
         self.include_nwp = include_nwp
@@ -173,7 +176,7 @@ class Model(BaseModel):
         if include_nwp:
             weather_cat_features += encoder_out_features
         if version == 1:
-            weather_cat_features += self.forecast_len
+            weather_cat_features += self.forecast_len_30
 
         nonweather_cat_features = 0
         if include_gsp_yield_history:
@@ -185,19 +188,19 @@ class Model(BaseModel):
 
         self.simple_output_network = output_network(
             in_features=nonweather_cat_features,
-            out_features=self.forecast_len,
+            out_features=self.forecast_len_30,
             **output_network_kwargs,
         )
 
         self.weather_residual_network = nn.Sequential(
             output_network(
                 in_features=weather_cat_features,
-                out_features=self.forecast_len,
+                out_features=self.forecast_len_30,
                 **output_network_kwargs,
             ),
             # All output network return LeakyReLU activated outputs
             # However, the residual could be positive or negative
-            nn.Linear(self.forecast_len, self.forecast_len),
+            nn.Linear(self.forecast_len_30, self.forecast_len_30),
         )
 
         self.source_dropout_0d = CompleteDropoutNd(0, p=source_dropout)
@@ -206,6 +209,7 @@ class Model(BaseModel):
         self.save_hyperparameters()
 
     def encode(self, x):
+        """Encode the inputs before fusion"""
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -254,9 +258,11 @@ class Model(BaseModel):
         return modes
 
     def forward(self, x):
+        """Run normal model forward"""
         return self.multi_mode_forward(x)["weather_out"]
 
     def base_and_resid_forward(self, x):
+        """Run forward with to predict climateology result and weather residual"""
         modes = self.encode(x)
 
         simple_in = OrderedDict((k, v) for k, v in modes.items() if k not in ["sat", "nwp"])
@@ -270,14 +276,16 @@ class Model(BaseModel):
         return simple_output, weather_resid
 
     def multi_mode_forward(self, x):
+        """Predict output with multiple model heads"""
         simple_output, weather_resid = self.base_and_resid_forward(x)
         weather_out = F.leaky_relu(simple_output + weather_resid, negative_slope=0.01)
         outs = OrderedDict(simple_out=simple_output, weather_out=weather_out)
         return outs
 
     def training_step(self, batch, batch_idx):
+        """Run training step"""
         y_hats = self.multi_mode_forward(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hats["weather_out"])
         losses = {f"{k}/train": v for k, v in losses.items()}

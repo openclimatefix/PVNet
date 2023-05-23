@@ -1,5 +1,7 @@
-"""Encoder modules for the satellite/NWP data. These networks naively stack the sequences into extra
-channels before putting through these architectures.
+"""Encoder modules for the satellite/NWP data. 
+
+These networks naively stack the sequences into extra channels before putting through their
+architectures.
 """
 
 from functools import partial
@@ -16,16 +18,9 @@ from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEn
 
 
 class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
-    """
-    An implementation of EfficientNet from `efficientnet_pytorch`. This model is quite naive, and
-    just stacks the sequence into channels.
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-        model_name: Name of EfficientNet model to construct.
+    """An implementation of EfficientNet from `efficientnet_pytorch`. 
+    
+    This model is quite naive, and just stacks the sequence into channels.
     """
 
     def __init__(
@@ -36,9 +31,22 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         out_features: int,
         model_name: str = "efficientnet-b0",
     ):
-        # The efficientnet_pytorch package must be installed to use the
-        # EncoderNaiveEfficientNet encoder. See
-        # https://github.com/lukemelas/EfficientNet-PyTorch for install instructions.
+        """An implementation of EfficientNet from `efficientnet_pytorch`. 
+
+        This model is quite naive, and just stacks the sequence into channels.
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            model_name: Name of EfficientNet model to construct.
+
+        Notes:
+            The `efficientnet_pytorch` package must be installed to use `EncoderNaiveEfficientNet`. 
+            See https://github.com/lukemelas/EfficientNet-PyTorch for install instructions.
+        """
+
         from efficientnet_pytorch import EfficientNet
 
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
@@ -51,14 +59,17 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         )
 
     def forward(self, x):
+        """Run model forward"""
         bs, s, c, h, w = x.shape
         x = x.reshape((bs, s * c, h, w))
         return self.model(x)
 
 
 class NaiveResNet(nn.Module):
-    """A ResNet model modified from one in torchvision [1] to allow different number of input
-    channels. This model is quite naive, and just stacks the sequence into channels.
+    """A ResNet model modified from one in torchvision [1].
+    
+    Modified allow different number of input channels. This model is quite naive, and just stacks 
+    the sequence into channels.
 
     Example use:
         ```
@@ -69,15 +80,6 @@ class NaiveResNet(nn.Module):
     Sources:
          [1] https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
          [2] https://pytorch.org/hub/pytorch_vision_resnet
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-
-        For other args see [1] and [2].
-
     """
 
     def __init__(
@@ -94,6 +96,25 @@ class NaiveResNet(nn.Module):
         replace_stride_with_dilation: Optional[List[bool]] = None,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
     ):
+        """A ResNet model modified from one in torchvision [1].
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            layers: See [1] and [2].
+            block: See [1] and [2].
+            zero_init_residual: See [1] and [2].
+            groups: See [1] and [2].
+            width_per_group: See [1] and [2].
+            replace_stride_with_dilation: See [1] and [2].
+            norm_layer: See [1] and [2].
+            
+        Sources:
+             [1] https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
+             [2] https://pytorch.org/hub/pytorch_vision_resnet
+        """
         super().__init__()
         _log_api_usage_once(self)
         if norm_layer is None:
@@ -227,16 +248,17 @@ class NaiveResNet(nn.Module):
         return x
 
     def forward(self, x: Tensor) -> Tensor:
+        """Run model forward"""
         bs, s, c, h, w = x.shape
         x = x.reshape((bs, s * c, h, w))
         return self._forward_impl(x)
 
 
-class ConvNeXt(nn.Module):
-    """
-    A ConvNeXt model [1] modified from one in torchvision [2] to allow different number of input
-    channels, and smaller spatial inputs. This model is quite naive, and just stacks the sequence
-    into channels.
+class NaiveConvNeXt(nn.Module):
+    """A NaiveConvNeXt model [1] modified from one in torchvision [2].
+    
+    Mopdified to allow different number of input channels, and smaller spatial inputs. This model is
+    quite naive, and just stacks the sequence into channels.
 
     Example usage:
         ```
@@ -266,15 +288,6 @@ class ConvNeXt(nn.Module):
         [2] https://github.com/pytorch/vision/blob/main/torchvision/models/convnext.py
         [3] https://pytorch.org/vision/main/models/convnext.html
 
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-
-        For other args see [2] and [3].
-
     """
 
     def __init__(
@@ -290,6 +303,25 @@ class ConvNeXt(nn.Module):
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         **kwargs: Any,
     ) -> None:
+        """A ConvNeXt model [1] modified from one in torchvision [2].
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            block_setting: See [2] and [3].
+            stochastic_depth_prob: See [2] and [3].
+            layer_scale: See [2] and [3].
+            block: See [2] and [3].
+            norm_layer: See [2] and [3].
+            **kwargs: See [2] and [3].
+
+        Sources:
+            [1] https://arxiv.org/abs/2201.03545
+            [2] https://github.com/pytorch/vision/blob/main/torchvision/models/convnext.py
+            [3] https://pytorch.org/vision/main/models/convnext.html
+        """
         super().__init__()
         _log_api_usage_once(self)
 
@@ -375,6 +407,7 @@ class ConvNeXt(nn.Module):
         return x
 
     def forward(self, x: Tensor) -> Tensor:
+        """Run model forward"""
         bs, s, c, h, w = x.shape
         x = x.reshape((bs, s * c, h, w))
         return self._forward_impl(x)

@@ -52,19 +52,6 @@ class BatchSplitter(IterDataPipe):
 
 class DataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
-
-    Args:
-        configuration: Path to datapipe configuration file.
-        batch_size: Batch size.
-        num_workers: Number of workers to use in multiprocess batch loading.
-        prefetch_factor: Number of data will be prefetched at the end of each worker process.
-        train_period: Date range filter for train dataloader.
-        val_period: Date range filter for val dataloader.
-        test_period: Date range filter for test dataloader.
-        block_nwp_and_sat: If True, the dataloader does not load the requested NWP and sat data. It
-            instead returns an zero-array of the required shape. Useful for pretraining.
-        batch_dir: Path to the directory of pre-saved batches. Cannot be used together with
-            `configuration` or 'train/val/test_period'.
     """
 
     def __init__(
@@ -79,6 +66,25 @@ class DataModule(LightningDataModule):
         block_nwp_and_sat=False,
         batch_dir=None,
     ):
+        """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
+        
+        Can also be used with pre-made batches if `batch_dir` is set.
+        
+
+        Args:
+            configuration: Path to datapipe configuration file.
+            batch_size: Batch size.
+            num_workers: Number of workers to use in multiprocess batch loading.
+            prefetch_factor: Number of data will be prefetched at the end of each worker process.
+            train_period: Date range filter for train dataloader.
+            val_period: Date range filter for val dataloader.
+            test_period: Date range filter for test dataloader.
+            block_nwp_and_sat: If True, the dataloader does not load the requested NWP and sat data.
+                It instead returns an zero-array of the required shape. Useful for pretraining.
+            batch_dir: Path to the directory of pre-saved batches. Cannot be used together with
+                `configuration` or 'train/val/test_period'.
+
+        """
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
@@ -151,6 +157,7 @@ class DataModule(LightningDataModule):
         return data_pipeline
 
     def train_dataloader(self):
+        """Construct train dataloader"""
         if self.batch_dir is not None:
             datapipe = self._get_premade_batches_datapipe("train", shuffle=True)
         else:
@@ -159,6 +166,7 @@ class DataModule(LightningDataModule):
         return DataLoader2(datapipe, reading_service=rs)
 
     def val_dataloader(self):
+        """Construct val dataloader"""
         if self.batch_dir is not None:
             datapipe = self._get_premade_batches_datapipe("val")
         else:
@@ -167,6 +175,7 @@ class DataModule(LightningDataModule):
         return DataLoader2(datapipe, reading_service=rs)
 
     def test_dataloader(self):
+        """Construct test dataloader"""
         if self.batch_dir is not None:
             datapipe = self._get_premade_batches_datapipe("test")
         else:

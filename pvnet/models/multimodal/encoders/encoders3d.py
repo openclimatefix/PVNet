@@ -11,17 +11,7 @@ from pvnet.models.multimodal.encoders.basic_blocks import (
 
 
 class DefaultPVNet(AbstractNWPSatelliteEncoder):
-    """
-    This is the original encoding module used in PVNet, with a few minor tweaks.
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-        number_of_conv3d_layers: Number of convolution 3d layers that are used.
-        conv3d_channels: Number of channels used in each conv3d layer.
-        fc_features: number of output nodes out of the hidden fully connected layer.
+    """This is the original encoding module used in PVNet, with a few minor tweaks.
     """
 
     def __init__(
@@ -34,6 +24,17 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         conv3d_channels: int = 32,
         fc_features: int = 128,
     ):
+        """This is the original encoding module used in PVNet, with a few minor tweaks.
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            number_of_conv3d_layers: Number of convolution 3d layers that are used.
+            conv3d_channels: Number of channels used in each conv3d layer.
+            fc_features: number of output nodes out of the hidden fully connected layer.
+        """
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
         # Check that the output shape of the convolutional layers will be at least 1x1
@@ -79,6 +80,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         )
 
     def forward(self, x):
+        """Run model forward"""
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
 
@@ -89,21 +91,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
 
 class DefaultPVNet2(AbstractNWPSatelliteEncoder):
-    """
-    This is the original encoding module used in PVNet, with a few minor tweaks, and added
-    batchnorm.
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-        number_of_conv3d_layers: Number of convolution 3d layers that are used.
-        conv3d_channels: Number of channels used in each conv3d layer.
-        fc_features: number of output nodes out of the hidden fully connected layer.
-        batch_norm: Whether to include 3D batch normalisation.
-        fc_dropout: Probability of an element to be zeroed before the last two fully connected
-            layers.
+    """The original encoding module used in PVNet, with a few minor tweaks, and batchnorm.
     """
 
     def __init__(
@@ -118,6 +106,20 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         batch_norm=True,
         fc_dropout=0.2,
     ):
+        """The original encoding module used in PVNet, with a few minor tweaks, and batchnorm.
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            number_of_conv3d_layers: Number of convolution 3d layers that are used.
+            conv3d_channels: Number of channels used in each conv3d layer.
+            fc_features: number of output nodes out of the hidden fully connected layer.
+            batch_norm: Whether to include 3D batch normalisation.
+            fc_dropout: Probability of an element to be zeroed before the last two fully connected
+                layers.
+        """
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
         # Check that the output shape of the convolutional layers will be at least 1x1
@@ -174,6 +176,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         self.final_block = nn.Sequential(*final_block)
 
     def forward(self, x):
+        """Run model forward"""
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
 
@@ -184,21 +187,12 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
 
 
 class EncoderUNET(AbstractNWPSatelliteEncoder):
-    """
+    """An encoder based on emodifed UNet architecture.
+    
     An encoder for satellite and/or NWP data taking inspiration from the kinds of skip
     connections in UNet. This differs from an actual UNet in that it does not have upsampling
     layers, instead it concats features from different spatial scales, and applies a few extra
     conv3d layers.
-
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
-        n_downscale: Number of conv3d and spatially downscaling layers that are used.
-        conv3d_channels: Number of channels used in each conv3d layer.
-        fc_features: number of output nodes out of the hidden fully connected layer.
-        dropout_frac: Probability of an element to be zeroed in the residual pathways.
     """
 
     def __init__(
@@ -212,6 +206,18 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         conv3d_channels: int = 32,
         dropout_frac: float = 0.1,
     ):
+        """An encoder based on emodifed UNet architecture.
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            n_downscale: Number of conv3d and spatially downscaling layers that are used.
+            res_block_layers: Number of residual blocks used after each downscale layer.
+            conv3d_channels: Number of channels used in each conv3d layer.
+            dropout_frac: Probability of an element to be zeroed in the residual pathways.
+        """
         cnn_spatial_output = image_size_pixels // (2**n_downscale)
 
         if not (cnn_spatial_output > 0):
@@ -287,6 +293,7 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         )
 
     def forward(self, x):
+        """Run model forward"""
         out = self.first_layer(x)
         outputs = [self.crop_fn(out)]
 

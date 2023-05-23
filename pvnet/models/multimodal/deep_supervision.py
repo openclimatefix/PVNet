@@ -1,3 +1,5 @@
+"""Model which uses mutliple prediction heads"""
+
 from collections import OrderedDict
 from typing import Optional
 
@@ -17,8 +19,7 @@ from pvnet.optimizers import AbstractOptimizer
 
 
 class Model(BaseModel):
-    """
-    Neural network which combines information from different sources.
+    """Neural network which combines information from different sources.
 
     Architecture is roughly as follows:
 
@@ -34,40 +35,6 @@ class Model(BaseModel):
         data sources.
 
     * if included
-
-    Args:
-        image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D into
-            an 1D feature vector.
-        encoder_out_features: Number of features of the 1D vector created by the
-            `encoder_out_features` class.
-        encoder_kwargs: Dictionary of optional kwargs for the `image_encoder` module.
-        output_network: Pytorch Module class used to combine the 1D features to produce the
-            forecast. Also used for the ancillary networks.
-        output_network_kwrgs: Dictionary of optional kwargs for the `output_network` module.
-        include_sat: Include satellite data.
-        include_nwp: Include NWP data.
-        add_image_embedding_channel: Add a channel to the NWP and satellite data with the embedding
-            of the GSP ID.
-        include_gsp_yield_history: Include GSP yield data.
-        include_sun: Include sun azimuth and altitude data.
-        embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
-            `None`.
-        forecast_minutes: The amount of minutes that should be forecasted.
-        history_minutes: The default amount of historical minutes that are used.
-        sat_history_minutes: Period of historical data to use for satellite data. Defaults to
-            `history_minutes` if not provided.
-        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
-            `forecast_minutes` if not provided.
-        nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
-            `history_minutes` if not provided.
-        sat_image_size_pixels: Image size (assumed square) of the satellite data.
-        nwp_image_size_pixels: Image size (assumed square) of the NWP data.
-        number_sat_channels: Number of satellite channels used.
-        number_nwp_channels: Number of NWP channels used.
-
-        source_dropout: Fraction of samples where each data source will be completely dropped out.
-
-        optimizer: Optimizer factory function used for network.
     """
 
     name = "conv3d_sat_nwp_deep_supevision"
@@ -97,6 +64,43 @@ class Model(BaseModel):
         source_dropout=0.0,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
+        """Neural network which combines information from different sources.
+
+        Args:
+            image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D 
+                into an 1D feature vector.
+            encoder_out_features: Number of features of the 1D vector created by the
+                `encoder_out_features` class.
+            encoder_kwargs: Dictionary of optional kwargs for the `image_encoder` module.
+            output_network: Pytorch Module class used to combine the 1D features to produce the
+                forecast. Also used for the ancillary networks.
+            output_network_kwargs: Dictionary of optional kwargs for the `output_network` module.
+            include_sat: Include satellite data.
+            include_nwp: Include NWP data.
+            add_image_embedding_channel: Add a channel to the NWP and satellite data with the 
+                embedding of the GSP ID.
+            include_gsp_yield_history: Include GSP yield data.
+            include_sun: Include sun azimuth and altitude data.
+            embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
+                `None`.
+            forecast_minutes: The amount of minutes that should be forecasted.
+            history_minutes: The default amount of historical minutes that are used.
+            sat_history_minutes: Period of historical data to use for satellite data. Defaults to
+                `history_minutes` if not provided.
+            nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
+                `forecast_minutes` if not provided.
+            nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
+                `history_minutes` if not provided.
+            sat_image_size_pixels: Image size (assumed square) of the satellite data.
+            nwp_image_size_pixels: Image size (assumed square) of the NWP data.
+            number_sat_channels: Number of satellite channels used.
+            number_nwp_channels: Number of NWP channels used.
+
+            source_dropout: Fraction of samples where each data source will be completely dropped 
+                out.
+
+            optimizer: Optimizer factory function used for network.
+        """
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = include_sat
         self.include_nwp = include_nwp
@@ -155,14 +159,14 @@ class Model(BaseModel):
             num_cat_features += encoder_out_features
             self.sat_output_network = output_network(
                 in_features=encoder_out_features,
-                out_features=self.forecast_len,
+                out_features=self.forecast_len_30,
                 **output_network_kwargs,
             )
         if include_nwp:
             num_cat_features += encoder_out_features
             self.nwp_output_network = output_network(
                 in_features=encoder_out_features,
-                out_features=self.forecast_len,
+                out_features=self.forecast_len_30,
                 **output_network_kwargs,
             )
         if include_gsp_yield_history:
@@ -174,7 +178,7 @@ class Model(BaseModel):
 
         self.output_network = output_network(
             in_features=num_cat_features,
-            out_features=self.forecast_len,
+            out_features=self.forecast_len_30,
             **output_network_kwargs,
         )
 
@@ -184,6 +188,7 @@ class Model(BaseModel):
         self.save_hyperparameters()
 
     def encode(self, x):
+        """Encode the image inputs"""
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -233,10 +238,12 @@ class Model(BaseModel):
         return modes
 
     def forward(self, x):
+        """Run central model forward"""
         modes = self.encode(x)
         return self.output_network(modes)
 
     def multi_mode_forward(self, x):
+        """Predict using all model heads"""
         modes = self.encode(x)
         outs = OrderedDict()
         if self.include_sat:
@@ -247,8 +254,9 @@ class Model(BaseModel):
         return outs
 
     def training_step(self, batch, batch_idx):
+        """Training step"""
         y_hats = self.multi_mode_forward(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hats["all"])
         losses = {f"{k}/train": v for k, v in losses.items()}
