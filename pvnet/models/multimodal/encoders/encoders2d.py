@@ -1,4 +1,4 @@
-"""Encoder modules for the satellite/NWP data. 
+"""Encoder modules for the satellite/NWP data.
 
 These networks naively stack the sequences into extra channels before putting through their
 architectures.
@@ -18,8 +18,8 @@ from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEn
 
 
 class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
-    """An implementation of EfficientNet from `efficientnet_pytorch`. 
-    
+    """An implementation of EfficientNet from `efficientnet_pytorch`.
+
     This model is quite naive, and just stacks the sequence into channels.
     """
 
@@ -31,7 +31,7 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
         out_features: int,
         model_name: str = "efficientnet-b0",
     ):
-        """An implementation of EfficientNet from `efficientnet_pytorch`. 
+        """An implementation of EfficientNet from `efficientnet_pytorch`.
 
         This model is quite naive, and just stacks the sequence into channels.
 
@@ -43,7 +43,7 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
             model_name: Name of EfficientNet model to construct.
 
         Notes:
-            The `efficientnet_pytorch` package must be installed to use `EncoderNaiveEfficientNet`. 
+            The `efficientnet_pytorch` package must be installed to use `EncoderNaiveEfficientNet`.
             See https://github.com/lukemelas/EfficientNet-PyTorch for install instructions.
         """
 
@@ -67,8 +67,8 @@ class NaiveEfficientNet(AbstractNWPSatelliteEncoder):
 
 class NaiveResNet(nn.Module):
     """A ResNet model modified from one in torchvision [1].
-    
-    Modified allow different number of input channels. This model is quite naive, and just stacks 
+
+    Modified allow different number of input channels. This model is quite naive, and just stacks
     the sequence into channels.
 
     Example use:
@@ -110,7 +110,7 @@ class NaiveResNet(nn.Module):
             width_per_group: See [1] and [2].
             replace_stride_with_dilation: See [1] and [2].
             norm_layer: See [1] and [2].
-            
+
         Sources:
              [1] https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
              [2] https://pytorch.org/hub/pytorch_vision_resnet
@@ -256,7 +256,7 @@ class NaiveResNet(nn.Module):
 
 class NaiveConvNeXt(nn.Module):
     """A NaiveConvNeXt model [1] modified from one in torchvision [2].
-    
+
     Mopdified to allow different number of input channels, and smaller spatial inputs. This model is
     quite naive, and just stacks the sequence into channels.
 

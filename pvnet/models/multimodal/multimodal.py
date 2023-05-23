@@ -62,7 +62,7 @@ class Model(BaseModel):
         """Neural network which combines information from different sources.
 
         Args:
-            image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D 
+            image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D
                 into an 1D feature vector.
             encoder_out_features: Number of features of the 1D vector created by the
                 `encoder_out_features` class.
@@ -72,7 +72,7 @@ class Model(BaseModel):
             output_network_kwargs: Dictionary of optional kwargs for the `output_network` module.
             include_sat: Include satellite data.
             include_nwp: Include NWP data.
-            add_image_embedding_channel: Add a channel to the NWP and satellite data with the 
+            add_image_embedding_channel: Add a channel to the NWP and satellite data with the
                 embedding of the GSP ID.
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
@@ -91,7 +91,7 @@ class Model(BaseModel):
             number_sat_channels: Number of satellite channels used.
             number_nwp_channels: Number of NWP channels used.
 
-            source_dropout: Fraction of samples where each data source will be completely dropped 
+            source_dropout: Fraction of samples where each data source will be completely dropped
                 out.
 
             optimizer: Optimizer factory function used for network.

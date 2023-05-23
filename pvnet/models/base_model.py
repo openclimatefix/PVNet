@@ -106,12 +106,12 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             config (`dict`):
                 Model configuration specified as a key/value dictionary.
             repo_id (`str`, *optional*):
-                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to 
+                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the Huggingface Hub after saving it.
             kwargs:
-                Additional key word arguments passed along to the 
+                Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
         """
         # For PVNet the Config must be supplied. Not optional
@@ -122,6 +122,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     """Abtstract base class for PVNet submodels"""
+
     def __init__(
         self,
         history_minutes: int,
@@ -196,9 +197,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _training_accumulate_log(self, batch, batch_idx, losses, y_hat):
         """Internal function to accumulate training batches and log results.
-        
+
         This is used when accummulating grad batches. Should make the variability in logged training
-        step metrics indpendent on whether we accumulate N batches of size B or just use a larger 
+        step metrics indpendent on whether we accumulate N batches of size B or just use a larger
         batch size of N*B with no accumulaion.
         """
 

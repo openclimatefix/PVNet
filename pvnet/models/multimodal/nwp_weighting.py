@@ -12,7 +12,7 @@ from pvnet.optimizers import AbstractOptimizer
 
 class Model(BaseModel):
     """Model that learns an linear interpolation of NWP dwsrf to predict output.
-    
+
     This model learns to compute a weighted average of the downward short-wave radiation flux for
     each GSP. The same averaging is used for each step in the NWP input sequence. It also learns
     a linear time-interpolation scheme to map between the NWP-step weighted average and the
