@@ -1,3 +1,4 @@
+"""Architecture for simple learned weighted average of the downwards short wave radiation flux"""
 from typing import Optional
 
 import torch
@@ -10,21 +11,13 @@ from pvnet.optimizers import AbstractOptimizer
 
 
 class Model(BaseModel):
-    """This model learns to compute a weighted average of the downward short-wave radiation flux for
+    """Model that learns an linear interpolation of NWP dwsrf to predict output.
+
+    This model learns to compute a weighted average of the downward short-wave radiation flux for
     each GSP. The same averaging is used for each step in the NWP input sequence. It also learns
     a linear time-interpolation scheme to map between the NWP-step weighted average and the
     predicted GSP output.
 
-    Args:
-        forecast_minutes: The amount of minutes that should be forecasted.
-        history_minutes: The default amount of historical minutes that are used.
-        nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
-            `forecast_minutes` if not provided.
-        nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
-            `history_minutes` if not provided.
-        nwp_image_size_pixels: Image size (assumed square) of the NWP data.
-        dwsrf_channel: Which index of the NWP input is the dwsrf channel.
-        optimizer: Optimizer factory function used for network.
     """
 
     name = "nwp_weighting"
@@ -39,6 +32,19 @@ class Model(BaseModel):
         dwsrf_channel: int = 0,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
+        """Model that learns an linear interpolation of NWP dwsrf to predict output.
+
+        Args:
+            forecast_minutes: The amount of minutes that should be forecasted.
+            history_minutes: The default amount of historical minutes that are used.
+            nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
+                `forecast_minutes` if not provided.
+            nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
+                `history_minutes` if not provided.
+            nwp_image_size_pixels: Image size (assumed square) of the NWP data.
+            dwsrf_channel: Which index of the NWP input is the dwsrf channel.
+            optimizer: Optimizer factory function used for network.
+        """
         super().__init__(history_minutes, forecast_minutes, optimizer)
 
         self.dwsrf_channel = dwsrf_channel
@@ -57,7 +63,7 @@ class Model(BaseModel):
         self.interpolate = nn.Sequential(
             nn.Linear(
                 in_features=nwp_sequence_len,
-                out_features=self.forecast_len,
+                out_features=self.forecast_len_30,
             ),
             nn.LeakyReLU(negative_slope=0.01),
         )
@@ -74,6 +80,7 @@ class Model(BaseModel):
         self.save_hyperparameters()
 
     def forward(self, x):
+        """Run model forward"""
         nwp_data = x[BatchKey.nwp].float()
 
         # This hack is specific to the current pvnet pipeline. In the pipeline, the dwsrf is

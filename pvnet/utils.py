@@ -1,3 +1,5 @@
+"""Utils"""
+
 import logging
 import os
 import warnings
@@ -60,7 +62,9 @@ def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
 
 
 def extras(config: DictConfig) -> None:
-    """A couple of optional utilities, controlled by main config file:
+    """A couple of optional utilities.
+
+    Controlled by main config file:
     - disabling warnings
     - easier access to debug mode
     - forcing debug friendly configuration
@@ -143,6 +147,7 @@ def print_config(
 
 
 def empty(*args, **kwargs):
+    """Returns nothing"""
     pass
 
 
@@ -209,6 +214,8 @@ def finish(
 
 
 def plot_batch_forecasts(batch, y_hat, batch_idx=None):
+    """Plot a batch of data and the forecast from that batch"""
+
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
@@ -254,6 +261,8 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None):
 
 
 def construct_ocf_ml_metrics_batch_df(batch, y, y_hat):
+    """Helper function tot construct DataFrame for ocf_ml_metrics"""
+
     def _repeat(x):
         return np.repeat(x.squeeze(), n_times)
 

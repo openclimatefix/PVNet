@@ -1,18 +1,14 @@
+"""Basic blocks for immage sequence encoders"""
 from abc import ABCMeta, abstractmethod
 
 from torch import nn
 
 
 class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
-    """Abstract class for NWP/satellite encoder. The encoder will take an input of shape
-    (batch_size, sequence_length, channels, height, width) and return an output of shape
-    (batch_size, out_features).
+    """Abstract class for NWP/satellite encoder.
 
-    Args:
-        sequence_length: The time sequence length of the data.
-        image_size_pixels: The spatial size of the image. Assumed square.
-        in_channels: Number of input channels.
-        out_features: Number of output features.
+    The encoder will take an input of shape (batch_size, sequence_length, channels, height, width)
+    and return an output of shape (batch_size, out_features).
     """
 
     def __init__(
@@ -22,21 +18,26 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
         in_channels: int,
         out_features: int,
     ):
+        """Abstract class for NWP/satellite encoder.
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+        """
         super().__init__()
 
     @abstractmethod
     def forward(self):
+        """Run model forward"""
         pass
 
 
 class ResidualConv3dBlock(nn.Module):
-    """Fully-connected deep network based on ResNet architecture. Internally, this network uses ELU
-    activations throughout the residual blocks.
+    """Fully-connected deep network based on ResNet architecture.
 
-    Args:
-        in_features: Number of input features.
-        n_layers: Number of layers in residual pathway.
-        dropout_frac: Probability of an element to be zeroed.
+    Internally, this network uses ELU activations throughout the residual blocks.
     """
 
     def __init__(
@@ -45,6 +46,13 @@ class ResidualConv3dBlock(nn.Module):
         n_layers: int = 2,
         dropout_frac: float = 0.0,
     ):
+        """Fully-connected deep network based on ResNet architecture.
+
+        Args:
+            in_channels: Number of input channels.
+            n_layers: Number of layers in residual pathway.
+            dropout_frac: Probability of an element to be zeroed.
+        """
         super().__init__()
 
         layers = []
@@ -63,4 +71,5 @@ class ResidualConv3dBlock(nn.Module):
         self.model = nn.Sequential(*layers)
 
     def forward(self, x):
+        """Run residual connection"""
         return self.model(x) + x

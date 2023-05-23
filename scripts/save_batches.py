@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 
-class save_batch_func_factory:
+class _save_batch_func_factory:
     def __init__(self, batch_dir):
         self.batch_dir = batch_dir
 
@@ -49,12 +49,11 @@ class save_batch_func_factory:
         torch.save(batch, f"{self.batch_dir}/{i:06}.pt")
 
 
-def get_datapipe(config_path, start_time, end_time, batch_size):
+def _get_datapipe(config_path, start_time, end_time, batch_size):
     data_pipeline = pvnet_datapipe(
         config_path,
         start_time=start_time,
         end_time=end_time,
-        experimental=False,
     )
 
     data_pipeline = (
@@ -63,8 +62,8 @@ def get_datapipe(config_path, start_time, end_time, batch_size):
     return data_pipeline
 
 
-def save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
-    save_func = save_batch_func_factory(batch_dir)
+def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
+    save_func = _save_batch_func_factory(batch_dir)
     filenumber_pipe = IterableWrapper(range(num_batches)).sharding_filter()
     save_pipe = filenumber_pipe.zip(batch_pipe).map(save_func)
 
@@ -80,6 +79,7 @@ def save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
 
 @hydra.main(config_path="../configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
+    """Constructs and saves validation and training batches."""
     config_dm = config.datamodule
 
     # Set up directory
@@ -101,13 +101,13 @@ def main(config: DictConfig):
 
     print("----- Saving val batches -----")
 
-    val_batch_pipe = get_datapipe(
+    val_batch_pipe = _get_datapipe(
         config_dm.configuration,
         *config_dm.val_period,
         config_dm.batch_size,
     )
 
-    save_batches_with_dataloader(
+    _save_batches_with_dataloader(
         batch_pipe=val_batch_pipe,
         batch_dir=f"{config.batch_output_dir}/val",
         num_batches=config.num_val_batches,
@@ -116,13 +116,13 @@ def main(config: DictConfig):
 
     print("----- Saving train batches -----")
 
-    train_batch_pipe = get_datapipe(
+    train_batch_pipe = _get_datapipe(
         config_dm.configuration,
         *config_dm.train_period,
         config_dm.batch_size,
     )
 
-    save_batches_with_dataloader(
+    _save_batches_with_dataloader(
         batch_pipe=train_batch_pipe,
         batch_dir=f"{config.batch_output_dir}/train",
         num_batches=config.num_train_batches,

@@ -1,3 +1,4 @@
+"""Base model for all PVNet submodels"""
 import logging
 import os
 from pathlib import Path
@@ -5,7 +6,6 @@ from typing import Dict, Optional, Union
 
 import hydra
 import lightning.pytorch as pl
-import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -27,6 +27,7 @@ from pvnet.models.utils import (
     MetricAccumulator,
     PredAccumulator,
 )
+from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
 
 logger = logging.getLogger(__name__)
@@ -38,8 +39,7 @@ if torch.cuda.is_available():
 
 class PVNetModelHubMixin(PyTorchModelHubMixin):
     """
-    Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities to
-    PVNet models.
+    Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities.
     """
 
     @classmethod
@@ -93,7 +93,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         self,
         save_directory: Union[str, Path],
         config: dict,
-        *,
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         **kwargs,
@@ -104,15 +103,16 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         Args:
             save_directory (`str` or `Path`):
                 Path to directory in which the model weights and configuration will be saved.
-            config `dict`:
+            config (`dict`):
                 Model configuration specified as a key/value dictionary.
+            repo_id (`str`, *optional*):
+                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
+                the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the Huggingface Hub after saving it.
-            repo_id (`str`, *optional*):
-                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to the folder name if
-                not provided.
             kwargs:
-                Additional key word arguments passed along to the [`~ModelHubMixin._from_pretrained`] method.
+                Additional key word arguments passed along to the
+                [`~ModelHubMixin._from_pretrained`] method.
         """
         # For PVNet the Config must be supplied. Not optional
         return super().save_pretrained(
@@ -121,12 +121,21 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
+    """Abtstract base class for PVNet submodels"""
+
     def __init__(
         self,
-        history_minutes,
-        forecast_minutes,
-        optimizer,
+        history_minutes: int,
+        forecast_minutes: int,
+        optimizer: AbstractOptimizer,
     ):
+        """Abtstract base class for PVNet submodels.
+
+        Args:
+            history_minutes (int): Length of the GSP history period in minutes
+            forecast_minutes (int): Length of the GSP forecast period in minutes
+            optimizer (AbstractOptimizer): Optimizer
+        """
         super().__init__()
 
         self._optimizer = optimizer
@@ -138,23 +147,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.history_minutes = history_minutes
         self.forecast_minutes = forecast_minutes
 
-        # Number of timestemps for 5 minutely data
-        self.history_len_5 = history_minutes // 5
-        self.forecast_len_5 = forecast_minutes // 5
-
         # Number of timestemps for 30 minutely data
         self.history_len_30 = history_minutes // 30
         self.forecast_len_30 = forecast_minutes // 30
 
-        # Number of timesteps for 60 minutely data
-        # Note that ceil is taken as for 30 minutes of history data, one history value will be used
-        self.history_len_60 = int(np.ceil(history_minutes / 60))
-        self.forecast_len_60 = self.forecast_minutes // 60
-
-        self.forecast_len = self.forecast_len_30
-        self.history_len = self.history_len_30
-
-        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
+        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len_30)
 
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator()
@@ -199,10 +196,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         return losses
 
     def _training_accumulate_log(self, batch, batch_idx, losses, y_hat):
-        """Internal function to accumulate training batches and log results when
-        using accummulated grad batches. Should make the variability in logged training step metrics
-        indpendent on whether we accumulate N batches of size B or just use a larger batch size of
-        N*B with no accumulaion.
+        """Internal function to accumulate training batches and log results.
+
+        This is used when accummulating grad batches. Should make the variability in logged training
+        step metrics indpendent on whether we accumulate N batches of size B or just use a larger
+        batch size of N*B with no accumulaion.
         """
 
         losses = {k: v.detach().cpu() for k, v in losses.items()}
@@ -233,8 +231,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 fig.savefig("latest_logged_train_batch.png")
 
     def training_step(self, batch, batch_idx):
+        """Run training step"""
         y_hat = self(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -244,9 +243,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         return losses["MAE/train"]
 
     def validation_step(self, batch: dict, batch_idx):
-        # put the batch data through the model
+        """Run validation step"""
         y_hat = self(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))
@@ -288,9 +287,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         return logged_losses
 
     def test_step(self, batch, batch_idx):
-        # put the batch data through the model
+        """Run test step"""
         y_hat = self(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))
@@ -306,6 +305,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)
 
     def on_test_epoch_end(self, outputs):
+        """Evalauate test results using oc_ml_metrics"""
         results_df = pd.concat(outputs)
         # setting model_name="test" gives us keys like "test/mw/forecast_horizon_30_minutes/mae"
         metrics = evaluation(results_df=results_df, model_name="test", outturn_unit="mw")
@@ -315,6 +315,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         )
 
     def configure_optimizers(self):
+        """Configure the optimizers using learning rate found with LR finder if used"""
         if self.lr is not None:
             # Use learning rate found by learning rate finder callback
             self._optimizer.lr = self.lr

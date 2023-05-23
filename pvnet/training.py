@@ -1,3 +1,5 @@
+"""Training"""
+
 from typing import Optional
 
 import hydra
@@ -19,7 +21,7 @@ log = utils.get_logger(__name__)
 torch.set_default_dtype(torch.float32)
 
 
-def callbacks_to_phase(callbacks, phase):
+def _callbacks_to_phase(callbacks, phase):
     for c in callbacks:
         if hasattr(c, "switch_phase"):
             c.switch_phase(phase)
@@ -27,6 +29,7 @@ def callbacks_to_phase(callbacks, phase):
 
 def train(config: DictConfig) -> Optional[float]:
     """Contains training pipeline.
+
     Instantiates all PyTorch Lightning objects from config.
 
     Args:
@@ -69,7 +72,7 @@ def train(config: DictConfig) -> Optional[float]:
         should_pretrain |= hasattr(c, "training_phase") and c.training_phase == "pretrain"
 
     if should_pretrain:
-        callbacks_to_phase(callbacks, "pretrain")
+        _callbacks_to_phase(callbacks, "pretrain")
 
     trainer: Trainer = hydra.utils.instantiate(
         config.trainer,
@@ -83,7 +86,7 @@ def train(config: DictConfig) -> Optional[float]:
         datamodule.block_nwp_and_sat = True
         trainer.fit(model=model, datamodule=datamodule)
 
-    callbacks_to_phase(callbacks, "main")
+    _callbacks_to_phase(callbacks, "main")
 
     datamodule.block_nwp_and_sat = False
     trainer.should_stop = False
