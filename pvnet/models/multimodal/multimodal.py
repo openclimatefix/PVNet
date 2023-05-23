@@ -92,7 +92,6 @@ class Model(BaseModel):
         source_dropout=0.0,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = include_sat
         self.include_nwp = include_nwp
@@ -170,7 +169,6 @@ class Model(BaseModel):
         self.save_hyperparameters()
 
     def forward(self, x):
-
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:

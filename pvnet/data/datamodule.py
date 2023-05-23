@@ -79,7 +79,6 @@ class DataModule(LightningDataModule):
         block_nwp_and_sat=False,
         batch_dir=None,
     ):
-
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
@@ -90,7 +89,6 @@ class DataModule(LightningDataModule):
             raise ValueError("Exactly one of `batch_dir` or `configuration` must be set.")
 
         if batch_dir is not None:
-
             if any([period != [None, None] for period in [train_period, val_period, test_period]]):
                 raise ValueError("Cannot set `(train/val/test)_period` with presaved batches")
 

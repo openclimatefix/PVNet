@@ -8,7 +8,7 @@ import torch
 
 class AbstractOptimizer(ABC):
     """Abstract class for optimizer
-    
+
     Optimizer classes will be used by model like:
     > OptimizerGenerator = AbstractOptimizer()
     > optimizer = OptimizerGenerator(model.parameters())
@@ -27,6 +27,7 @@ class AbstractOptimizer(ABC):
 
 class Adam(AbstractOptimizer):
     """Adam optimizer"""
+
     def __init__(self, lr=0.0005, **kwargs):
         """Adam optimizer"""
         self.lr = lr
@@ -39,6 +40,7 @@ class Adam(AbstractOptimizer):
 
 class AdamW(AbstractOptimizer):
     """AdamW optimizer"""
+
     def __init__(self, lr=0.0005, **kwargs):
         """AdamW optimizer"""
         self.lr = lr
@@ -51,6 +53,7 @@ class AdamW(AbstractOptimizer):
 
 class AdamWReduceLROnPlateau(AbstractOptimizer):
     """AdamW optimizer and reduce on plateau scheduler"""
+
     def __init__(self, lr=0.0005, patience=3, factor=0.5, threshold=2e-4, **opt_kwargs):
         """AdamW optimizer and reduce on plateau scheduler"""
         self.lr = lr

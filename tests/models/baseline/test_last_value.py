@@ -9,7 +9,6 @@ def last_value_model(model_minutes_kwargs):
 
 
 def test_model_forward(last_value_model, sample_batch):
-
     y = last_value_model(sample_batch)
 
     # check output is the correct shape

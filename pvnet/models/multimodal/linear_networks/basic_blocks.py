@@ -49,7 +49,6 @@ class ResidualLinearBlock(nn.Module):
         n_layers: int = 2,
         dropout_frac: float = 0.0,
     ):
-
         super().__init__()
 
         layers = []
@@ -90,7 +89,6 @@ class ResidualLinearBlock2(nn.Module):
         n_layers: int = 2,
         dropout_frac: float = 0.0,
     ):
-
         super().__init__()
 
         layers = []

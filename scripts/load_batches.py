@@ -8,10 +8,7 @@ from pvnet.data.datamodule import BatchSplitter
 
 
 def get_batch_datapipe(folder, rebatch=False):
-    """Constructs a datapipe for presaved batches
-    
-    """
-
+    """Constructs a datapipe for presaved batches"""
     dp = FileLister(root=folder, masks="*.pt", recursive=False)
     if rebatch:
         dp = dp.shuffle(buffer_size=100).sharding_filter()
@@ -26,6 +23,5 @@ def get_batch_datapipe(folder, rebatch=False):
 
 
 if __name__ == "__main__":
-
     dp = get_batch_datapipe("../tests/data/sample_batches/train")
     batch_0 = next(iter(dp))

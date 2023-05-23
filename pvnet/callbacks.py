@@ -6,8 +6,8 @@ from lightning.pytorch.trainer.states import TrainerFn
 
 
 class PhaseEarlyStopping(EarlyStopping):
-    """Monitor a validation metric and stop training when it stops improving. 
-    
+    """Monitor a validation metric and stop training when it stops improving.
+
     Only functions in a specific phase of training.
     """
 
@@ -29,37 +29,36 @@ class PhaseEarlyStopping(EarlyStopping):
         self.active = True
 
     def _should_skip_check(self, trainer: Trainer) -> bool:
-
         return (
             (trainer.state.fn != TrainerFn.FITTING) or (trainer.sanity_checking) or not self.active
         )
 
 
 class PretrainEarlyStopping(EarlyStopping):
-    """Monitor a validation metric and stop training when it stops improving. 
-    
+    """Monitor a validation metric and stop training when it stops improving.
+
     Only functions in the 'pretrain' phase of training.
     """
+
     training_phase = "pretrain"
 
 
 class MainEarlyStopping(EarlyStopping):
-    """Monitor a validation metric and stop training when it stops improving. 
-    
+    """Monitor a validation metric and stop training when it stops improving.
+
     Only functions in the 'main' phase of training.
     """
+
     training_phase = "main"
 
 
 class PretrainFreeze(BaseFinetuning):
-    """Freeze the satellite and NWP encoders during pretraining
-    """
+    """Freeze the satellite and NWP encoders during pretraining"""
 
     training_phase = "pretrain"
 
     def __init__(self):
-        """Freeze the satellite and NWP encoders during pretraining
-        """
+        """Freeze the satellite and NWP encoders during pretraining"""
         super().__init__()
 
     def freeze_before_training(self, pl_module):
