@@ -43,8 +43,8 @@ class DefaultFCNet(AbstractLinearNetwork):
 
 
 class ResFCNet(AbstractLinearNetwork):
-    """Fully-connected deep network based on ResNet architecture. 
-    
+    """Fully-connected deep network based on ResNet architecture.
+
     Internally, this network uses ELU activations throughout the residual blocks.
     With n_res_blocks=0 this becomes equivalent to `DefaultFCNet`.
     """
@@ -58,7 +58,7 @@ class ResFCNet(AbstractLinearNetwork):
         res_block_layers: int = 2,
         dropout_frac: float = 0.2,
     ):
-        """Fully-connected deep network based on ResNet architecture. 
+        """Fully-connected deep network based on ResNet architecture.
 
         Args:
             in_features: Number of input features.
@@ -97,8 +97,8 @@ class ResFCNet(AbstractLinearNetwork):
 
 
 class ResFCNet2(AbstractLinearNetwork):
-    """Fully connected deep network based on ResNet architecture. 
-    
+    """Fully connected deep network based on ResNet architecture.
+
     This architecture is similar to
     `ResFCNet`, except that it uses LeakyReLU activations internally, and batchnorm in the residual
     branches. The residual blocks are implemented based on the best performing block in [1].
@@ -231,7 +231,7 @@ class SNN(AbstractLinearNetwork):
 
 class TabNet(AbstractLinearNetwork):
     """An implmentation of TabNet [1].
-    
+
     The implementation comes rom `pytorch_tabnet` and this must be installed for use.
 
 
@@ -258,7 +258,7 @@ class TabNet(AbstractLinearNetwork):
         mask_type="sparsemax",
     ):
         """An implmentation of TabNet [1].
-        
+
         Sources:
             [1] https://arxiv.org/abs/1908.07442
 

@@ -51,8 +51,7 @@ class BatchSplitter(IterDataPipe):
 
 
 class DataModule(LightningDataModule):
-    """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
-    """
+    """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
 
     def __init__(
         self,
@@ -67,9 +66,9 @@ class DataModule(LightningDataModule):
         batch_dir=None,
     ):
         """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
-        
+
         Can also be used with pre-made batches if `batch_dir` is set.
-        
+
 
         Args:
             configuration: Path to datapipe configuration file.

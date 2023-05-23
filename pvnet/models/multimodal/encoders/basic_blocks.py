@@ -5,9 +5,9 @@ from torch import nn
 
 
 class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
-    """Abstract class for NWP/satellite encoder. 
-    
-    The encoder will take an input of shape (batch_size, sequence_length, channels, height, width) 
+    """Abstract class for NWP/satellite encoder.
+
+    The encoder will take an input of shape (batch_size, sequence_length, channels, height, width)
     and return an output of shape (batch_size, out_features).
     """
 
@@ -18,7 +18,7 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
         in_channels: int,
         out_features: int,
     ):
-        """Abstract class for NWP/satellite encoder. 
+        """Abstract class for NWP/satellite encoder.
 
         Args:
             sequence_length: The time sequence length of the data.
@@ -35,8 +35,8 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
 
 
 class ResidualConv3dBlock(nn.Module):
-    """Fully-connected deep network based on ResNet architecture. 
-    
+    """Fully-connected deep network based on ResNet architecture.
+
     Internally, this network uses ELU activations throughout the residual blocks.
     """
 
@@ -46,7 +46,7 @@ class ResidualConv3dBlock(nn.Module):
         n_layers: int = 2,
         dropout_frac: float = 0.0,
     ):
-        """Fully-connected deep network based on ResNet architecture. 
+        """Fully-connected deep network based on ResNet architecture.
 
         Args:
             in_channels: Number of input channels.

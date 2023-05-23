@@ -7,13 +7,12 @@ from torch import _VF, nn
 
 
 class ImageEmbedding(nn.Module):
-    """A embedding layer which concatenates an ID embedding as a new channel onto 3D inputs. 
-    """
+    """A embedding layer which concatenates an ID embedding as a new channel onto 3D inputs."""
 
     def __init__(self, num_embeddings, sequence_length, image_size_pixels, **kwargs):
-        """A embedding layer which concatenates an ID embedding as a new channel onto 3D inputs. 
+        """A embedding layer which concatenates an ID embedding as a new channel onto 3D inputs.
 
-        The embedding is a single 2D image and is appended at each step in the 1st dimension 
+        The embedding is a single 2D image and is appended at each step in the 1st dimension
         (assumed to be time).
 
         Args:
@@ -42,7 +41,7 @@ class ImageEmbedding(nn.Module):
 
 class CompleteDropoutNd(nn.Module):
     """A layer used to completely drop out all elements of a N-dimensional sample.
-    
+
     Each sample will be zeroed out independently on every forward call with probability `p` using
     samples from a Bernoulli distribution.
 
@@ -57,7 +56,7 @@ class CompleteDropoutNd(nn.Module):
         """A layer used to completely drop out all elements of a N-dimensional sample.
 
         Args:
-            n_dim: Number of dimensions of each sample not including channels. E.g. a sample with 
+            n_dim: Number of dimensions of each sample not including channels. E.g. a sample with
                 shape (channel, time, height, width) would use `n_dim=3`.
             p: probability of a channel to be zeroed. Default: 0.5
             training: apply dropout if is `True`. Default: `True`

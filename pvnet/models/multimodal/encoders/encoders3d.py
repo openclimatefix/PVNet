@@ -11,8 +11,7 @@ from pvnet.models.multimodal.encoders.basic_blocks import (
 
 
 class DefaultPVNet(AbstractNWPSatelliteEncoder):
-    """This is the original encoding module used in PVNet, with a few minor tweaks.
-    """
+    """This is the original encoding module used in PVNet, with a few minor tweaks."""
 
     def __init__(
         self,
@@ -91,8 +90,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
 
 class DefaultPVNet2(AbstractNWPSatelliteEncoder):
-    """The original encoding module used in PVNet, with a few minor tweaks, and batchnorm.
-    """
+    """The original encoding module used in PVNet, with a few minor tweaks, and batchnorm."""
 
     def __init__(
         self,
@@ -188,7 +186,7 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
 
 class EncoderUNET(AbstractNWPSatelliteEncoder):
     """An encoder based on emodifed UNet architecture.
-    
+
     An encoder for satellite and/or NWP data taking inspiration from the kinds of skip
     connections in UNet. This differs from an actual UNet in that it does not have upsampling
     layers, instead it concats features from different spatial scales, and applies a few extra

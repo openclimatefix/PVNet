@@ -24,8 +24,7 @@ class PredAccumulator:
         self._y_hats += [y_hat]
 
     def flush(self) -> torch.Tensor:
-        """Return appended predictions as single tensor and remove from accumulated store.
-        """
+        """Return all appended predictions as single tensor and remove from accumulated store."""
         y_hat = torch.cat(self._y_hats, dim=0)
         self._y_hats = []
         return y_hat

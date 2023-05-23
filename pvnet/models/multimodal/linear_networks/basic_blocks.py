@@ -7,8 +7,7 @@ from torch import nn
 
 
 class AbstractLinearNetwork(nn.Module, metaclass=ABCMeta):
-    """Abstract class for a network to combine the features from all the inputs.
-    """
+    """Abstract class for a network to combine the features from all the inputs."""
 
     def __init__(
         self,
@@ -39,8 +38,7 @@ class AbstractLinearNetwork(nn.Module, metaclass=ABCMeta):
 
 
 class ResidualLinearBlock(nn.Module):
-    """ A 1D fully-connected residual block using ELU activations and including optional dropout.
-    """
+    """A 1D fully-connected residual block using ELU activations and including optional dropout."""
 
     def __init__(
         self,
@@ -75,11 +73,11 @@ class ResidualLinearBlock(nn.Module):
 
 
 class ResidualLinearBlock2(nn.Module):
-    """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1]. 
-    
-    This was the best performing residual block tested in the study. This implementation differs 
-    from that block just by using LeakyReLU activation to avoid dead neuron, and by including 
-    optional dropout in the residual branch. This is also a 1D fully connected layer residual block 
+    """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1].
+
+    This was the best performing residual block tested in the study. This implementation differs
+    from that block just by using LeakyReLU activation to avoid dead neuron, and by including
+    optional dropout in the residual branch. This is also a 1D fully connected layer residual block
     rather than a 2D convolutional block.
 
     Sources:
@@ -92,7 +90,7 @@ class ResidualLinearBlock2(nn.Module):
         n_layers: int = 2,
         dropout_frac: float = 0.0,
     ):
-        """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1]. 
+        """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1].
 
         Sources:
             [1] https://arxiv.org/pdf/1603.05027.pdf
