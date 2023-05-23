@@ -12,7 +12,10 @@ from lightning.pytorch import (
     seed_everything,
 )
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
+from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers.wandb import WandbLogger
+from omegaconf import DictConfig, OmegaConf
+
 
 from pvnet import utils
 
@@ -52,12 +55,12 @@ def train(config: DictConfig) -> Optional[float]:
     model: LightningModule = hydra.utils.instantiate(config.model)
 
     # Init lightning loggers
-    logger: list[Logger] = []
+    loggers: list[Logger] = []
     if "logger" in config:
         for _, lg_conf in config.logger.items():
             if "_target_" in lg_conf:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
-                logger.append(hydra.utils.instantiate(lg_conf))
+                loggers.append(hydra.utils.instantiate(lg_conf))
 
     # Init lightning callbacks
     callbacks: list[Callback] = []
@@ -66,7 +69,21 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in cb_conf:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
-
+                
+    # Align the wandb id with the checkpoint path 
+    # - only works if wandb logger and model checkpoint used
+    # - this makes it easy to push the model to huggingface
+    for callback in callbacks:
+        if isinstance(callback, ModelCheckpoint):
+            for logger in loggers:
+                if isinstance(logger, WandbLogger):
+                    callback.dirpath="/".join(callback.dirpath.split('/')[:-1]+[logger.id])
+            checkpoint_path = callback.dirpath
+            # Also save model config here - this makes for easy model push to huggingface
+            os.makedirs(callback.dirpath, exist_ok=True)
+            OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
+            break
+            
     should_pretrain = False
     for c in callbacks:
         should_pretrain |= hasattr(c, "training_phase") and c.training_phase == "pretrain"
@@ -76,7 +93,7 @@ def train(config: DictConfig) -> Optional[float]:
 
     trainer: Trainer = hydra.utils.instantiate(
         config.trainer,
-        logger=logger,
+        logger=loggers,
         _convert_="partial",
         callbacks=callbacks,
     )
