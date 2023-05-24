@@ -59,15 +59,27 @@ MIN_DAY_ELEVATION = 0
 # Forecast made for these GSP IDs and summed to national with ID=>0
 gsp_ids = np.arange(1, 318)
 
-# Set up logger
-logger = logging.getLogger("PVNet App")
-logger.setLevel(logging.INFO)
-logger.info(f"Using PVNet library version: {pvnet.__version__}")
+# Batch size used to make forecasts for all GSPs
+batch_size = 10
 
 # Huggingfacehub model repo and commit
 model_name = "openclimatefix/pvnet_v2"
 model_version = "7cc7e9f8e5fc472a753418c45b2af9f123547b6c"
 
+# ---------------------------------------------------------------------------
+# LOGGER 
+
+formatter = logging.Formatter(fmt="%(levelname)s:%(name)s:%(message)s")
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
+
+# Get rid of these verbose logs
+sql_logger = logging.getLogger("sqlalchemy.engine.Engine")
+sql_logger.addHandler(logging.NullHandler())
 
 # ---------------------------------------------------------------------------
 # HELPER FUNCTIONS
@@ -170,6 +182,9 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
         gsp_ids (array_like): List of gsp_ids to make predictions for. This list of GSPs are summed
             to national.
     """
+    
+    logger.info(f"Using `pvnet` library version: {pvnet.__version__}")
+    
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
@@ -220,7 +235,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
             t0_datapipe=t0_datapipe,
             production=True,
         )
-        .batch(10)
+        .batch(batch_size)
         .map(stack_np_examples_into_batch)
     )
 
@@ -243,7 +258,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     normed_preds = []
 
     with torch.no_grad():
-        for batch in tqdm(dataloader):
+        for batch in tqdm(dataloader, total=int(np.ceil(len(gsp_ids)/batch_size))):
             # Run batch through model
             device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
             preds = model(device_batch).detach().cpu().numpy()
@@ -307,6 +322,8 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
             update_gsp=True,
             apply_adjuster=apply_adjuster,
         )
+        
+    logger.info("Finished forecast")
 
 
 if __name__ == "__main__":
