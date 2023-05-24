@@ -22,6 +22,7 @@ RUN pip install -r app/requirements.txt
 # copy library files
 COPY pvnet/ app/pvnet/
 COPY tests/ app/tests/
+COPY configs/ app/configs/
 
 # change to app folder
 WORKDIR /app

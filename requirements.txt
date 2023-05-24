@@ -16,6 +16,7 @@ pytest-cov
 typer
 sqlalchemy
 jedi
+fsspec[s3]
 tables
 tilemapbase
 testcontainers
