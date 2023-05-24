@@ -33,7 +33,6 @@ from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
-from tqdm import tqdm
 
 import pvnet
 from pvnet.data.datamodule import batch_to_tensor
@@ -258,7 +257,8 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     normed_preds = []
 
     with torch.no_grad():
-        for batch in tqdm(dataloader, total=int(np.ceil(len(gsp_ids) / batch_size))):
+        for i, batch in enumerate(dataloader):
+            logger.info(f"Predicting for batch: {i}")
             # Run batch through model
             device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
             preds = model(device_batch).detach().cpu().numpy()
@@ -273,6 +273,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
             preds[sun_down_mask] = 0
 
             normed_preds += [preds]
+            logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
 
