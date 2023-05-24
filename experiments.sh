@@ -12,7 +12,7 @@ then
     # Note that this library has been refactored since these runs. So they will not work as they
     # are written here
     #
-    # A few small changes would be required to re-run these. For example, in the first model below
+    # A few small changes would bes required to re-run these. For example, in the first model below
     # `pvnet.models.conv3d.encoders.DefaultPVNet2` should be replaced with
     # `pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet2` and
     # `pvnet.models.conv3d.dense_networks.ResFCNet2` should be replaced with
@@ -297,27 +297,55 @@ then
         datamodule.batch_size=4 \
         trainer.accumulate_grad_batches=32 \
         model_name="ResNet+ResFC2_deepsup_slow_regx25_amsgrad_v1"
+        
+        
+    cd scripts
+
+    # Re-train this model after refactoring
+    python save_batches.py \
+        +batch_output_dir="/mnt/disks/batches2/batches_v3.2" \
+        +num_train_batches=200_000 \
+        +num_val_batches=4_000
+
+    cd ..
+
+
+    python run.py \
+        datamodule=premade_batches \
+        datamodule.batch_dir="/mnt/disks/batches2/batches_v3.2" \
+        +trainer.val_check_interval=10_000 \
+        trainer.log_every_n_steps=200 \
+        model=conv3d_sat_nwp_v6.yaml \
+        callbacks.early_stopping.patience=20 \
+        datamodule.batch_size=32 \
+        trainer.accumulate_grad_batches=4 \
+        model_name="pvnet+ResFC2+_slow_regx25_amsgrad_v4"
+
 
 fi
 
 cd scripts
 
-# Re-train this model after refactoring
+# Changes in datapipes make this more like production
 python save_batches.py \
-    +batch_output_dir="/mnt/disks/batches2/batches_v3.2" \
+    +batch_output_dir="/mnt/disks/batches2/batches_v3.4" \
     +num_train_batches=200_000 \
     +num_val_batches=4_000
 
 cd ..
 
-
 python run.py \
     datamodule=premade_batches \
-    datamodule.batch_dir="/mnt/disks/batches2/batches_v3.2" \
+    datamodule.batch_dir="/mnt/disks/batches2/batches_v3.4" \
     +trainer.val_check_interval=10_000 \
     trainer.log_every_n_steps=200 \
-    model=conv3d_sat_nwp_v6.yaml \
+    model=multimodal.yaml \
+    model.include_gsp_yield_history=False \
+    +model.min_sat_delay_minutes=30 \
     callbacks.early_stopping.patience=20 \
     datamodule.batch_size=32 \
     trainer.accumulate_grad_batches=4 \
-    model_name="pvnet+ResFC2+_slow_regx25_amsgrad_v4"
+    callbacks.early_stopping.patience=10 \
+    datamodule.batch_size=32 \
+    trainer.accumulate_grad_batches=4 \
+    model_name="pvnet+ResFC2+_slow_regx25_amsgrad_v5_nohist"
