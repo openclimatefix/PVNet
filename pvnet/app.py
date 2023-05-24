@@ -67,7 +67,7 @@ model_name = "openclimatefix/pvnet_v2"
 model_version = "7cc7e9f8e5fc472a753418c45b2af9f123547b6c"
 
 # ---------------------------------------------------------------------------
-# LOGGER 
+# LOGGER
 
 formatter = logging.Formatter(fmt="%(levelname)s:%(name)s:%(message)s")
 stream_handler = logging.StreamHandler()
@@ -182,9 +182,9 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
         gsp_ids (array_like): List of gsp_ids to make predictions for. This list of GSPs are summed
             to national.
     """
-    
+
     logger.info(f"Using `pvnet` library version: {pvnet.__version__}")
-    
+
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
@@ -258,7 +258,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     normed_preds = []
 
     with torch.no_grad():
-        for batch in tqdm(dataloader, total=int(np.ceil(len(gsp_ids)/batch_size))):
+        for batch in tqdm(dataloader, total=int(np.ceil(len(gsp_ids) / batch_size))):
             # Run batch through model
             device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
             preds = model(device_batch).detach().cpu().numpy()
@@ -322,7 +322,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
             update_gsp=True,
             apply_adjuster=apply_adjuster,
         )
-        
+
     logger.info("Finished forecast")
 
 
