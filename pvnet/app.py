@@ -14,7 +14,6 @@ import fsspec
 import numpy as np
 import pandas as pd
 import torch
-import typer
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
     ForecastSQL,
