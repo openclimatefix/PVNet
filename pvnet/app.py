@@ -311,4 +311,4 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
 
 
 if __name__ == "__main__":
-    typer.run(app)
+    app()
