@@ -65,6 +65,8 @@ batch_size = 10
 model_name = "openclimatefix/pvnet_v2"
 model_version = "7cc7e9f8e5fc472a753418c45b2af9f123547b6c"
 
+model_name_ocf_db = "pvnet_v2"
+
 # ---------------------------------------------------------------------------
 # LOGGER
 
@@ -313,7 +315,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
         sql_forecasts = convert_df_to_forecasts(
-            df, session, model_name=model_name, version=model_version
+            df, session, model_name=model_name_ocf_db, version=model_version
         )
 
         save_sql_forecasts(
