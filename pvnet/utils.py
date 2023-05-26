@@ -1,22 +1,25 @@
 """Utils"""
-
 import logging
 import os
 import warnings
 from collections.abc import Sequence
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
+import xarray as xr
+import matplotlib.pyplot as plt
+
 import rich.syntax
 import rich.tree
 import yaml
-from ocf_datapipes.utils.consts import BatchKey
-from ocf_datapipes.utils.geospatial import osgb_to_lat_lon
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.loggers import Logger
-from pytorch_lightning.utilities import rank_zero_only
+
+import lightning.pytorch as pl
+from lightning.pytorch.loggers import Logger
+from lightning.pytorch.utilities import rank_zero_only
+
+from ocf_datapipes.utils.consts import BatchKey, Location
+from ocf_datapipes.utils.geospatial import osgb_to_lat_lon
 
 import pvnet
 
@@ -59,6 +62,32 @@ def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
         setattr(logger, level, rank_zero_only(getattr(logger, level)))
 
     return logger
+
+class GSPLocationLookup:
+    """Query object for GSP location from GSP ID"""
+    
+    def __init__(self, x_osgb: xr.DataArray, y_osgb: xr.DataArray):
+        """Query object for GSP location from GSP ID
+        
+        Args:
+            x_osgb: DataArray of the OSGB x-coordinate for any given GSP ID
+            y_osgb: DataArray of the OSGB y-coordinate for any given GSP ID
+
+        """
+        self.x_osgb = x_osgb
+        self.y_osgb = y_osgb
+    
+    def __call__(self, gsp_id: int) -> Location:
+        """Returns the locations for the input GSP IDs.
+
+        Args:
+            gsp_id: Integer ID of the GSP
+        """
+        return Location(
+            x=self.x_osgb.sel(gsp_id=gsp_id).item(),
+            y=self.y_osgb.sel(gsp_id=gsp_id).item(),
+            id=gsp_id,
+        )
 
 
 def extras(config: DictConfig) -> None:
