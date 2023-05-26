@@ -49,4 +49,4 @@ def push_to_huggingface(checkpoint_dir_path, val_best=True, wandb_id=None):
 
 
 if __name__ == "__main__":
-    typer.run(app)
+    typer.run(push_to_huggingface)
