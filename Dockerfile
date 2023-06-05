@@ -17,6 +17,7 @@ RUN pip install git+https://github.com/SheffieldSolar/PV_Live-API#pvlive_api
 
 
 # install requirements
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install -r app/requirements.txt
 
 # copy library files
