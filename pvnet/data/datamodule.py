@@ -12,7 +12,6 @@ from torchdata.datapipes import functional_datapipe
 from torchdata.datapipes.iter import FileLister, IterDataPipe
 
 
-
 def copy_batch_to_device(batch, device):
     """Moves a dict-batch of tensors to new device."""
     batch_copy = {}

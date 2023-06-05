@@ -133,7 +133,7 @@ class Model(BaseModel):
             # We limit the history to have a delay of 15 mins in satellite data
             if sat_history_minutes is None:
                 sat_history_minutes = history_minutes
-            self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes)// 5 + 1
+            self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
 
             self.sat_encoder = image_encoder(
                 sequence_length=self.sat_sequence_len,

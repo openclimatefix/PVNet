@@ -38,7 +38,7 @@ The model is trained on data from 2017-2020 and validated on data from 2021. See
 Data is prepared with the `ocf_datapipes.training.pvnet` datapipe [2].
 
 
-## Results 
+## Results
 
 The training logs for the current model can be found [here on wandb](https://wandb.ai/openclimatefix/pvnet2.1/runs/{{ wandb_model_code }}).
 
@@ -55,5 +55,3 @@ Trained on a single NVIDIA Tesla T4
 
 - [1] https://github.com/openclimatefix/PVNet
 - [2] https://github.com/openclimatefix/ocf_datapipes
-
-

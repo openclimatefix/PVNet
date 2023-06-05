@@ -11,11 +11,10 @@ from lightning.pytorch import (
     Trainer,
     seed_everything,
 )
-from lightning.pytorch.loggers import Logger
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
-
 
 from pvnet import utils
 
@@ -69,30 +68,29 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in cb_conf:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
-                
-    # Align the wandb id with the checkpoint path 
+
+    # Align the wandb id with the checkpoint path
     # - only works if wandb logger and model checkpoint used
-    # - this makes it easy to push the model to huggingface
-    use_wandb_logger=False
+    # - this makes it easy to push the model to huggingface
+    use_wandb_logger = False
     for logger in loggers:
         log.info(f"{logger}")
         if isinstance(logger, WandbLogger):
-            
             use_wandb_logger = True
             wandb_logger = logger
             break
-    
+
     if use_wandb_logger:
         for callback in callbacks:
             log.info(f"{callback}")
-            if isinstance(callback, ModelCheckpoint):                
-                callback.dirpath="/".join(callback.dirpath.split('/')[:-1]+[wandb_logger.version])
-                checkpoint_path = callback.dirpath
+            if isinstance(callback, ModelCheckpoint):
+                callback.dirpath = "/".join(
+                    callback.dirpath.split("/")[:-1] + [wandb_logger.version]
+                )
                 # Also save model config here - this makes for easy model push to huggingface
                 os.makedirs(callback.dirpath, exist_ok=True)
                 OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
                 break
-    
 
     should_pretrain = False
     for c in callbacks:

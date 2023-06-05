@@ -25,13 +25,11 @@ from nowcasting_datamodel.read.read import (
     get_model,
 )
 from nowcasting_datamodel.save.save import save as save_sql_forecasts
-
 from ocf_datapipes.load import OpenGSPFromDatabase
 from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
 from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
-
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
@@ -87,6 +85,7 @@ sql_logger.addHandler(logging.NullHandler())
 
 # ---------------------------------------------------------------------------
 # HELPER FUNCTIONS
+
 
 def convert_df_to_forecasts(
     forecast_values_df: pd.DataFrame, session: Session, model_name: str, version: str
@@ -164,7 +163,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
         apply_adjuster (bool): Whether to apply the adjuster when saving forecast
         gsp_ids (array_like): List of gsp_ids to make predictions for. This list of GSPs are summed
             to national.
-        write_predictions (bool): Whether to write prediction to the database. Else returns as 
+        write_predictions (bool): Whether to write prediction to the database. Else returns as
             DataFrame for local testing.
     """
 
@@ -195,7 +194,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
         .to_dataframe()
         .capacity_megawatt_power
     )
-    
+
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
 
@@ -238,10 +237,10 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
     # ---------------------------------------------------------------------------
     # 3. set up model
     logger.info(f"Loading model: {model_name} - {model_version}")
-    
+
     model = BaseModel.from_pretrained(
-        os.getenv("APP_MODEL", default=model_name), 
-        revision=os.getenv("APP_MODEL_VERSION", default=model_version)
+        os.getenv("APP_MODEL", default=model_name),
+        revision=os.getenv("APP_MODEL_VERSION", default=model_version),
     ).to(device)
 
     # 4. Make prediction
@@ -290,12 +289,12 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
     # 6. Make national total
     logger.info("Summing to national forecast")
     df_abs.insert(0, 0, df_abs.sum(axis=1))
-    
+
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
     if not write_predictions:
         return df_abs
-        
+
     # ---------------------------------------------------------------------------
     # 7. Write predictions to database
     logger.info("Writing to database")

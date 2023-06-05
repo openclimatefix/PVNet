@@ -297,8 +297,8 @@ then
         datamodule.batch_size=4 \
         trainer.accumulate_grad_batches=32 \
         model_name="ResNet+ResFC2_deepsup_slow_regx25_amsgrad_v1"
-        
-        
+
+
     cd scripts
 
     # Re-train this model after refactoring

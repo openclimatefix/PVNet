@@ -1,8 +1,8 @@
 """Base model for all PVNet submodels"""
+import json
 import logging
 import os
 from pathlib import Path
-import json
 from typing import Dict, Optional, Union
 
 import hydra
@@ -11,8 +11,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
-from huggingface_hub import ModelCard, ModelCardData
-from huggingface_hub import PyTorchModelHubMixin
+from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
@@ -98,7 +97,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_model_code: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[str]:
         """
         Save weights in local directory.
@@ -118,7 +117,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
         """
-        
+
         save_directory = Path(save_directory)
         save_directory.mkdir(parents=True, exist_ok=True)
 
@@ -128,18 +127,18 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # saving config
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config))
-            
+
         # Creating and saving model card.
-        card_data = ModelCardData(language='en', license='mit', library_name='pytorch')
+        card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
         card_template_path = f"{os.path.dirname(os.path.abspath(__file__))}/model_card_template.md"
-        
+
         card = ModelCard.from_template(
-            card_data, 
+            card_data,
             template_path=card_template_path,
-            wandb_model_code=wandb_model_code, 
+            wandb_model_code=wandb_model_code,
         )
-        
-        (save_directory/"README.md").write_text(str(card))
+
+        (save_directory / "README.md").write_text(str(card))
 
         if push_to_hub:
             kwargs = kwargs.copy()  # soft-copy to avoid mutating input
@@ -149,7 +148,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 repo_id = save_directory.name  # Defaults to `save_directory` name
             return self.push_to_hub(repo_id=repo_id, **kwargs)
         return None
-        
 
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
