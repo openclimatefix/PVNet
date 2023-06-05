@@ -170,7 +170,7 @@ def convert_df_to_forecasts(
     return forecasts
 
 
-def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids):
+def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
     """Inference function for production
 
     This app expects these evironmental variables to be available:
