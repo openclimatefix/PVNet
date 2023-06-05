@@ -230,7 +230,7 @@ if __name__=="__main__":
     pbar.close()
     # ---------------------------------------------------------------------------
     # Consolidate up all the zarr stores
-    ds = xr.open_mfdataset(f"path_root/*.zarr", engine="zarr").compute()
+    ds = xr.open_mfdataset(f"{path_root}/*.zarr", engine="zarr").compute()
     ds.to_zarr(f"{path_root}.zarr")
     
     os.system(f"rm -r {path_root}/*.zarr")
