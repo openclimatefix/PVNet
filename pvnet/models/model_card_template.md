@@ -29,10 +29,6 @@ This model class uses satellite data, numericl weather predictions, and recent G
 The model is trained on data from 2017-2020 and validated on data from 2021. See experimental notes in the [the google doc](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing) for more details.
 
 
-## Training Procedure
-
-<!-- This relates heavily to the Technical Specifications. Content here should link to that section when it is relevant to the training procedure. -->
-
 ### Preprocessing
 
 Data is prepared with the `ocf_datapipes.training.pvnet` datapipe [2].
