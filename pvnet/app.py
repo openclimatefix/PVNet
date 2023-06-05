@@ -35,7 +35,6 @@ from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
-from tqdm import tqdm
 
 import pvnet
 from pvnet.data.datamodule import batch_to_tensor, copy_batch_to_device
@@ -68,6 +67,8 @@ batch_size = 10
 # Huggingfacehub model repo and commit
 model_name = "openclimatefix/pvnet_v2"
 model_version = "4a0510b498c55fee00defb385eec418d5712124c"
+
+model_name_ocf_db = "pvnet_v2"
 
 # ---------------------------------------------------------------------------
 # LOGGER
@@ -248,7 +249,8 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
     normed_preds = []
 
     with torch.no_grad():
-        for batch in tqdm(dataloader, total=int(np.ceil(len(gsp_ids) / batch_size))):
+        for i, batch in enumerate(dataloader):
+            logger.info(f"Predicting for batch: {i}")
             # Run batch through model
             device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
             preds = model(device_batch).detach().cpu().numpy()
@@ -263,6 +265,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
             preds[sun_down_mask] = 0
 
             normed_preds += [preds]
+            logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
 
@@ -307,7 +310,7 @@ def app(t0=None, apply_adjuster=False, gsp_ids=gsp_ids, write_predictions=True):
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
         sql_forecasts = convert_df_to_forecasts(
-            df, session, model_name=model_name, version=model_version
+            df, session, model_name=model_name_ocf_db, version=model_version
         )
 
         save_sql_forecasts(
