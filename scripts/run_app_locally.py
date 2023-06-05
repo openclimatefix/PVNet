@@ -22,6 +22,7 @@ logger.addHandler(stream_handler)
 
 
 def sleep_until(wake_time):
+    """Sleep until the given time"""
     now = pd.Timestamp.now()
     sleep_duration = (wake_time - now).total_seconds()
     if sleep_duration < 0:
@@ -68,7 +69,7 @@ if __name__ == "__main__":
 
             # Save
             df.to_csv(f"{output_dir}/predictions/{t0}.csv")
-        except:
+        except Exception:
             logger.exception(f"Predictions for {t0=} failed")
 
         try:
@@ -80,7 +81,7 @@ if __name__ == "__main__":
                 nwp_times=xr.open_zarr(os.environ["NWP_ZARR_PATH"]).init_time.values,
             )
             np.save(f"{output_dir}/logs/{t0}.npy", log)
-        except:
+        except Exception:
             logger.exception(f"Logs for {t0=} failed")
 
         if save_inputs:
@@ -99,5 +100,5 @@ if __name__ == "__main__":
 
                 next(iter(OpenGSPFromDatabase())).to_dataset().to_zarr(f"{input_dir}/gsp.zarr")
 
-            except:
+            except Exception:
                 logger.exception(f"Saving inputs for {t0=} failed")

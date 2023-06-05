@@ -1,3 +1,4 @@
+"""Command line tool to push locally save model checkpoints to huggingface"""
 import glob
 import os
 import tempfile

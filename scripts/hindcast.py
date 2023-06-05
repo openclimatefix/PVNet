@@ -23,8 +23,9 @@ from pvnet.models.base_model import BaseModel
 from pvnet.utils import GSPLocationLookup
 
 
-def get_dataloader_for_loctimes(loc_list, t0_list, gsp_id_list, num_workers=0, batch_size=None):
-    batch_size = len(gsp_id_list) if batch_size is None else batch_size
+def get_dataloader_for_loctimes(loc_list, t0_list, num_workers=0, batch_size=None):
+    """Get the datalolader for given """
+    batch_size = len(loc_list) if batch_size is None else batch_size
 
     readingservice_config = dict(
         num_workers=num_workers,
@@ -32,10 +33,10 @@ def get_dataloader_for_loctimes(loc_list, t0_list, gsp_id_list, num_workers=0, b
         worker_prefetch_cnt=0 if num_workers == 0 else 2,
     )
 
-    # This iterates though all times for gsp_id_list[0] before moving on to gsp_id_list[1]
+    # This iterates though all times for loc_list[0] before moving on to loc_list[1]
     # This stops us wasting time if some timestamp in the day has missing values
     location_pipe = IterableWrapper(loc_list).repeat(len(t0_list))
-    t0_datapipe = IterableWrapper(t0_list).cycle(len(gsp_id_list))
+    t0_datapipe = IterableWrapper(t0_list).cycle(len(loc_list))
 
     location_pipe = location_pipe.sharding_filter()
     t0_datapipe = t0_datapipe.sharding_filter()
@@ -60,6 +61,7 @@ def get_dataloader_for_loctimes(loc_list, t0_list, gsp_id_list, num_workers=0, b
 
 
 def save_date_preds(x, date, path_root):
+    """Save the predictions for date to zarr"""
     a = np.zeros((len(x.keys()), 317, 16))
 
     for i, k in enumerate(list(x.keys())):
@@ -87,7 +89,7 @@ if __name__ == "__main__":
     # date_range = ("2021-01-01", "2021-01-02") - will give 2 days
     date_range = ("2021-04-19", "2021-06-19")
 
-    gsp_id_list = np.arange(1, 318)
+    gsp_ids = np.arange(1, 318)
 
     times = [timedelta(minutes=i * 30) for i in range(48)]
     batch_size = 10
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
 
-    location_list = [gsp_id_to_loc(gsp_id) for gsp_id in gsp_id_list]
+    location_list = [gsp_id_to_loc(gsp_id) for gsp_id in gsp_ids]
 
     # ---------------------------------------------------------------------------
     # Construct array of dates
@@ -149,7 +151,7 @@ if __name__ == "__main__":
 
     logger.info("Beginning hindcasts")
 
-    pbar = tqdm(total=len(potential_dates) * len(times) * len(gsp_id_list))
+    pbar = tqdm(total=len(potential_dates) * len(times) * len(location_list))
 
     # Expected n on pbar after next date iteration
     # Store this in case some dates fail. Allows pbar to be kept up to dat regardless of failure on
@@ -160,7 +162,7 @@ if __name__ == "__main__":
         warnings.simplefilter("ignore")
 
         for date in potential_dates:
-            pbar_n += len(gsp_id_list) * len(times)
+            pbar_n += len(location_list) * len(times)
 
             t0_list = [np.datetime64(pd.Timestamp(date) + dt, "s") for dt in times]
 
@@ -169,7 +171,6 @@ if __name__ == "__main__":
             dataloader = get_dataloader_for_loctimes(
                 loc_list=location_list,
                 t0_list=t0_list,
-                gsp_id_list=gsp_id_list,
                 num_workers=num_workers,
                 batch_size=batch_size,
             )
@@ -194,7 +195,7 @@ if __name__ == "__main__":
                             date_preds[time][id.item()] = pred
                             pbar.update()
                     should_save = True
-            except:
+            except Exception:
                 logger.exception(f"Date: {date} failed")
                 # Round up the progress bar
                 pbar.update(pbar_n - pbar.n)
