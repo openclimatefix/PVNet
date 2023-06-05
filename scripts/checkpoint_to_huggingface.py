@@ -1,31 +1,45 @@
-import hydra
-from pyaml_env import parse_config
 import os
+from typing import Optional
+import glob
 import tempfile
+from pyaml_env import parse_config
+
+import hydra
+import torch
 import wandb
 import typer
 
-def push_to_huggingface(checkpoint_dir_path, val_best=True, wandb_id=None):
+def push_to_huggingface(
+    checkpoint_dir_path: str, 
+    val_best: bool = True, 
+    wandb_id: Optional[str] = None, 
+    local_path: Optional[str] = None, 
+    push_to_hub: bool = True
+):
     """Push a local model to pvnet_v2 huggingface model repo
     
     checkpoint_dir_path (str): Path of the chekpoint directory
     val_best (bool): Use best model according to val loss, else last saved model
     wandb_id (str): The wandb ID code
+    local_path (str): Where to save the local copy of the model
+    push_to_hub (bool): Whether to push the model to the hub or just create local version.
     """
+    
+    assert (push_to_hub or local_path is not None)
+    
     this_dir = os.path.dirname(os.path.abspath(__file__))
     
     # Check if checkpoint dir name is wandb run ID
     if wandb_id is None:
         all_wandb_ids = [run.id  for run in wandb.Api().runs(path="openclimatefix/pvnet2.1")]
         dirname = checkpoint_dir_path.split("/")[-1]
-        if dirname in all_wandb_runs:
+        if dirname in all_wandb_ids:
             wandb_id = dirname
     
     # Load the model
     model_config = parse_config(f"{checkpoint_dir_path}/model_config.yaml")
 
     model = hydra.utils.instantiate(model_config)
-    checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt")
 
     if val_best:
         # Only one epoch (best) saved per model
@@ -38,14 +52,22 @@ def push_to_huggingface(checkpoint_dir_path, val_best=True, wandb_id=None):
     model.load_state_dict(state_dict=checkpoint['state_dict'])
     
     # Push to hub
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        model.save_pretrained(
-            tmpdirname, 
-            config=model_config,
-            wandb_model_code=wandb_id,
-            push_to_hub=True, 
-            repo_id="openclimatefix/pvnet_v2"
-        )
+    if local_path is None:
+        temp_dir = tempfile.TemporaryDirectory()
+        model_output_dir = temp_dir.name
+    else:
+        model_output_dir = local_path
+    
+    model.save_pretrained(
+        model_output_dir, 
+        config=model_config,
+        wandb_model_code=wandb_id,
+        push_to_hub=push_to_hub, 
+        repo_id="openclimatefix/pvnet_v2" if push_to_hub else None,
+    )
+    
+    if local_path is None:
+        temp_dir.cleanup()
 
 
 if __name__ == "__main__":

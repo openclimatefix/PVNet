@@ -1,7 +1,7 @@
 # https://wandb.ai
 
 wandb:
-  _target_: pytorch_lightning.loggers.wandb.WandbLogger
+  _target_: lightning.pytorch.loggers.wandb.WandbLogger
   project: "pvnet2.1"
   name: "${model_name}"
   save_dir: "/mnt/disks/batches/"

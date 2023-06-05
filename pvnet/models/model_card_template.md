@@ -40,9 +40,9 @@ Data is prepared with the `ocf_datapipes.training.pvnet` datapipe [2].
 
 ## Results 
 
-The training logs for the current model can be found [here on wandb](#https://wandb.ai/openclimatefix/pvnet2.1/runs/{{ wandb_model_code }}).
+The training logs for the current model can be found [here on wandb](https://wandb.ai/openclimatefix/pvnet2.1/runs/{{ wandb_model_code }}).
 
-The training logs for all model runs of PVNet2 can be found [here](#https://wandb.ai/openclimatefix/pvnet2.1).
+The training logs for all model runs of PVNet2 can be found [here](https://wandb.ai/openclimatefix/pvnet2.1).
 
 Some experimental notes can be found at in [the google doc](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing)
 

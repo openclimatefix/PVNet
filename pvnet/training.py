@@ -73,17 +73,27 @@ def train(config: DictConfig) -> Optional[float]:
     # Align the wandb id with the checkpoint path 
     # - only works if wandb logger and model checkpoint used
     # - this makes it easy to push the model to huggingface
-    for callback in callbacks:
-        if isinstance(callback, ModelCheckpoint):
-            for logger in loggers:
-                if isinstance(logger, WandbLogger):
-                    callback.dirpath="/".join(callback.dirpath.split('/')[:-1]+[logger.id])
-            checkpoint_path = callback.dirpath
-            # Also save model config here - this makes for easy model push to huggingface
-            os.makedirs(callback.dirpath, exist_ok=True)
-            OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
-            break
+    use_wandb_logger=False
+    for logger in loggers:
+        log.info(f"{logger}")
+        if isinstance(logger, WandbLogger):
             
+            use_wandb_logger = True
+            wandb_logger = logger
+            break
+    
+    if use_wandb_logger:
+        for callback in callbacks:
+            log.info(f"{callback}")
+            if isinstance(callback, ModelCheckpoint):                
+                callback.dirpath="/".join(callback.dirpath.split('/')[:-1]+[wandb_logger.version])
+                checkpoint_path = callback.dirpath
+                # Also save model config here - this makes for easy model push to huggingface
+                os.makedirs(callback.dirpath, exist_ok=True)
+                OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
+                break
+    
+
     should_pretrain = False
     for c in callbacks:
         should_pretrain |= hasattr(c, "training_phase") and c.training_phase == "pretrain"
