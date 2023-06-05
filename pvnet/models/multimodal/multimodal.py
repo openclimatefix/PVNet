@@ -50,6 +50,7 @@ class Model(BaseModel):
         forecast_minutes: int = 30,
         history_minutes: int = 60,
         sat_history_minutes: Optional[int] = None,
+        min_sat_delay_minutes: Optional[int] = 15,
         nwp_forecast_minutes: Optional[int] = None,
         nwp_history_minutes: Optional[int] = None,
         sat_image_size_pixels: int = 64,
@@ -82,6 +83,8 @@ class Model(BaseModel):
             history_minutes: The default amount of historical minutes that are used.
             sat_history_minutes: Period of historical data to use for satellite data. Defaults to
                 `history_minutes` if not provided.
+            min_sat_delay_minutes: Minimum delay with respect to t0 of the first available satellite
+                image.
             nwp_forecast_minutes: Period of future NWP forecast data to use. Defaults to
                 `forecast_minutes` if not provided.
             nwp_history_minutes: Period of historical data to use for NWP data. Defaults to
@@ -110,7 +113,7 @@ class Model(BaseModel):
             # We limit the history to have a delay of 15 mins in satellite data
             if sat_history_minutes is None:
                 sat_history_minutes = history_minutes
-            self.sat_sequence_len = sat_history_minutes // 5 + 1 - 3
+            self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
 
             self.sat_encoder = image_encoder(
                 sequence_length=self.sat_sequence_len,

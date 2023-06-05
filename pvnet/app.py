@@ -28,15 +28,16 @@ from nowcasting_datamodel.save.save import save as save_sql_forecasts
 from ocf_datapipes.load import OpenGSPFromDatabase
 from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
 from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
-from ocf_datapipes.utils.consts import BatchKey, Location
+from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
 import pvnet
-from pvnet.data.datamodule import batch_to_tensor
+from pvnet.data.datamodule import batch_to_tensor, copy_batch_to_device
 from pvnet.models.base_model import BaseModel
+from pvnet.utils import GSPLocationLookup
 
 # ---------------------------------------------------------------------------
 # GLOBAL SETTINGS
@@ -63,7 +64,7 @@ batch_size = 10
 
 # Huggingfacehub model repo and commit
 model_name = "openclimatefix/pvnet_v2"
-model_version = "7cc7e9f8e5fc472a753418c45b2af9f123547b6c"
+model_version = "4a0510b498c55fee00defb385eec418d5712124c"
 
 model_name_ocf_db = "pvnet_v2"
 
@@ -84,26 +85,6 @@ sql_logger.addHandler(logging.NullHandler())
 
 # ---------------------------------------------------------------------------
 # HELPER FUNCTIONS
-
-
-def copy_batch_to_device(batch, device):
-    """Moves a dict-batch of tensors to new device."""
-    batch_copy = {}
-    for k in list(batch.keys()):
-        if isinstance(batch[k], torch.Tensor):
-            batch_copy[k] = batch[k].to(device)
-        else:
-            batch_copy[k] = batch[k]
-    return batch_copy
-
-
-def id2loc(gsp_id, ds_gsp):
-    """Returns the locations for the input GSP IDs."""
-    return Location(
-        x=ds_gsp.x_osgb.sel(gsp_id=gsp_id).item(),
-        y=ds_gsp.y_osgb.sel(gsp_id=gsp_id).item(),
-        id=gsp_id,
-    )
 
 
 def convert_df_to_forecasts(
@@ -170,7 +151,7 @@ def convert_df_to_forecasts(
     return forecasts
 
 
-def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
+def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
     """Inference function for production
 
     This app expects these evironmental variables to be available:
@@ -182,6 +163,8 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
         apply_adjuster (bool): Whether to apply the adjuster when saving forecast
         gsp_ids (array_like): List of gsp_ids to make predictions for. This list of GSPs are summed
             to national.
+        write_predictions (bool): Whether to write prediction to the database. Else returns as
+            DataFrame for local testing.
     """
 
     logger.info(f"Using `pvnet` library version: {pvnet.__version__}")
@@ -212,6 +195,9 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
         .capacity_megawatt_power
     )
 
+    # Set up ID location query object
+    gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
+
     # Download satellite data - can't load zipped zarr straight from s3 bucket
     logger.info("Downloading zipped satellite data")
     fs = fsspec.open(os.environ["SATELLITE_ZARR_PATH"]).fs
@@ -222,7 +208,7 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
     logger.info("Creating DataLoader")
 
     # Location and time datapipes
-    location_pipe = IterableWrapper([id2loc(gsp_id, ds_gsp) for gsp_id in gsp_ids])
+    location_pipe = IterableWrapper([gsp_id_to_loc(gsp_id) for gsp_id in gsp_ids])
     t0_datapipe = IterableWrapper([t0]).repeat(len(location_pipe))
 
     location_pipe = location_pipe.sharding_filter()
@@ -252,7 +238,10 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
     # 3. set up model
     logger.info(f"Loading model: {model_name} - {model_version}")
 
-    model = BaseModel.from_pretrained(model_name, revision=model_version).to(device)
+    model = BaseModel.from_pretrained(
+        os.getenv("APP_MODEL", default=model_name),
+        revision=os.getenv("APP_MODEL_VERSION", default=model_version),
+    ).to(device)
 
     # 4. Make prediction
     logger.info("Processing batches")
@@ -300,6 +289,11 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids):
     # 6. Make national total
     logger.info("Summing to national forecast")
     df_abs.insert(0, 0, df_abs.sum(axis=1))
+
+    # ---------------------------------------------------------------------------
+    # Escape clause for making predictions locally
+    if not write_predictions:
+        return df_abs
 
     # ---------------------------------------------------------------------------
     # 7. Write predictions to database
