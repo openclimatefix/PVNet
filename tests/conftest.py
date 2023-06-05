@@ -271,6 +271,7 @@ def multimodal_model_kwargs(model_minutes_kwargs):
     kwargs.update(model_minutes_kwargs)
     return kwargs
 
+
 @pytest.fixture()
 def me_latest(db_session):
     metric_values = make_fake_me_latest(session=db_session, model_name="pvnet_v2")
