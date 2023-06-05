@@ -24,7 +24,7 @@ from pvnet.utils import GSPLocationLookup
 
 
 def get_dataloader_for_loctimes(loc_list, t0_list, num_workers=0, batch_size=None):
-    """Get the datalolader for given """
+    """Get the datalolader for given"""
     batch_size = len(loc_list) if batch_size is None else batch_size
 
     readingservice_config = dict(
