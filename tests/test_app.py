@@ -11,7 +11,7 @@ from nowcasting_datamodel.models.forecast import (
 )
 
 
-def test_app(db_session, nwp_data, sat_data, gsp_yields_and_systems):
+def test_app(db_session, nwp_data, sat_data, gsp_yields_and_systems, me_latest):
     # Environment variable DB_URL is set in engine_url, which is called by db_session
     # set NWP_ZARR_PATH
     # save nwp_data to temporary file, and set NWP_ZARR_PATH

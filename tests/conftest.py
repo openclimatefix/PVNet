@@ -20,6 +20,7 @@ from nowcasting_datamodel.models import (
     Location,
     LocationSQL,
 )
+from nowcasting_datamodel.fake import make_fake_me_latest
 
 xr.set_options(keep_attrs=True)
 
@@ -269,3 +270,10 @@ def multimodal_model_kwargs(model_minutes_kwargs):
     )
     kwargs.update(model_minutes_kwargs)
     return kwargs
+
+
+@pytest.fixture()
+def me_latest(db_session):
+    metric_values = make_fake_me_latest(session=db_session, model_name="pvnet_v2")
+    db_session.add_all(metric_values)
+    db_session.commit()
