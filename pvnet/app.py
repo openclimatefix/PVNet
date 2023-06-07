@@ -8,6 +8,7 @@ This app expects these evironmental variables to be available:
 
 import logging
 import os
+import typer
 from datetime import datetime, timedelta, timezone
 
 import fsspec
@@ -57,7 +58,7 @@ num_workers = min(os.cpu_count() - 1, 16)
 MIN_DAY_ELEVATION = 0
 
 # Forecast made for these GSP IDs and summed to national with ID=>0
-gsp_ids = np.arange(1, 318)
+all_gsp_ids = list(range(1, 318))
 
 # Batch size used to make forecasts for all GSPs
 batch_size = 10
@@ -151,7 +152,12 @@ def convert_df_to_forecasts(
     return forecasts
 
 
-def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
+def app(
+    t0=None, 
+    apply_adjuster: bool = True, 
+    gsp_ids: list[int] = all_gsp_ids, 
+    write_predictions: bool = True
+):
     """Inference function for production
 
     This app expects these evironmental variables to be available:
@@ -172,12 +178,16 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
-        t0 = pd.Timestamp.now(tz=None).floor(timedelta(minutes=30))
+        t0 = pd.Timestamp.now(tz='UTC').replace(tzinfo=None).floor(timedelta(minutes=30))
     else:
         t0 = pd.to_datetime(t0).floor(timedelta(minutes=30))
+        
+    if len(gsp_ids)==0:
+        gsp_ids = all_gsp_ids
 
     logger.info(f"Making forecast for init time: {t0}")
-
+    logger.info(f"Making forecast for GSP IDs: {gsp_ids}")
+    
     # ---------------------------------------------------------------------------
     # 1. Prepare data sources
     logger.info("Loading GSP metadata")
@@ -324,4 +334,4 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
 
 
 if __name__ == "__main__":
-    app()
+    typer.run(app)
