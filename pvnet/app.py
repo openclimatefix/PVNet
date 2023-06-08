@@ -151,6 +151,7 @@ def convert_df_to_forecasts(
 
 
 def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
+def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=False):
     """Inference function for production
 
     This app expects these evironmental variables to be available:
@@ -255,7 +256,7 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
             preds = model(device_batch).detach().cpu().numpy()
 
             # Calculate unnormalised elevation and sun-dowm mask
-            logger.info("Remove predictions after sundown")
+            logger.info("Zeroing predictions after sundown")
             elevation = batch[BatchKey.gsp_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
             # We only need elevation mask for forecasted values, not history
             elevation = elevation[:, -preds.shape[-1] :]
@@ -289,7 +290,7 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
     )
     # Multiply normalised forecasts by capacities and clip negatives
     df_abs = df_normed.clip(0, None) * gsp_capacities.T
-    logger.debug(f"Maximum predictions: {df_abs.max()}")
+    logger.info(f"Maximum predictions: {df_abs.max()}")
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
