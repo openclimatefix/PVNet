@@ -290,7 +290,7 @@ def app(
 
             # log max prediction
             logger.info(f"GSP IDs: {these_gsp_ids}")
-            logger.info(f"Max prediction MW: {np.max(preds, axis=1)}")
+            logger.info(f"Max prediction: {np.max(preds, axis=1)}")
             logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
