@@ -291,7 +291,7 @@ def app(
         ),
     )
     # Multiply normalised forecasts by capacities and clip negatives
-    logger.info(f"Clipping up from zero")
+    logger.info("Clipping up from zero")
     df_abs = df_normed.clip(0, None)
     logger.info(f"Maximum predictions: {df_abs.max()}")
     # ---------------------------------------------------------------------------
