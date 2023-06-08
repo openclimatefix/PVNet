@@ -289,6 +289,7 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
     )
     # Multiply normalised forecasts by capacities and clip negatives
     df_abs = df_normed.clip(0, None) * gsp_capacities.T
+    logger.debug(f"Maximum predictions: {df_abs.max()}")
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
