@@ -264,6 +264,7 @@ def app(
             preds = model(device_batch).detach().cpu().numpy()
 
             # Calculate unnormalised elevation and sun-dowm mask
+            logger.info("Remove predictions after sundown")
             elevation = batch[BatchKey.gsp_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
             # We only need elevation mask for forecasted values, not history
             elevation = elevation[:, -preds.shape[-1] :]
@@ -271,6 +272,10 @@ def app(
 
             # Zero out after sundown
             preds[sun_down_mask] = 0
+
+            # log max prediction
+            max_prediction = np.max(preds)
+            logger.info(f"Max prediction: {max_prediction}")
 
             normed_preds += [preds]
             logger.info(f"Completed batch: {i}")
@@ -293,6 +298,7 @@ def app(
     )
     # Multiply normalised forecasts by capacities and clip negatives
     df_abs = df_normed.clip(0, None) * gsp_capacities.T
+    logger.debug(f"Maximum predictions: {df_abs.max()}")
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
