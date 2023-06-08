@@ -71,14 +71,13 @@ model_name_ocf_db = "pvnet_v2"
 
 # ---------------------------------------------------------------------------
 # LOGGER
-
-formatter = logging.Formatter(fmt="%(levelname)s:%(name)s:%(message)s")
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOGLEVEL", "INFO")),
+    format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(stream_handler)
 
 # Get rid of these verbose logs
 sql_logger = logging.getLogger("sqlalchemy.engine.Engine")
@@ -299,6 +298,7 @@ def app(
     # 6. Make national total
     logger.info("Summing to national forecast")
     df_abs.insert(0, 0, df_abs.sum(axis=1))
+    logger.info(f"National forecast is {df_abs[0]}")
 
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
