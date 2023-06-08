@@ -8,13 +8,13 @@ This app expects these evironmental variables to be available:
 
 import logging
 import os
-import typer
 from datetime import datetime, timedelta, timezone
 
 import fsspec
 import numpy as np
 import pandas as pd
 import torch
+import typer
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
     ForecastSQL,
@@ -152,10 +152,10 @@ def convert_df_to_forecasts(
 
 
 def app(
-    t0=None, 
-    apply_adjuster: bool = True, 
-    gsp_ids: list[int] = all_gsp_ids, 
-    write_predictions: bool = True
+    t0=None,
+    apply_adjuster: bool = True,
+    gsp_ids: list[int] = all_gsp_ids,
+    write_predictions: bool = True,
 ):
     """Inference function for production
 
@@ -177,16 +177,16 @@ def app(
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
-        t0 = pd.Timestamp.now(tz='UTC').replace(tzinfo=None).floor(timedelta(minutes=30))
+        t0 = pd.Timestamp.now(tz="UTC").replace(tzinfo=None).floor(timedelta(minutes=30))
     else:
         t0 = pd.to_datetime(t0).floor(timedelta(minutes=30))
-        
-    if len(gsp_ids)==0:
+
+    if len(gsp_ids) == 0:
         gsp_ids = all_gsp_ids
 
     logger.info(f"Making forecast for init time: {t0}")
     logger.info(f"Making forecast for GSP IDs: {gsp_ids}")
-    
+
     # ---------------------------------------------------------------------------
     # 1. Prepare data sources
     logger.info("Loading GSP metadata")
