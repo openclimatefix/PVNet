@@ -198,7 +198,6 @@ class Model(BaseModel):
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
-            sat_data = sat_data[:, :, : self.sat_sequence_len]
             if self.add_image_embedding_channel:
                 id = x[BatchKey.gsp_id][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
