@@ -205,7 +205,7 @@ def app(
             time_utc=t0,
             method="ffill",
         )
-        .sel(gsp_id=slice(1, None))
+        .sel(gsp_id=gsp_ids)
         .to_dataframe()
         .capacity_megawatt_power
     )
