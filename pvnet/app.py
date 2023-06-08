@@ -171,7 +171,8 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
     if t0 is None:
-        t0 = pd.Timestamp.now(tz=None).floor(timedelta(minutes=30))
+        t0 = pd.Timestamp.now(tz='UTC').replace(tzinfo=None).floor(timedelta(minutes=30))
+
     else:
         t0 = pd.to_datetime(t0).floor(timedelta(minutes=30))
 
@@ -254,6 +255,7 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
             preds = model(device_batch).detach().cpu().numpy()
 
             # Calculate unnormalised elevation and sun-dowm mask
+            logger.info(f"Remove predictions after sundown")
             elevation = batch[BatchKey.gsp_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
             # We only need elevation mask for forecasted values, not history
             elevation = elevation[:, -preds.shape[-1] :]
@@ -261,6 +263,10 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
 
             # Zero out after sundown
             preds[sun_down_mask] = 0
+
+            # log max prediction
+            max_prediction = np.max(preds)
+            logger.info(f"Max prediction: {max_prediction}")
 
             normed_preds += [preds]
             logger.info(f"Completed batch: {i}")
