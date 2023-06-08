@@ -51,9 +51,6 @@ data_config_filename = f"{this_dir}/../configs/datamodule/configuration/app_conf
 # Model will use GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Use multiple workers for data loading
-num_workers = min(os.cpu_count() - 1, 16)
-
 # If the solar elevation is less than this the predictions are set to zero
 MIN_DAY_ELEVATION = 0
 
@@ -71,13 +68,15 @@ model_name_ocf_db = "pvnet_v2"
 
 # ---------------------------------------------------------------------------
 # LOGGER
-logging.basicConfig(
-    level=getattr(logging, os.getenv("LOGLEVEL", "INFO")),
-    format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+formatter = logging.Formatter(
+    fmt="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s"
 )
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(getattr(logging, os.getenv("LOGLEVEL", "INFO")))
+logger.addHandler(stream_handler)
 
 # Get rid of these verbose logs
 sql_logger = logging.getLogger("sqlalchemy.engine.Engine")
@@ -156,6 +155,7 @@ def app(
     apply_adjuster: bool = True,
     gsp_ids: list[int] = all_gsp_ids,
     write_predictions: bool = True,
+    num_workers: int = -1,
 ):
     """Inference function for production
 
@@ -170,9 +170,15 @@ def app(
             to national.
         write_predictions (bool): Whether to write prediction to the database. Else returns as
             DataFrame for local testing.
+        num_workers (int): Number of workers to use to load batches of data. When set to default
+            value of -1, it will use one less than the number of CPU cores workers.
     """
 
+    if num_workers == -1:
+        num_workers = os.cpu_count() - 1
+
     logger.info(f"Using `pvnet` library version: {pvnet.__version__}")
+    logger.info(f"Using {num_workers} workers")
 
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
@@ -199,7 +205,7 @@ def app(
             time_utc=t0,
             method="ffill",
         )
-        .sel(gsp_id=slice(1, None))
+        .sel(gsp_id=gsp_ids)
         .to_dataframe()
         .capacity_megawatt_power
     )
@@ -255,10 +261,16 @@ def app(
     # 4. Make prediction
     logger.info("Processing batches")
     normed_preds = []
+    gsp_ids_each_batch = []
 
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
             logger.info(f"Predicting for batch: {i}")
+
+            # Store GSP IDs for this batch for reordering later
+            these_gsp_ids = batch[BatchKey.gsp_id].squeeze()
+            gsp_ids_each_batch += [these_gsp_ids]
+
             # Run batch through model
             device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
             preds = model(device_batch).detach().cpu().numpy()
@@ -273,14 +285,17 @@ def app(
             # Zero out after sundown
             preds[sun_down_mask] = 0
 
-            # log max prediction
-            max_prediction = np.max(preds)
-            logger.info(f"Max prediction: {max_prediction}")
-
+            # Store predictions
             normed_preds += [preds]
+
+            # log max prediction
+            logger.info(f"GSP IDs: {these_gsp_ids}")
+            logger.info(f"Max prediction: {np.max(preds, axis=1)}")
             logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
+    gsp_ids_all_batches = np.concatenate(gsp_ids_each_batch)
+    logger.info(f"{gsp_ids_all_batches.shape}")
 
     # ---------------------------------------------------------------------------
     # 5. Merge batch results to pandas df
@@ -290,16 +305,21 @@ def app(
 
     df_normed = pd.DataFrame(
         normed_preds.T,
-        columns=gsp_ids,
+        columns=gsp_ids_all_batches,
         index=pd.Index(
             [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
             name="target_datetime_utc",
         ),
     )
+
+    # Reorder columns which end up shuffled if multiprocessing is used
+    df_normed = df_normed.loc[:, gsp_ids]
+
     # Multiply normalised forecasts by capacities and clip negatives
     logger.info(f"Converting to absolute MW using {gsp_capacities}")
     df_abs = df_normed.clip(0, None) * gsp_capacities.T
     logger.info(f"Maximum predictions: {df_abs.max()}")
+
     # ---------------------------------------------------------------------------
     # 6. Make national total
     logger.info("Summing to national forecast")
