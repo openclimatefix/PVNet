@@ -155,7 +155,7 @@ def app(
     t0=None,
     apply_adjuster: bool = True,
     gsp_ids: list[int] = all_gsp_ids,
-    write_predictions: bool = True,
+    write_predictions: bool = False,
 ):
     """Inference function for production
 
@@ -192,17 +192,6 @@ def app(
     logger.info("Loading GSP metadata")
 
     ds_gsp = next(iter(OpenGSPFromDatabase()))
-
-    # DataFrame of most recent GSP capacities
-    gsp_capacities = (
-        ds_gsp.sel(
-            time_utc=t0,
-            method="ffill",
-        )
-        .sel(gsp_id=slice(1, None))
-        .to_dataframe()
-        .capacity_megawatt_power
-    )
 
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
@@ -273,16 +262,20 @@ def app(
             # Zero out after sundown
             preds[sun_down_mask] = 0
 
+            # Get GSP capacities, they can be muddled up due to multiprocessing
+            gsp_capacities = batch[BatchKey.gsp_capacity_megawatt_power].detach().cpu().numpy()
+
+            # normalize
+            preds = preds * gsp_capacities
+
             # log max prediction
             max_prediction = np.max(preds, axis=1)
-            logger.info(f"Max prediction: {max_prediction}")
-            logger.info(f"{preds.shape=}")
+            logger.info(f"Max prediction MW: {max_prediction}")
 
             normed_preds += [preds]
             logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
-
     # ---------------------------------------------------------------------------
     # 5. Merge batch results to pandas df
     logger.info("Processing raw predictions to DataFrame")
@@ -298,8 +291,8 @@ def app(
         ),
     )
     # Multiply normalised forecasts by capacities and clip negatives
-    logger.info(f"Converting to absolute MW using {gsp_capacities}")
-    df_abs = df_normed.clip(0, None) * gsp_capacities.T
+    logger.info(f"Clipping up from zero")
+    df_abs = df_normed.clip(0, None)
     logger.info(f"Maximum predictions: {df_abs.max()}")
     # ---------------------------------------------------------------------------
     # 6. Make national total
