@@ -155,7 +155,7 @@ def app(
     t0=None,
     apply_adjuster: bool = True,
     gsp_ids: list[int] = all_gsp_ids,
-    write_predictions: bool = False,
+    write_predictions: bool = True,
 ):
     """Inference function for production
 
