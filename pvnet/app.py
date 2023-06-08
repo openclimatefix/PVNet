@@ -274,8 +274,9 @@ def app(
             preds[sun_down_mask] = 0
 
             # log max prediction
-            max_prediction = np.max(preds, axis=0)
-            logger.info(f"Max prediction: {max_prediction}")
+            max_prediction = np.max(preds, axis=1)
+            logger.info(f"Max prediction: {max_prediction}, {preds.shape}")
+            logger.info(f"{preds.shape=}")
 
             normed_preds += [preds]
             logger.info(f"Completed batch: {i}")
