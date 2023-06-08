@@ -265,7 +265,7 @@ def app(t0=None, apply_adjuster=True, gsp_ids=gsp_ids, write_predictions=True):
             preds[sun_down_mask] = 0
 
             # log max prediction
-            max_prediction = np.max(preds)
+            max_prediction = np.max(preds, axis=0)
             logger.info(f"Max prediction: {max_prediction}")
 
             normed_preds += [preds]
