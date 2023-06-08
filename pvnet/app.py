@@ -275,7 +275,7 @@ def app(
 
             # log max prediction
             max_prediction = np.max(preds, axis=1)
-            logger.info(f"Max prediction: {max_prediction}, {preds.shape}")
+            logger.info(f"Max prediction: {max_prediction}")
             logger.info(f"{preds.shape=}")
 
             normed_preds += [preds]
