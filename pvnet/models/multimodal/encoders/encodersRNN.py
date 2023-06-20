@@ -22,7 +22,7 @@ class ConvLSTM(AbstractNWPSatelliteEncoder):
         in_channels: int,
         out_features: int,
         hidden_channels: int = 32,
-        num_layers: int = 1,
+        num_layers: int = 2,
         kernel_size: int = 3,
         bias: bool = True,
         activation = torch.tanh,
@@ -92,7 +92,7 @@ class FlattenLSTM(AbstractNWPSatelliteEncoder):
         image_size_pixels: int,
         in_channels: int,
         out_features: int,
-        num_layers: int = 1,
+        num_layers: int = 2,
         number_of_conv2d_layers: int = 4,
         conv2d_channels: int = 32,
     ):
@@ -128,7 +128,7 @@ class FlattenLSTM(AbstractNWPSatelliteEncoder):
         )
 
         self.final_block = nn.Sequential(
-            nn.Linear(in_features=num_layers*out_features, out_features=out_features),
+            nn.Linear(in_features=out_features, out_features=out_features),
             nn.ELU(),
         )
         
