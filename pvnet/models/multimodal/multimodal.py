@@ -65,7 +65,7 @@ class Model(BaseModel):
         """Neural network which combines information from different sources.
 
         Args:
-            image_encoder: Pytorch Module class used to encode the NWP data (and satellite data 
+            image_encoder: Pytorch Module class used to encode the NWP data (and satellite data
                 unless sat_encoder is set) from 4D into an 1D feature vector.
             encoder_out_features: Number of features of the 1D vector created by the
                 `encoder_out_features` class.
@@ -118,7 +118,7 @@ class Model(BaseModel):
             if sat_encoder is None:
                 sat_encoder = image_encoder
                 sat_encoder_kwargs = encoder_kwargs
-            
+
             if sat_history_minutes is None:
                 sat_history_minutes = history_minutes
             self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1

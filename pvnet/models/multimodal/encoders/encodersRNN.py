@@ -3,11 +3,9 @@
 
 import torch
 from torch import nn
-from torchvision.transforms import CenterCrop
 
 from pvnet.models.multimodal.encoders.basic_blocks import (
     AbstractNWPSatelliteEncoder,
-    ResidualConv3dBlock,
     ImageSequenceEncoder,
 )
 
@@ -25,8 +23,8 @@ class ConvLSTM(AbstractNWPSatelliteEncoder):
         num_layers: int = 2,
         kernel_size: int = 3,
         bias: bool = True,
-        activation = torch.tanh,
-        batchnorm = False,
+        activation=torch.tanh,
+        batchnorm=False,
     ):
         """Convolutional LSTM block from MetNet.
 
@@ -43,9 +41,9 @@ class ConvLSTM(AbstractNWPSatelliteEncoder):
             batchnorm: Whether to use batch norm.
         """
         from metnet.layers.ConvLSTM import ConvLSTM as _ConvLSTM
-        
+
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-        
+
         self.conv_lstm = _ConvLSTM(
             input_dim=in_channels,
             hidden_dim=hidden_channels,
@@ -55,7 +53,7 @@ class ConvLSTM(AbstractNWPSatelliteEncoder):
             activation=activation,
             batchnorm=batchnorm,
         )
-        
+
         # Calculate the size of the output of the ConvLSTM network
         convlstm_output_size = hidden_channels * image_size_pixels**2
 
@@ -63,18 +61,18 @@ class ConvLSTM(AbstractNWPSatelliteEncoder):
             nn.Linear(in_features=convlstm_output_size, out_features=out_features),
             nn.ELU(),
         )
-        
+
     def forward(self, x):
         """Run model forward"""
-        
+
         batch_size, channel, seq_len, height, width = x.shape
         x = torch.swapaxes(x, 1, 2)
-        
+
         res, _ = self.conv_lstm(x)
-        
+
         # Select last state only
         out = res[:, -1]
-        
+
         # Flatten and fully connected layer
         out = out.reshape(batch_size, -1)
         out = self.final_block(out)
@@ -82,7 +80,6 @@ class ConvLSTM(AbstractNWPSatelliteEncoder):
         return out
 
 
-    
 class FlattenLSTM(AbstractNWPSatelliteEncoder):
     """Convolutional blocks followed by LSTM."""
 
@@ -103,22 +100,22 @@ class FlattenLSTM(AbstractNWPSatelliteEncoder):
             image_size_pixels: The spatial size of the image. Assumed square.
             in_channels: Number of input channels.
             out_features: Number of output features. Also used for LSTM hidden dimension.
-            num_layers: Number of recurrent layers. E.g., setting num_layers=2 would mean stacking 
-                two LSTMs together to form a stacked LSTM, with the second LSTM taking in outputs of 
+            num_layers: Number of recurrent layers. E.g., setting num_layers=2 would mean stacking
+                two LSTMs together to form a stacked LSTM, with the second LSTM taking in outputs of
                 the first LSTM and computing the final results.
             number_of_conv2d_layers: Number of convolution 2D layers that are used.
             conv2d_channels: Number of channels used in each conv2d layer.
         """
-        
+
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-        
+
         self.lstm = nn.LSTM(
             input_size=out_features,
             hidden_size=out_features,
             num_layers=num_layers,
             batch_first=True,
         )
-        
+
         self.encode_image_sequence = ImageSequenceEncoder(
             image_size_pixels=image_size_pixels,
             in_channels=in_channels,
@@ -131,13 +128,13 @@ class FlattenLSTM(AbstractNWPSatelliteEncoder):
             nn.Linear(in_features=out_features, out_features=out_features),
             nn.ELU(),
         )
-        
+
     def forward(self, x):
         """Run model forward"""
         encoded_images = self.encode_image_sequence(x)
-        
+
         _, (_, c_n) = self.lstm(encoded_images)
-        
+
         # Take only the deepest level hidden cell state
         out = self.final_block(c_n[-1])
 

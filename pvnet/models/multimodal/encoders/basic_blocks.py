@@ -74,8 +74,8 @@ class ResidualConv3dBlock(nn.Module):
     def forward(self, x):
         """Run residual connection"""
         return self.model(x) + x
-    
-    
+
+
 class ResidualConv3dBlock(nn.Module):
     """Fully-connected deep network based on ResNet architecture.
 
@@ -118,8 +118,7 @@ class ResidualConv3dBlock(nn.Module):
 
 
 class ImageSequenceEncoder(nn.Module):
-    """Simple network which independently encodes each image in a sequence into 1D features
-    """
+    """Simple network which independently encodes each image in a sequence into 1D features"""
 
     def __init__(
         self,
@@ -129,10 +128,10 @@ class ImageSequenceEncoder(nn.Module):
         conv2d_channels: int = 32,
         fc_features: int = 128,
     ):
-        """Simple network which independently encodes each image in a sequence into 1D features. 
-        
+        """Simple network which independently encodes each image in a sequence into 1D features.
+
         For input image with shape [N, C, L, H, W] the output is of shape [N, L, fc_features] where
-        N is number of samples in batch, C is the number of input channels, L is the length of the 
+        N is number of samples in batch, C is the number of input channels, L is the length of the
         sequence, and H and W are the height and width.
 
         Args:
@@ -178,8 +177,8 @@ class ImageSequenceEncoder(nn.Module):
 
         self.final_block = nn.Sequential(
             nn.Linear(
-                in_features=(cnn_spatial_output_size**2)*conv2d_channels, 
-                out_features=fc_features
+                in_features=(cnn_spatial_output_size**2) * conv2d_channels,
+                out_features=fc_features,
             ),
             nn.ELU(),
         )
@@ -187,12 +186,12 @@ class ImageSequenceEncoder(nn.Module):
     def forward(self, x):
         """Run model forward"""
         batch_size, channel, seq_len, height, width = x.shape
-        
+
         x = torch.swapaxes(x, 1, 2)
-        x = x.reshape(batch_size*seq_len, channel, height, width)
-        
+        x = x.reshape(batch_size * seq_len, channel, height, width)
+
         out = self.conv_layers(x)
-        out = out.reshape(batch_size*seq_len, -1)
+        out = out.reshape(batch_size * seq_len, -1)
 
         out = self.final_block(out)
         out = out.reshape(batch_size, seq_len, -1)

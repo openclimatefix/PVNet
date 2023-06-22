@@ -38,4 +38,3 @@ def test_convlstm_backward(sample_satellite_batch, encoder_model_kwargs):
 
 def test_flattenlstm_backward(sample_satellite_batch, encoder_model_kwargs):
     _test_model_backward(sample_satellite_batch, FlattenLSTM, encoder_model_kwargs)
-
