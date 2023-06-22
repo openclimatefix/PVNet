@@ -15,6 +15,9 @@ import numpy as np
 import pandas as pd
 import torch
 import typer
+
+from pvlive_api import PVLive
+        
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
     ForecastSQL,
@@ -195,21 +198,42 @@ def app(
 
     # ---------------------------------------------------------------------------
     # 1. Prepare data sources
+
+    # Make pands Series of most recent GSP effective capacities
+    logger.info("Requesting GSP effective capacities from PVLive")
+    
+    gsp_capacities = pd.Series(
+        np.zeros(len(gsp_ids), dtype=np.float32), 
+        name="capacity_megawatt_power",
+        index=pd.Series(
+            gsp_ids, 
+            name='gsp_id'
+        ), 
+    )
+    
+    # Take capacities at most recent midnight
+    capacity_time = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0)
+    
+    pvl = PVLive()
+    
+    for gsp_id in gsp_ids:
+
+        cap_df = pvl.between(
+            start=capacity_time,
+            end=capacity_time,
+            entity_type="gsp",
+            entity_id=gsp_id,
+            extra_fields="capacity_mwp",
+            dataframe=True,
+        )
+
+        gsp_capacities.loc[gsp_id] = cap_df.capacity_mwp.item()
+
+    
     logger.info("Loading GSP metadata")
 
     ds_gsp = next(iter(OpenGSPFromDatabase()))
-
-    # DataFrame of most recent GSP capacities
-    gsp_capacities = (
-        ds_gsp.sel(
-            time_utc=t0,
-            method="ffill",
-        )
-        .sel(gsp_id=gsp_ids)
-        .to_dataframe()
-        .capacity_megawatt_power
-    )
-
+        
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
 
@@ -268,7 +292,7 @@ def app(
             logger.info(f"Predicting for batch: {i}")
 
             # Store GSP IDs for this batch for reordering later
-            these_gsp_ids = batch[BatchKey.gsp_id].squeeze()
+            these_gsp_ids = batch[BatchKey.gsp_id]
             gsp_ids_each_batch += [these_gsp_ids]
 
             # Run batch through model
@@ -294,7 +318,7 @@ def app(
             logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
-    gsp_ids_all_batches = np.concatenate(gsp_ids_each_batch)
+    gsp_ids_all_batches = np.concatenate(gsp_ids_each_batch).squeeze()
     logger.info(f"{gsp_ids_all_batches.shape}")
 
     # ---------------------------------------------------------------------------

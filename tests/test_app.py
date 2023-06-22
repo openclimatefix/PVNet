@@ -34,7 +34,7 @@ def test_app(db_session, nwp_data, sat_data, gsp_yields_and_systems, me_latest):
         store.close()
 
         # Run prediction
-        app(gsp_ids=range(1, 11))
+        app(gsp_ids=list(range(1, 11)))
 
     # Check forecasts have been made
     # (10 GSPs + 1 National) = 11 forecasts
