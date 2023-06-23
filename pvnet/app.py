@@ -366,7 +366,7 @@ def app(
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
         sql_forecasts = convert_df_to_forecasts(
-            df, session, model_name=model_name_ocf_db, version=model_version
+            df, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
 
         save_sql_forecasts(
