@@ -198,8 +198,8 @@ def app(
     # 1. Prepare data sources
 
     # Make pands Series of most recent GSP effective capacities
-    
-    # Pulling these valiues from the PVLive API is a temporary fix until capacity_mwp is available 
+
+    # Pulling these valiues from the PVLive API is a temporary fix until capacity_mwp is available
     # in the database. This should be removed/updated once available.
     logger.info("Requesting GSP effective capacities from PVLive")
 
