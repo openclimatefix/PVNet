@@ -1,5 +1,5 @@
 nowcasting_utils
-nowcasting_datamodel==1.4.0
+nowcasting_datamodel==1.4.5
 ocf_datapipes
 ocf_ml_metrics
 numpy
