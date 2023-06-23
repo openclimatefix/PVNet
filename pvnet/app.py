@@ -65,6 +65,7 @@ model_name = "openclimatefix/pvnet_v2"
 model_version = "4a0510b498c55fee00defb385eec418d5712124c"
 
 model_name_ocf_db = "pvnet_v2"
+use_adjuster = os.getenv("USE_ADJUSTER", "True").lower() == "true"
 
 # ---------------------------------------------------------------------------
 # LOGGER
@@ -152,7 +153,7 @@ def convert_df_to_forecasts(
 
 def app(
     t0=None,
-    apply_adjuster: bool = True,
+    apply_adjuster: bool = use_adjuster,
     gsp_ids: list[int] = all_gsp_ids,
     write_predictions: bool = True,
     num_workers: int = -1,
