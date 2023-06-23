@@ -39,6 +39,8 @@ class Model(BaseModel):
         image_encoder: AbstractNWPSatelliteEncoder = DefaultPVNet,
         encoder_out_features: int = 128,
         encoder_kwargs: dict = dict(),
+        sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
+        sat_encoder_kwargs: Optional[dict] = None,
         output_network: AbstractLinearNetwork = DefaultFCNet,
         output_network_kwargs: dict = dict(),
         include_sat: bool = True,
@@ -63,11 +65,14 @@ class Model(BaseModel):
         """Neural network which combines information from different sources.
 
         Args:
-            image_encoder: Pytorch Module class used to encode the satellite (and NWP) data from 4D
-                into an 1D feature vector.
+            image_encoder: Pytorch Module class used to encode the NWP data (and satellite data
+                unless sat_encoder is set) from 4D into an 1D feature vector.
             encoder_out_features: Number of features of the 1D vector created by the
                 `encoder_out_features` class.
             encoder_kwargs: Dictionary of optional kwargs for the `image_encoder` module.
+            sat_encoder: Pytorch Module class used to encode the satellite data from 4D
+                into an 1D feature vector. If not set `image_encoder` is used.
+            sat_encoder_kwargs: Dictionary of optional kwargs for the `sat_encoder` module.
             output_network: Pytorch Module class used to combine the 1D features to produce the
                 forecast.
             output_network_kwargs: Dictionary of optional kwargs for the `output_network` module.
@@ -109,18 +114,21 @@ class Model(BaseModel):
         super().__init__(history_minutes, forecast_minutes, optimizer)
 
         if include_sat:
-            # TODO: remove this hardcoding
             # We limit the history to have a delay of 15 mins in satellite data
+            if sat_encoder is None:
+                sat_encoder = image_encoder
+                sat_encoder_kwargs = encoder_kwargs
+
             if sat_history_minutes is None:
                 sat_history_minutes = history_minutes
             self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
 
-            self.sat_encoder = image_encoder(
+            self.sat_encoder = sat_encoder(
                 sequence_length=self.sat_sequence_len,
                 image_size_pixels=sat_image_size_pixels,
                 in_channels=number_sat_channels + add_image_embedding_channel,
                 out_features=encoder_out_features,
-                **encoder_kwargs,
+                **sat_encoder_kwargs,
             )
             if add_image_embedding_channel:
                 self.sat_embed = ImageEmbedding(318, self.sat_sequence_len, sat_image_size_pixels)
