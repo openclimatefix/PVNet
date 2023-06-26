@@ -1,5 +1,14 @@
 # PVNet 2.1
+
 [![test-release](https://github.com/openclimatefix/PVNet/actions/workflows/test-release.yml/badge.svg)](https://github.com/openclimatefix/PVNet/actions/workflows/test-release.yml)
+
+This project is used for training PVNet and running PVnet on live data.
+
+PVNet2 largely inherits the same architecture from [PVNet1.0](https://github.com/openclimatefix/predict_pv_yield).
+The NWP and satellite data are sent through some neural network which encodes them down to 1D intermediate representations.
+These are concatenated together with the GSP output history, the calculated solar coordinates (azimuth and elevation) and the GSP ID which has been put through an embedding layer.
+This 1D concatenated feature vector is put through an output network which outputs predictions of the future GSP yield.
+National forecasts are made by adding all the GSP forecasts together.
 
 ## Setup
 ```bash
