@@ -55,7 +55,7 @@ input_data:
     satellite_image_size_pixels_width: 24
     satellite_meters_per_pixel: 6000
     keep_dawn_dusk_hours: 4
-    live_delay_minutes: 30
+    live_delay_minutes: 60
     is_live: false
     log_level: DEBUG
 

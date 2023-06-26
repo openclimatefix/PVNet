@@ -25,6 +25,10 @@ Might need to install PVLive
 pip install git+https://github.com/SheffieldSolar/PV_Live-API#pvlive_api
 ```
 
+## Testing
+
+You can use `pytest` to run tests
+
 ## Experiments
 
 Notes on these experiments are [here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing).
