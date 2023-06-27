@@ -7,7 +7,7 @@ input_data:
   default_forecast_minutes: 480
 
   gsp:
-    gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v5/pv_gsp.zarr
+    gsp_zarr_path: /mnt/disks/nwp/pv_gsp.zarr
     history_minutes: 120
     forecast_minutes: 480
     time_resolution_minutes: 30
