@@ -36,7 +36,7 @@ input_data:
 
   satellite:
     satellite_zarr_path: latest.zarr.zip
-    history_minutes: 120
+    history_minutes: 90
     forecast_minutes: 0
     time_resolution_minutes: 5
     satellite_channels:
