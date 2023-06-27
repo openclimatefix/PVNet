@@ -36,7 +36,7 @@ input_data:
 
   satellite:
     satellite_zarr_path: latest.zarr.zip
-    history_minutes: 90
+    history_minutes: 120
     forecast_minutes: 0
     time_resolution_minutes: 5
     satellite_channels:
@@ -55,7 +55,7 @@ input_data:
     satellite_image_size_pixels_width: 24
     satellite_meters_per_pixel: 6000
     keep_dawn_dusk_hours: 4
-    live_delay_minutes: 30
+    live_delay_minutes: 60
     is_live: false
     log_level: DEBUG
 
