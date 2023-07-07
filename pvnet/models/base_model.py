@@ -22,7 +22,6 @@ from nowcasting_utils.models.metrics import (
 )
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
-from pytorch_forecasting.metrics import QuantileLoss
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -181,8 +180,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.history_minutes = history_minutes
         self.forecast_minutes = forecast_minutes
         self.output_quantiles = output_quantiles
-        if output_quantiles is not None:
-            self._quantile_loss = QuantileLoss(quantiles=output_quantiles)
 
         # Number of timestemps for 30 minutely data
         self.history_len_30 = history_minutes // 30
@@ -193,20 +190,60 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator()
         self._accumulated_y_hat = PredAccumulator()
+        
+    @property   
+    def use_quantile_regression(self):
+        return self.output_quantiles is not None
 
     def _quantiles_to_prediction(self, y_quantiles):
+        """
+        Convert network prediction into a point prediction.
+        
+        Note: 
+            Implementation copied from:
+                https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
+                /metrics/quantile.html#QuantileLoss.loss
+
+        Args:
+            y_quantiles: Quantile prediction of network
+
+        Returns:
+            torch.Tensor: Point prediction
+        """
         # y_quantiles Shape: batch_size, seq_length, num_quantiles
-        return self._quantile_loss.to_prediction(y_quantiles)
+        idx = self.output_quantiles.index(0.5)
+        y_median = y_quantiles[..., idx]
+        return y_median
 
     def _calculate_qauntile_loss(self, y_quantiles, y):
-        return self._quantile_loss.loss(y_quantiles, y).mean()
+        """Calculate quantile loss.
+        
+        Note: 
+            Implementation copied from:
+                https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
+                /metrics/quantile.html#QuantileLoss.loss
+                
+        Args:
+            y_quantiles: Quantile prediction of network
+            y: Target values
+
+        Returns:
+            Quantile loss
+        """
+        # calculate quantile loss
+        losses = []
+        for i, q in enumerate(self.output_quantiles):
+            errors = y - y_quantiles[..., i]
+            losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
+        losses = 2 * torch.cat(losses, dim=2)
+        return losses.mean()
 
     def _calculate_common_losses(self, y, y_hat):
         """Calculate losses common to train, test, and val"""
 
         losses = {}
 
-        if self.output_quantiles is not None:
+        if self.use_quantile_regression:
             losses["quantile_loss"] = self._calculate_qauntile_loss(y_hat, y)
             y_hat = self._quantiles_to_prediction(y_hat)
 
@@ -234,7 +271,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
-        if self.output_quantiles is not None:
+        if self.use_quantile_regression:
             y_hat = self._quantiles_to_prediction(y_hat)
 
         mse_each_step = mse_each_forecast_horizon(output=y_hat, target=y)
@@ -295,7 +332,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self._training_accumulate_log(batch, batch_idx, losses, y_hat)
 
-        if self.output_quantiles is not None:
+        if self.use_quantile_regression:
             opt_target = losses["quantile_loss/train"]
         else:
             opt_target = losses["MAE/train"]
@@ -361,7 +398,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             on_epoch=True,
         )
 
-        if self.output_quantiles is not None:
+        if self.use_quantile_regression:
             y_hat = self._quantiles_to_prediction(y_hat)
 
         return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)

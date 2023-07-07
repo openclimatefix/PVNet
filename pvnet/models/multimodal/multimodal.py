@@ -175,7 +175,7 @@ class Model(BaseModel):
         if include_sun:
             fc_in_features += 16
 
-        if output_quantiles is not None:
+        if self.use_quantile_regression:
             out_features = self.forecast_len_30 * len(output_quantiles)
         else:
             out_features = self.forecast_len_30
@@ -240,7 +240,7 @@ class Model(BaseModel):
 
         out = self.output_network(modes)
 
-        if self.output_quantiles is not None:
+        if self.use_quantile_regression:
             # Shape: batch_size, seq_length * num_quantiles
             out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))
 
