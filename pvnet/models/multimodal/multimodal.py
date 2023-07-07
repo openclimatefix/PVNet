@@ -175,14 +175,9 @@ class Model(BaseModel):
         if include_sun:
             fc_in_features += 16
 
-        if self.use_quantile_regression:
-            out_features = self.forecast_len_30 * len(output_quantiles)
-        else:
-            out_features = self.forecast_len_30
-
         self.output_network = output_network(
             in_features=fc_in_features,
-            out_features=out_features,
+            out_features=self.num_output_features,
             **output_network_kwargs,
         )
 
