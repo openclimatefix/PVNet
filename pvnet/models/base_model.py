@@ -190,16 +190,16 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator()
         self._accumulated_y_hat = PredAccumulator()
-        
-    @property   
+
+    @property
     def use_quantile_regression(self):
         return self.output_quantiles is not None
 
     def _quantiles_to_prediction(self, y_quantiles):
         """
         Convert network prediction into a point prediction.
-        
-        Note: 
+
+        Note:
             Implementation copied from:
                 https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
                 /metrics/quantile.html#QuantileLoss.loss
@@ -217,12 +217,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_qauntile_loss(self, y_quantiles, y):
         """Calculate quantile loss.
-        
-        Note: 
+
+        Note:
             Implementation copied from:
                 https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
                 /metrics/quantile.html#QuantileLoss.loss
-                
+
         Args:
             y_quantiles: Quantile prediction of network
             y: Target values
