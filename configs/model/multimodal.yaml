@@ -1,5 +1,7 @@
 _target_: pvnet.models.multimodal.multimodal.Model
 
+output_quantiles: null
+
 #--------------------------------------------
 # Sat/NWP encoder settings
 #--------------------------------------------

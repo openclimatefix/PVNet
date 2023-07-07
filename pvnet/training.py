@@ -27,6 +27,15 @@ def _callbacks_to_phase(callbacks, phase):
     for c in callbacks:
         if hasattr(c, "switch_phase"):
             c.switch_phase(phase)
+            
+
+def resolve_monitor_loss(output_quantiles):
+    if output_quantiles is None:
+        return "MAE/val"
+    else:
+        return "quantile_loss/val"
+
+OmegaConf.register_new_resolver("resolve_monitor_loss", resolve_monitor_loss)
 
 
 def train(config: DictConfig) -> Optional[float]:
