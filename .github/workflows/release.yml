@@ -7,10 +7,11 @@ on:
 
 jobs:
   release:
-    uses: openclimatefix/.github/.github/workflows/python-docker-release.yml@main
+    uses: openclimatefix/.github/.github/workflows/python-docker-release.yml@v1.7.2
     secrets:
       token: ${{ secrets.PYPI_API_TOKEN }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
     with:
       image_base_name: pvnet
