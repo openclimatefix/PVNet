@@ -30,7 +30,8 @@ def test_model_backward(multimodal_model, sample_batch):
 
     # Backwards on sum drives sum to zero
     y.sum().backward()
-    
+
+
 def test_quantile_model_forward(multimodal_quantile_model, sample_batch):
     y_quantiles = multimodal_quantile_model(sample_batch)
 
