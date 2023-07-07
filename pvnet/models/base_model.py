@@ -281,13 +281,21 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
+        
+        losses = {}
+        
         if self.use_quantile_regression:
+            # Add fraction below each quantile for calibration
+            for i, quantile in enumerate(self.output_quantiles):
+                losses[f"fraction_below_{quantile}_quantile"] = (y <= y_hat[..., i]).mean()
+            
+            # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
 
         mse_each_step = mse_each_forecast_horizon(output=y_hat, target=y)
         mae_each_step = mae_each_forecast_horizon(output=y_hat, target=y)
 
-        losses = {f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)}
+        losses.update({f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)})
         losses.update({f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_step)})
         return losses
 
