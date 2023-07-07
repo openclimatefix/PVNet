@@ -195,8 +195,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def use_quantile_regression(self):
         """Whether the model should use quantile regression or simply predict the mean"""
         return self.output_quantiles is not None
-    
-    @property   
+
+    @property
     def num_output_features(self):
         """Number of ouput features he model chould predict for"""
         if self.use_quantile_regression:
