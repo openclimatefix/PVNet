@@ -238,7 +238,7 @@ def app(
     logger.info("Downloading zipped satellite data")
     fs = fsspec.open(os.environ["SATELLITE_ZARR_PATH"]).fs
     fs.get(os.environ["SATELLITE_ZARR_PATH"], "latest.zarr.zip")
-    
+
     # Also download 15-minute satellite if it exists
     sat_latest_15 = os.environ["SATELLITE_ZARR_PATH"].replace(".zarr.zip", "_15.zarr.zip")
     if fs.exists(sat_latest_15):
