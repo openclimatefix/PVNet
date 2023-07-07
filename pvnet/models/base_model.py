@@ -194,8 +194,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     @property
     def use_quantile_regression(self):
         return self.output_quantiles is not None
-    
-    @property   
+
+    @property
     def num_output_features(self):
         if self.use_quantile_regression:
             out_features = self.forecast_len_30 * len(self.output_quantiles)
