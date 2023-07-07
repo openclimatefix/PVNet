@@ -31,10 +31,10 @@ def _callbacks_to_phase(callbacks, phase):
 
 def resolve_monitor_loss(output_quantiles):
     """Return the desired metric to monitor based on whether quantile regression is being used.
-    
+
     The adds the option to use something like:
         monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
-    
+
     in early stopping and model checkpoint callbacks so the callbacks config does not need to be
     modified depending on whether quantile regression is being used or not.
     """
