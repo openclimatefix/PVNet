@@ -66,7 +66,7 @@ class Model(BaseModel):
         """Neural network which combines information from different sources.
 
         Args:
-            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to 
+            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
             image_encoder: Pytorch Module class used to encode the NWP data (and satellite data
                 unless sat_encoder is set) from 4D into an 1D feature vector.
@@ -174,18 +174,17 @@ class Model(BaseModel):
             fc_in_features += embedding_dim
         if include_sun:
             fc_in_features += 16
-            
+
         if output_quantiles is not None:
             out_features = self.forecast_len_30 * len(output_quantiles)
         else:
             out_features = self.forecast_len_30
-            
+
         self.output_network = output_network(
             in_features=fc_in_features,
             out_features=out_features,
             **output_network_kwargs,
         )
-            
 
         self.source_dropout_0d = CompleteDropoutNd(0, p=source_dropout)
         self.source_dropout_3d = CompleteDropoutNd(3, p=source_dropout)
@@ -240,7 +239,7 @@ class Model(BaseModel):
             modes["sun"] = sun
 
         out = self.output_network(modes)
-        
+
         if self.output_quantiles is not None:
             # Shape: batch_size, seq_length * num_quantiles
             out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))

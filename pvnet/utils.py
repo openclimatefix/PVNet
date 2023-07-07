@@ -6,9 +6,9 @@ from collections.abc import Sequence
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
-import pylab
 import numpy as np
 import pandas as pd
+import pylab
 import rich.syntax
 import rich.tree
 import xarray as xr
@@ -246,7 +246,7 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None):
 
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
-  
+
     y = batch[BatchKey.gsp].cpu().numpy()
     y_hat = y_hat.cpu().numpy()
 
@@ -266,26 +266,22 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None):
             ax.axis("off")
             continue
         ax.plot(times_utc[i], y[i], marker=".", color="k", label=r"$y$")
-        
+
         if quantiles is None:
             ax.plot(
-                times_utc[i][-len(y_hat[i]) :], 
-                y_hat[i], 
-                marker=".", 
-                color="r", 
-                label=r"$\hat{y}$"
+                times_utc[i][-len(y_hat[i]) :], y_hat[i], marker=".", color="r", label=r"$\hat{y}$"
             )
         else:
-            cm = pylab.get_cmap('twilight')
+            cm = pylab.get_cmap("twilight")
             for nq, q in enumerate(quantiles):
                 ax.plot(
-                    times_utc[i][-len(y_hat[i]) :], 
-                    y_hat[i,:,nq],
+                    times_utc[i][-len(y_hat[i]) :],
+                    y_hat[i, :, nq],
                     color=cm(q),
-                    label=r"$\hat{y}$"+f"({q})",
+                    label=r"$\hat{y}$" + f"({q})",
                     alpha=0.7,
                 )
-            
+
         ax.set_title(f"ID: {gsp_ids[i]} | {times_utc[i][0].date()}", fontsize="small")
 
         xticks = [t for t in times_utc[i] if t.minute == 0][::2]

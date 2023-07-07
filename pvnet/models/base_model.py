@@ -11,14 +11,10 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
-
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
-
-from pytorch_forecasting.metrics import QuantileLoss
-
 from nowcasting_utils.models.loss import WeightedLosses
 from nowcasting_utils.models.metrics import (
     mae_each_forecast_horizon,
@@ -26,6 +22,7 @@ from nowcasting_utils.models.metrics import (
 )
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
+from pytorch_forecasting.metrics import QuantileLoss
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -163,7 +160,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         forecast_minutes: int,
         optimizer: AbstractOptimizer,
         output_quantiles: Optional[list[float]] = None,
-
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -171,7 +167,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             history_minutes (int): Length of the GSP history period in minutes
             forecast_minutes (int): Length of the GSP forecast period in minutes
             optimizer (AbstractOptimizer): Optimizer
-            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to 
+            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
         """
         super().__init__()
@@ -197,20 +193,19 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator()
         self._accumulated_y_hat = PredAccumulator()
-        
+
     def _quantiles_to_prediction(self, y_quantiles):
         # y_quantiles Shape: batch_size, seq_length, num_quantiles
         return self._quantile_loss.to_prediction(y_quantiles)
-    
+
     def _calculate_qauntile_loss(self, y_quantiles, y):
         return self._quantile_loss.loss(y_quantiles, y).mean()
-        
 
     def _calculate_common_losses(self, y, y_hat):
         """Calculate losses common to train, test, and val"""
-        
+
         losses = {}
-        
+
         if self.output_quantiles is not None:
             losses["quantile_loss"] = self._calculate_qauntile_loss(y_hat, y)
             y_hat = self._quantiles_to_prediction(y_hat)
@@ -226,12 +221,14 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # TODO: Compute correlation coef using np.corrcoef(tensor with
         # shape (2, num_timesteps))[0, 1] on each example, and taking
         # the mean across the batch?
-        losses.update({
-            "MSE": mse_loss,
-            "MAE": mae_loss,
-            "MSE_EXP": mse_exp,
-            "MAE_EXP": mae_exp,
-        })
+        losses.update(
+            {
+                "MSE": mse_loss,
+                "MAE": mae_loss,
+                "MSE_EXP": mse_exp,
+                "MAE_EXP": mae_exp,
+            }
+        )
 
         return losses
 
@@ -239,7 +236,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """Calculate additional validation losses"""
         if self.output_quantiles is not None:
             y_hat = self._quantiles_to_prediction(y_hat)
-        
+
         mse_each_step = mse_each_forecast_horizon(output=y_hat, target=y)
         mae_each_step = mae_each_forecast_horizon(output=y_hat, target=y)
 
@@ -363,7 +360,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             on_step=False,
             on_epoch=True,
         )
-        
+
         if self.output_quantiles is not None:
             y_hat = self._quantiles_to_prediction(y_hat)
 
