@@ -263,7 +263,7 @@ def app(
             location_pipe=location_pipe,
             t0_datapipe=t0_datapipe,
             production=True,
-            check_satellite_no_zeros=True
+            check_satellite_no_zeros=True,
         )
         .batch(batch_size)
         .map(stack_np_examples_into_batch)
