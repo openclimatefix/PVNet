@@ -173,6 +173,7 @@ def gsp_yields_and_systems(db_session):
             gsp_yield_sql = GSPYield(
                 datetime_utc=t0_datetime_utc + timedelta(minutes=minute),
                 solar_generation_kw=np.random.randint(low=0, high=1000),
+                capacity_mwp=100,
             ).to_orm()
             gsp_yield_sql.location = location_sql
             gsp_yields.append(gsp_yield_sql)
