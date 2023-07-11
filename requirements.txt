@@ -1,6 +1,6 @@
 nowcasting_utils
 nowcasting_datamodel==1.4.14
-ocf_datapipes==1.2.42
+ocf_datapipes==1.2.43
 ocf_ml_metrics
 numpy
 pandas
