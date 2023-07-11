@@ -1,6 +1,5 @@
 """
-Constructs batches where each batch includes all GSPs and each sample within a batch has the same
-timestamp.
+Constructs batches where each batch includes all GSPs and only a single timestamp.
 
 Currently a slightly hacky implementation due to the way the configs are done. This script will use
 the same config file currently set to train the model.
