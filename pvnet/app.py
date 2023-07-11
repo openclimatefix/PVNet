@@ -239,6 +239,12 @@ def app(
     fs = fsspec.open(os.environ["SATELLITE_ZARR_PATH"]).fs
     fs.get(os.environ["SATELLITE_ZARR_PATH"], "latest.zarr.zip")
 
+    # Also download 15-minute satellite if it exists
+    sat_latest_15 = os.environ["SATELLITE_ZARR_PATH"].replace(".zarr.zip", "_15.zarr.zip")
+    if fs.exists(sat_latest_15):
+        logger.info("Downloading 15-minute satellite data")
+        fs.get(sat_latest_15, "latest_15.zarr.zip")
+
     # ---------------------------------------------------------------------------
     # 2. Set up data loader
     logger.info("Creating DataLoader")
@@ -257,6 +263,7 @@ def app(
             location_pipe=location_pipe,
             t0_datapipe=t0_datapipe,
             production=True,
+            check_satellite_no_zeros=True,
         )
         .batch(batch_size)
         .map(stack_np_examples_into_batch)
