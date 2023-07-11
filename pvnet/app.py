@@ -31,7 +31,6 @@ from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
 from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
-from pvlive_api import PVLive
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
@@ -200,36 +199,20 @@ def app(
 
     # Make pands Series of most recent GSP effective capacities
 
-    # Pulling these valiues from the PVLive API is a temporary fix until capacity_mwp is available
-    # in the database. This should be removed/updated once available.
-    logger.info("Requesting GSP effective capacities from PVLive")
-
-    gsp_capacities = pd.Series(
-        np.zeros(len(gsp_ids), dtype=np.float32),
-        name="capacity_megawatt_power",
-        index=pd.Series(gsp_ids, name="gsp_id"),
-    )
-
-    # Take capacities at most recent midnight
-    capacity_time = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0)
-
-    pvl = PVLive()
-
-    for gsp_id in gsp_ids:
-        cap_df = pvl.between(
-            start=capacity_time,
-            end=capacity_time,
-            entity_type="gsp",
-            entity_id=gsp_id,
-            extra_fields="capacity_mwp",
-            dataframe=True,
-        )
-
-        gsp_capacities.loc[gsp_id] = cap_df.capacity_mwp.item()
-
     logger.info("Loading GSP metadata")
 
     ds_gsp = next(iter(OpenGSPFromDatabase()))
+
+    # DataFrame of most recent GSP capacities
+    gsp_capacities = (
+        ds_gsp.sel(
+            time_utc=t0,
+            method="ffill",
+        )
+        .sel(gsp_id=gsp_ids)
+        .to_dataframe()
+        .effective_capacity_mwp
+    )
 
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)

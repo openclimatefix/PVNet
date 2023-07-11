@@ -173,6 +173,7 @@ def gsp_yields_and_systems(db_session):
             gsp_yield_sql = GSPYield(
                 datetime_utc=t0_datetime_utc + timedelta(minutes=minute),
                 solar_generation_kw=np.random.randint(low=0, high=1000),
+                capacity_mwp=100,
             ).to_orm()
             gsp_yield_sql.location = location_sql
             gsp_yields.append(gsp_yield_sql)
@@ -230,7 +231,7 @@ def model_minutes_kwargs():
 def encoder_model_kwargs():
     # Used to test encoder model on satellite data
     kwargs = dict(
-        sequence_length=90 // 5 - 2,
+        sequence_length=(90 - 30) // 5 + 1,
         image_size_pixels=24,
         in_channels=11,
         out_features=128,
@@ -267,6 +268,7 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         sat_history_minutes=90,
         nwp_history_minutes=120,
         nwp_forecast_minutes=480,
+        min_sat_delay_minutes=30,
     )
     kwargs.update(model_minutes_kwargs)
     return kwargs
