@@ -36,6 +36,7 @@ class Model(BaseModel):
 
     def __init__(
         self,
+        output_quantiles: Optional[list[float]] = None,
         image_encoder: AbstractNWPSatelliteEncoder = DefaultPVNet,
         encoder_out_features: int = 128,
         encoder_kwargs: dict = dict(),
@@ -65,6 +66,8 @@ class Model(BaseModel):
         """Neural network which combines information from different sources.
 
         Args:
+            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
+                None the output is a single value.
             image_encoder: Pytorch Module class used to encode the NWP data (and satellite data
                 unless sat_encoder is set) from 4D into an 1D feature vector.
             encoder_out_features: Number of features of the 1D vector created by the
@@ -111,7 +114,7 @@ class Model(BaseModel):
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
 
-        super().__init__(history_minutes, forecast_minutes, optimizer)
+        super().__init__(history_minutes, forecast_minutes, optimizer, output_quantiles)
 
         if include_sat:
             # We limit the history to have a delay of 15 mins in satellite data
@@ -174,7 +177,7 @@ class Model(BaseModel):
 
         self.output_network = output_network(
             in_features=fc_in_features,
-            out_features=self.forecast_len_30,
+            out_features=self.num_output_features,
             **output_network_kwargs,
         )
 
@@ -231,5 +234,9 @@ class Model(BaseModel):
             modes["sun"] = sun
 
         out = self.output_network(modes)
+
+        if self.use_quantile_regression:
+            # Shape: batch_size, seq_length * num_quantiles
+            out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))
 
         return out

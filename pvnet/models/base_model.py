@@ -158,6 +158,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         history_minutes: int,
         forecast_minutes: int,
         optimizer: AbstractOptimizer,
+        output_quantiles: Optional[list[float]] = None,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -165,6 +166,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             history_minutes (int): Length of the GSP history period in minutes
             forecast_minutes (int): Length of the GSP forecast period in minutes
             optimizer (AbstractOptimizer): Optimizer
+            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
+                None the output is a single value.
         """
         super().__init__()
 
@@ -176,6 +179,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self.history_minutes = history_minutes
         self.forecast_minutes = forecast_minutes
+        self.output_quantiles = output_quantiles
 
         # Number of timestemps for 30 minutely data
         self.history_len_30 = history_minutes // 30
@@ -187,8 +191,71 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._accumulated_batches = BatchAccumulator()
         self._accumulated_y_hat = PredAccumulator()
 
+    @property
+    def use_quantile_regression(self):
+        """Whether the model should use quantile regression or simply predict the mean"""
+        return self.output_quantiles is not None
+
+    @property
+    def num_output_features(self):
+        """Number of ouput features he model chould predict for"""
+        if self.use_quantile_regression:
+            out_features = self.forecast_len_30 * len(self.output_quantiles)
+        else:
+            out_features = self.forecast_len_30
+        return out_features
+
+    def _quantiles_to_prediction(self, y_quantiles):
+        """
+        Convert network prediction into a point prediction.
+
+        Note:
+            Implementation copied from:
+                https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
+                /metrics/quantile.html#QuantileLoss.loss
+
+        Args:
+            y_quantiles: Quantile prediction of network
+
+        Returns:
+            torch.Tensor: Point prediction
+        """
+        # y_quantiles Shape: batch_size, seq_length, num_quantiles
+        idx = self.output_quantiles.index(0.5)
+        y_median = y_quantiles[..., idx]
+        return y_median
+
+    def _calculate_qauntile_loss(self, y_quantiles, y):
+        """Calculate quantile loss.
+
+        Note:
+            Implementation copied from:
+                https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
+                /metrics/quantile.html#QuantileLoss.loss
+
+        Args:
+            y_quantiles: Quantile prediction of network
+            y: Target values
+
+        Returns:
+            Quantile loss
+        """
+        # calculate quantile loss
+        losses = []
+        for i, q in enumerate(self.output_quantiles):
+            errors = y - y_quantiles[..., i]
+            losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
+        losses = 2 * torch.cat(losses, dim=2)
+        return losses.mean()
+
     def _calculate_common_losses(self, y, y_hat):
         """Calculate losses common to train, test, and val"""
+
+        losses = {}
+
+        if self.use_quantile_regression:
+            losses["quantile_loss"] = self._calculate_qauntile_loss(y_hat, y)
+            y_hat = self._quantiles_to_prediction(y_hat)
 
         # calculate mse, mae
         mse_loss = F.mse_loss(y_hat, y)
@@ -201,21 +268,34 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # TODO: Compute correlation coef using np.corrcoef(tensor with
         # shape (2, num_timesteps))[0, 1] on each example, and taking
         # the mean across the batch?
-        losses = {
-            "MSE": mse_loss,
-            "MAE": mae_loss,
-            "MSE_EXP": mse_exp,
-            "MAE_EXP": mae_exp,
-        }
+        losses.update(
+            {
+                "MSE": mse_loss,
+                "MAE": mae_loss,
+                "MSE_EXP": mse_exp,
+                "MAE_EXP": mae_exp,
+            }
+        )
 
         return losses
 
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
+
+        losses = {}
+
+        if self.use_quantile_regression:
+            # Add fraction below each quantile for calibration
+            for i, quantile in enumerate(self.output_quantiles):
+                losses[f"fraction_below_{quantile}_quantile"] = (y <= y_hat[..., i]).mean()
+
+            # Take median value for remaining metric calculations
+            y_hat = self._quantiles_to_prediction(y_hat)
+
         mse_each_step = mse_each_forecast_horizon(output=y_hat, target=y)
         mae_each_step = mae_each_forecast_horizon(output=y_hat, target=y)
 
-        losses = {f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)}
+        losses.update({f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)})
         losses.update({f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_step)})
         return losses
 
@@ -257,7 +337,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
             if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
-                fig = plot_batch_forecasts(batch, y_hat, batch_idx)
+                fig = plot_batch_forecasts(batch, y_hat, batch_idx, quantiles=self.output_quantiles)
                 fig.savefig("latest_logged_train_batch.png")
 
     def training_step(self, batch, batch_idx):
@@ -270,7 +350,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self._training_accumulate_log(batch, batch_idx, losses, y_hat)
 
-        return losses["MAE/train"]
+        if self.use_quantile_regression:
+            opt_target = losses["quantile_loss/train"]
+        else:
+            opt_target = losses["MAE/train"]
+        return opt_target
 
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
@@ -304,7 +388,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 y_hat = self._val_y_hats.flush()
                 batch = self._val_batches.flush()
 
-                fig = plot_batch_forecasts(batch, y_hat)
+                fig = plot_batch_forecasts(batch, y_hat, quantiles=self.output_quantiles)
 
                 self.logger.experiment.log(
                     {
@@ -331,6 +415,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             on_step=False,
             on_epoch=True,
         )
+
+        if self.use_quantile_regression:
+            y_hat = self._quantiles_to_prediction(y_hat)
 
         return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)
 

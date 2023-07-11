@@ -29,6 +29,24 @@ def _callbacks_to_phase(callbacks, phase):
             c.switch_phase(phase)
 
 
+def resolve_monitor_loss(output_quantiles):
+    """Return the desired metric to monitor based on whether quantile regression is being used.
+
+    The adds the option to use something like:
+        monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
+
+    in early stopping and model checkpoint callbacks so the callbacks config does not need to be
+    modified depending on whether quantile regression is being used or not.
+    """
+    if output_quantiles is None:
+        return "MAE/val"
+    else:
+        return "quantile_loss/val"
+
+
+OmegaConf.register_new_resolver("resolve_monitor_loss", resolve_monitor_loss)
+
+
 def train(config: DictConfig) -> Optional[float]:
     """Contains training pipeline.
 
