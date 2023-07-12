@@ -129,8 +129,9 @@ def sat_data():
         f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/non_hrv_shell.zarr"
     )
 
-    # Change times so they lead up to present. Delayed by an hour
-    t0_datetime_utc = time_before_present(timedelta(hours=1)).floor(timedelta(minutes=30))
+    # Change times so they lead up to present. Delayed by at most 1 hour
+    t0_datetime_utc = time_before_present(timedelta(minutes=0)).floor(timedelta(minutes=30))
+    t0_datetime_utc = t0_datetime_utc - timedelta(minutes=30)
     ds.time.values[:] = pd.date_range(
         t0_datetime_utc - timedelta(minutes=5 * (len(ds.time) - 1)),
         t0_datetime_utc,
@@ -168,8 +169,8 @@ def gsp_yields_and_systems(db_session):
         ).to_orm()
 
         gsp_yield_sqls = []
-        # From 2 hours ago to 8.5 hours into future
-        for minute in range(-2 * 60, 9 * 60, 30):
+        # From 3 hours ago to 8.5 hours into future
+        for minute in range(-3 * 60, 9 * 60, 30):
             gsp_yield_sql = GSPYield(
                 datetime_utc=t0_datetime_utc + timedelta(minutes=minute),
                 solar_generation_kw=np.random.randint(low=0, high=1000),
