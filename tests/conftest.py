@@ -129,8 +129,8 @@ def sat_data():
         f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/non_hrv_shell.zarr"
     )
 
-    # Change times so they lead up to present. Delayed by an hour
-    t0_datetime_utc = time_before_present(timedelta(hours=1)).floor(timedelta(minutes=30))
+    # Change times so they lead up to present. Delayed by 30 minutes
+    t0_datetime_utc = time_before_present(timedelta(hours=0.5)).floor(timedelta(minutes=30))
     ds.time.values[:] = pd.date_range(
         t0_datetime_utc - timedelta(minutes=5 * (len(ds.time) - 1)),
         t0_datetime_utc,
