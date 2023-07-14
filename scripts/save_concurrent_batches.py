@@ -59,7 +59,6 @@ def select_first(x):
 
 
 def _get_loctimes_datapipes(config_path, start_time, end_time, n_batches):
-    
     # Set up ID location query object
     ds_gsp = next(
         iter(
@@ -92,28 +91,24 @@ def _get_loctimes_datapipes(config_path, start_time, end_time, n_batches):
         start_time,
         end_time,
     )
-    
+
     # Iterate through both but select only time
     t0_datapipe = t0_datapipe.zip(random_location_datapipe).map(select_first)
-    
+
     # Create times datapipe so we'll get the same time over each batch
     t0_datapipe = t0_datapipe.header(n_batches)
     t0_datapipe = IterableWrapper([[t0 for gsp_id in range(1, 318)] for t0 in t0_datapipe])
     t0_datapipe = t0_datapipe.sharding_filter()
     t0_datapipe = t0_datapipe.unbatch(unbatch_level=1)
-    
+
     return location_pipe, t0_datapipe
 
 
 def _get_datapipe(config_path, start_time, end_time, n_batches):
     # Open datasets from the config and filter to useable location-time pairs
 
-
     location_pipe, t0_datapipe = _get_loctimes_datapipes(
-        config_path, 
-        start_time, 
-        end_time, 
-        n_batches
+        config_path, start_time, end_time, n_batches
     )
 
     data_pipeline = construct_sliced_data_pipeline(
