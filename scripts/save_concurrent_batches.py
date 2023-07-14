@@ -54,14 +54,12 @@ class _save_batch_func_factory:
         torch.save(batch, f"{self.batch_dir}/{i:06}.pt")
 
 
-def _get_datapipe(config_path, start_time, end_time, n_batches):
-    # Open datasets from the config and filter to useable location-time pairs
-    _, t0_datapipe = construct_loctime_pipelines(
-        config_path,
-        start_time,
-        end_time,
-    )
+def select_first(x):
+    return x[0]
 
+
+def _get_loctimes_datapipes(config_path, start_time, end_time, n_batches):
+    
     # Set up ID location query object
     ds_gsp = next(
         iter(
@@ -87,9 +85,36 @@ def _get_datapipe(config_path, start_time, end_time, n_batches):
     location_pipe = location_pipe.sharding_filter()
     location_pipe = location_pipe.unbatch(unbatch_level=1)
 
-    # Shard and repeat so each worker repeats the same time for the entire batch
+    # These two datapipes come from an earlier fork and must be iterated through together
+    # despite the fact that we don't want these random locations here
+    random_location_datapipe, t0_datapipe = construct_loctime_pipelines(
+        config_path,
+        start_time,
+        end_time,
+    )
+    
+    # Iterate through both but select only time
+    t0_datapipe = t0_datapipe.zip(random_location_datapipe).map(select_first)
+    
+    # Create times datapipe so we'll get the same time over each batch
+    t0_datapipe = t0_datapipe.header(n_batches)
+    t0_datapipe = IterableWrapper([[t0 for gsp_id in range(1, 318)] for t0 in t0_datapipe])
     t0_datapipe = t0_datapipe.sharding_filter()
-    t0_datapipe = t0_datapipe.repeat(317)
+    t0_datapipe = t0_datapipe.unbatch(unbatch_level=1)
+    
+    return location_pipe, t0_datapipe
+
+
+def _get_datapipe(config_path, start_time, end_time, n_batches):
+    # Open datasets from the config and filter to useable location-time pairs
+
+
+    location_pipe, t0_datapipe = _get_loctimes_datapipes(
+        config_path, 
+        start_time, 
+        end_time, 
+        n_batches
+    )
 
     data_pipeline = construct_sliced_data_pipeline(
         config_path,
@@ -104,7 +129,7 @@ def _get_datapipe(config_path, start_time, end_time, n_batches):
 
 def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
     save_func = _save_batch_func_factory(batch_dir)
-    filenumber_pipe = IterableWrapper(range(num_batches)).sharding_filter()
+    filenumber_pipe = IterableWrapper(np.arange(num_batches)).sharding_filter()
     save_pipe = filenumber_pipe.zip(batch_pipe).map(save_func)
 
     rs = MultiProcessingReadingService(**rs_config)
