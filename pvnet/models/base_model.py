@@ -126,7 +126,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         # saving config
         if isinstance(config, dict):
-            (save_directory / CONFIG_NAME).write_text(json.dumps(config))
+            (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")

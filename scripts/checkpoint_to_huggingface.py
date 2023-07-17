@@ -1,4 +1,10 @@
-"""Command line tool to push locally save model checkpoints to huggingface"""
+"""Command line tool to push locally save model checkpoints to huggingface
+
+use:
+python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
+    --local-path="~/tmp/this_model" \
+    --no-push-to-hub
+"""
 import glob
 import os
 import tempfile
