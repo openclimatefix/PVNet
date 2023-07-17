@@ -62,7 +62,7 @@ batch_size = 10
 
 # Huggingfacehub model repo and commit
 model_name = "openclimatefix/pvnet_v2"
-model_version = "3d01665c89501da25e3acaaee6b669a15748708c"
+model_version = "898630f3f8cd4e8506525d813dd61c6d8de86144"
 
 model_name_ocf_db = "pvnet_v2"
 use_adjuster = os.getenv("USE_ADJUSTER", "True").lower() == "true"
