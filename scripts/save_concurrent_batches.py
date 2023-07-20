@@ -55,6 +55,7 @@ class _save_batch_func_factory:
 
 
 def select_first(x):
+    """select zeroth element from indexable object"""
     return x[0]
 
 
