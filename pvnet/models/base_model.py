@@ -287,9 +287,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         if self.use_quantile_regression:
             # Add fraction below each quantile for calibration
             for i, quantile in enumerate(self.output_quantiles):
-                below_quant = (y <= y_hat[..., i])
-                # Mask values small values, which are dominated by night 
-                mask = y>=0.01
+                below_quant = y <= y_hat[..., i]
+                # Mask values small values, which are dominated by night
+                mask = y >= 0.01
                 losses[f"fraction_below_{quantile}_quantile"] = (below_quant[mask]).float().mean()
 
             # Take median value for remaining metric calculations
