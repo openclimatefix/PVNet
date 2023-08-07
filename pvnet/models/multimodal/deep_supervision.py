@@ -57,7 +57,7 @@ class Model(BaseModel):
         forecast_minutes: int = 30,
         history_minutes: int = 60,
         sat_history_minutes: Optional[int] = None,
-        min_sat_delay_minutes: Optional[int] = 15,
+        min_sat_delay_minutes: Optional[int] = 30,
         nwp_forecast_minutes: Optional[int] = None,
         nwp_history_minutes: Optional[int] = None,
         sat_image_size_pixels: int = 64,
