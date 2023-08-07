@@ -26,13 +26,14 @@ input_data:
 
   satellite:
     satellite_zarr_path:
-      - /mnt/disks/data_ssd/2017_nonhrv.zarr
-      - /mnt/disks/data_ssd/2018_nonhrv.zarr
-      - /mnt/disks/data_ssd/2019_nonhrv.zarr
-      - /mnt/disks/data_ssd/2020_nonhrv.zarr
-      - /mnt/disks/data_ssd/2021_nonhrv.zarr
+      - /mnt/disks/sat/2017_nonhrv.zarr
+      - /mnt/disks/sat/2018_nonhrv.zarr
+      - /mnt/disks/sat/2019_nonhrv.zarr
+      - /mnt/disks/sat/2020_nonhrv.zarr
+      - /mnt/disks/sat/2021_nonhrv.zarr
     history_minutes: 90
     forecast_minutes: 0
+    live_delay_minutes: 30
     time_resolution_minutes: 5
     satellite_channels:
       - IR_016

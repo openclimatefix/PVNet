@@ -3,25 +3,16 @@ general:
   name: template
 
 input_data:
-  data_source_which_defines_geospatial_locations: gsp
   default_forecast_minutes: 120
   default_history_minutes: 60
 
   gsp:
-    gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v5/pv_gsp.zarr
+    gsp_zarr_path: gs://solar-pv-nowcasting-data/PV/GSP/v7/pv_gsp.zarr
     history_minutes: 60
     forecast_minutes: 120
     time_resolution_minutes: 30
     start_datetime: "2020-01-01T00:00:00"
     end_datetime: "2021-09-01T00:00:00"
-    gsp_image_size_pixels_height: 64
-    gsp_image_size_pixels_width: 64
-    gsp_meters_per_pixel: 2000
-    n_gsp_per_example: 32
-    is_live: false
-    live_interpolate_minutes: 60
-    live_load_extra_minutes: 60
-    log_level: ERROR
     metadata_only: false
 
   nwp:
@@ -42,8 +33,6 @@ input_data:
       - si10 # 10-metre wind speed | live = unknown
     nwp_image_size_pixels_height: 24
     nwp_image_size_pixels_width: 24
-    nwp_meters_per_pixel: 2000
-    log_level: DEBUG
 
   pv:
     pv_files_groups:
@@ -65,6 +54,7 @@ input_data:
     satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
     history_minutes: 60
     forecast_minutes: 0
+    live_delay_minutes: 30
     time_resolution_minutes: 5
     satellite_channels:
       - IR_016
@@ -80,11 +70,6 @@ input_data:
       - WV_073
     satellite_image_size_pixels_height: 24
     satellite_image_size_pixels_width: 24
-    satellite_meters_per_pixel: 6000
-    keep_dawn_dusk_hours: 4
-    live_delay_minutes: 30
-    is_live: false
-    log_level: DEBUG
 
   hrvsatellite:
     hrvsatellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_hrv.zarr
