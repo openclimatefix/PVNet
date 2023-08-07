@@ -14,7 +14,7 @@ input_data:
     metadata_only: false
 
   nwp:
-    nwp_zarr_path: /mnt/disks/nwp_rechunk/UKV_intermediate_version_7.1.zarr
+    nwp_zarr_path: /mnt/disks/nwp/UKV_intermediate_version_7.zarr
     history_minutes: 120
     forecast_minutes: 480
     time_resolution_minutes: 60
