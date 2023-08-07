@@ -150,7 +150,7 @@ def train(config: DictConfig) -> Optional[float]:
         datamodule=datamodule,
         trainer=trainer,
         callbacks=callbacks,
-        logger=logger,
+        loggers=loggers,
     )
 
     # Print path to best checkpoint
