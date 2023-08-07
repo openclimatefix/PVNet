@@ -13,12 +13,6 @@ input_data:
     time_resolution_minutes: 30
     start_datetime: "1900-01-01T00:00:00"
     end_datetime: "2100-01-01T00:00:00"
-    gsp_image_size_pixels_height: 64
-    gsp_image_size_pixels_width: 64
-    gsp_meters_per_pixel: 2000
-    n_gsp_per_example: 32
-    is_live: false
-    log_level: DEBUG
     metadata_only: false
 
   nwp:
@@ -31,13 +25,12 @@ input_data:
       - dswrf
     nwp_image_size_pixels_height: 24
     nwp_image_size_pixels_width: 24
-    nwp_meters_per_pixel: 2000
-    log_level: DEBUG
 
   satellite:
     satellite_zarr_path: latest.zarr.zip
     history_minutes: 90
     forecast_minutes: 0
+    live_delay_minutes: 60
     time_resolution_minutes: 5
     satellite_channels:
       - IR_016
@@ -53,11 +46,6 @@ input_data:
       - WV_073
     satellite_image_size_pixels_height: 24
     satellite_image_size_pixels_width: 24
-    satellite_meters_per_pixel: 6000
-    keep_dawn_dusk_hours: 4
-    live_delay_minutes: 60
-    is_live: false
-    log_level: DEBUG
 
   hrvsatellite:
     hrvsatellite_zarr_path: ""
