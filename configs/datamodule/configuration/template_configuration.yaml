@@ -71,7 +71,6 @@ input_data:
     satellite_image_size_pixels_height: 24
     satellite_image_size_pixels_width: 24
 
-
   hrvsatellite:
     hrvsatellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_hrv.zarr
     history_minutes: 60
