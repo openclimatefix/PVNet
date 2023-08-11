@@ -13,9 +13,9 @@ from datetime import datetime, timedelta, timezone
 import fsspec
 import numpy as np
 import pandas as pd
-import xarray as xr
 import torch
 import typer
+import xarray as xr
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
     ForecastSQL,
@@ -96,8 +96,8 @@ def convert_dataarray_to_forecasts(
 
     Args:
         forecast_values_dataarray: Dataarray of forecasted values. Must have `target_datetime_utc` 
-            `gsp_id`, and `output_label` coords. The `output_label` coords must have 
-            `"forecast_mw"` as an element.
+            `gsp_id`, and `output_label` coords. The `output_label` coords must have `"forecast_mw"`
+            as an element.
         session: database session
         model_name: the name of the model
         version: the version of the model
@@ -132,17 +132,18 @@ def convert_dataarray_to_forecasts(
             # add timezone
             target_time_utc = target_time.replace(tzinfo=timezone.utc)
             this_da = gsp_forecast_values_da.sel(target_datetime_utc=target_time)
-            
+
             forecast_value_sql = ForecastValue(
                 target_time=target_time_utc,
                 expected_power_generation_megawatts=(
                     this_da.sel(output_label="forecast_mw").item()
                 )
             ).to_orm()
-            
+
             forecast_value_sql.adjust_mw = 0.0
-            
+
             forecast_value_sql.properties = {}
+
             if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_label:
                 forecast_value_sql.properties["10"] = (
                     this_da.sel(output_label="forecast_mw_plevel_10").item()
@@ -152,9 +153,9 @@ def convert_dataarray_to_forecasts(
                 forecast_value_sql.properties["90"] =  (
                     this_da.sel(output_label="forecast_mw_plevel_90").item()
                 )
-            
+
             forecast_values.append(forecast_value_sql)
-            
+
         # make forecast object
         forecast = ForecastSQL(
             model=model,
@@ -332,7 +333,7 @@ def app(
     logger.info("Processing raw predictions to DataArray")
 
     n_times = normed_preds.shape[1]
-        
+
     if model.use_quantile_regression:
         output_labels = model.output_quantiles
         output_labels = [f"forecast_mw_plevel_{int(q*100):02}" for q in model.output_quantiles]
@@ -340,7 +341,7 @@ def app(
     else:
         output_labels = ["forecast_mw"]
         normed_preds = normed_preds[..., np.newaxis]
-    
+
     da_normed = xr.DataArray(
         data=normed_preds,
         dims=["gsp_id", "target_datetime_utc", "output_label"],
