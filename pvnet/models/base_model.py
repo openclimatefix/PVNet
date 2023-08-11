@@ -97,7 +97,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_model_code: Optional[str] = None,
-        card_template_path=None**kwargs,
+        card_template_path=None,
+        **kwargs,
     ) -> Optional[str]:
         """
         Save weights in local directory.
