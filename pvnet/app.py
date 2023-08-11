@@ -385,7 +385,7 @@ def app(
         sql_forecasts = convert_dataarray_to_forecasts(
             da_abs, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
-                
+
         save_sql_forecasts(
             forecasts=sql_forecasts,
             session=session,
