@@ -104,11 +104,10 @@ def convert_dataarray_to_forecasts(
     Return:
         List of ForecastSQL objects
     """
-
     logger.debug("Converting DataArray to list of ForecastSQL")
 
-    assert "target_datetime_utc" in forecast_values_dataarray
-    assert "gsp_id" in forecast_values_dataarray
+    assert "target_datetime_utc" in forecast_values_dataarray.coords
+    assert "gsp_id" in forecast_values_dataarray.coords
     assert "forecast_mw" in forecast_values_dataarray.output_label
 
     # get last input data
@@ -385,7 +384,7 @@ def app(
         sql_forecasts = convert_dataarray_to_forecasts(
             da_abs, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
-
+        return
         save_sql_forecasts(
             forecasts=sql_forecasts,
             session=session,
