@@ -95,7 +95,7 @@ def convert_dataarray_to_forecasts(
     Make a ForecastSQL object from a DataArray.
 
     Args:
-        forecast_values_dataarray: Dataarray of forecasted values. Must have `target_datetime_utc` 
+        forecast_values_dataarray: Dataarray of forecasted values. Must have `target_datetime_utc`
             `gsp_id`, and `output_label` coords. The `output_label` coords must have `"forecast_mw"`
             as an element.
         session: database session
@@ -137,7 +137,7 @@ def convert_dataarray_to_forecasts(
                 target_time=target_time_utc,
                 expected_power_generation_megawatts=(
                     this_da.sel(output_label="forecast_mw").item()
-                )
+                ),
             ).to_orm()
 
             forecast_value_sql.adjust_mw = 0.0
@@ -145,14 +145,14 @@ def convert_dataarray_to_forecasts(
             forecast_value_sql.properties = {}
 
             if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_label:
-                forecast_value_sql.properties["10"] = (
-                    this_da.sel(output_label="forecast_mw_plevel_10").item()
-                )
+                forecast_value_sql.properties["10"] = this_da.sel(
+                    output_label="forecast_mw_plevel_10"
+                ).item()
 
             if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_label:
-                forecast_value_sql.properties["90"] =  (
-                    this_da.sel(output_label="forecast_mw_plevel_90").item()
-                )
+                forecast_value_sql.properties["90"] = this_da.sel(
+                    output_label="forecast_mw_plevel_90"
+                ).item()
 
             forecast_values.append(forecast_value_sql)
 
@@ -312,7 +312,7 @@ def app(
             # We only need elevation mask for forecasted values, not history
             elevation = elevation[:, -preds.shape[1] :]
             sun_down_mask = elevation < MIN_DAY_ELEVATION
-            
+
             # Zero out after sundown
             preds[sun_down_mask] = 0
 
@@ -350,7 +350,7 @@ def app(
             target_datetime_utc=pd.to_datetime(
                 [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
             ),
-            output_label = output_labels,
+            output_label=output_labels,
         ),
     )
 
@@ -360,7 +360,7 @@ def app(
     # Multiply normalised forecasts by capacities and clip negatives
     logger.info(f"Converting to absolute MW using {gsp_capacities}")
     da_abs = da_normed.clip(0, None) * gsp_capacities
-    max_preds = da_abs.sel(output_label='forecast_mw').max(dim='target_datetime_utc')
+    max_preds = da_abs.sel(output_label="forecast_mw").max(dim="target_datetime_utc")
     logger.info(f"Maximum predictions: {max_preds}")
 
     # ---------------------------------------------------------------------------
@@ -370,7 +370,7 @@ def app(
     da_abs_national = da_abs_national.expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
     da_abs = xr.concat([da_abs_national, da_abs], dim="gsp_id")
     logger.info(f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}")
-    
+
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
     if not write_predictions:
