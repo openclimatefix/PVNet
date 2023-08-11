@@ -113,7 +113,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the Huggingface Hub after saving it.
             wandb_model_code: Identifier of the model on wandb.
-            card_template_path: Path to the huggingface model card template. Defaults to card in 
+            card_template_path: Path to the huggingface model card template. Defaults to card in
                 PVNet library if set to None.
             kwargs:
                 Additional key word arguments passed along to the
