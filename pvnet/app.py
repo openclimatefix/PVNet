@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 import fsspec
 import numpy as np
 import pandas as pd
+import xarray as xr
 import torch
 import typer
 from nowcasting_datamodel.connection import DatabaseConnection
@@ -62,7 +63,7 @@ batch_size = 10
 
 # Huggingfacehub model repo and commit
 model_name = "openclimatefix/pvnet_v2"
-model_version = "898630f3f8cd4e8506525d813dd61c6d8de86144"
+model_version = "96ac8c67fa8663844ddcfa82aece51ef94f34453"
 
 model_name_ocf_db = "pvnet_v2"
 use_adjuster = os.getenv("USE_ADJUSTER", "True").lower() == "true"
@@ -87,15 +88,16 @@ sql_logger.addHandler(logging.NullHandler())
 # HELPER FUNCTIONS
 
 
-def convert_df_to_forecasts(
-    forecast_values_df: pd.DataFrame, session: Session, model_name: str, version: str
+def convert_dataarray_to_forecasts(
+    forecast_values_dataarray: xr.DataArray, session: Session, model_name: str, version: str
 ) -> list[ForecastSQL]:
     """
     Make a ForecastSQL object from a dataframe.
 
     Args:
-        config (DictConfig): Configuration composed by Hydra.
-        forecast_values_df (Dataframe): Containing `target_datetime_utc` and `forecast_mw` columns
+        forecast_values_dataarray: Dataarray of forecasted values. Must have `target_datetime_utc` 
+            `gsp_id`, and `output_labels` coords. The `output_labels` coords must have 
+            `"forecast_mw"` as an element.
         session: database session
         model_name: the name of the model
         version: the version of the model
@@ -105,9 +107,9 @@ def convert_df_to_forecasts(
 
     logger.debug("Converting dataframe to list of ForecastSQL")
 
-    assert "target_datetime_utc" in forecast_values_df.columns
-    assert "forecast_mw" in forecast_values_df.columns
-    assert "gsp_id" in forecast_values_df.columns
+    assert "target_datetime_utc" in forecast_values_df
+    assert "gsp_id" in forecast_values_df
+    assert "forecast_mw" in forecast_values_df.output_labels
 
     # get last input data
     input_data_last_updated = get_latest_input_data_last_updated(session=session)
@@ -117,25 +119,36 @@ def convert_df_to_forecasts(
 
     forecasts = []
 
-    for gsp_id in forecast_values_df.gsp_id.unique():
+    for gsp_id in forecast_values_dataarray.gsp_id.values:
         # make forecast values
         forecast_values = []
 
         # get location
         location = get_location(session=session, gsp_id=gsp_id)
 
-        gsp_forecast_values_df = forecast_values_df.query(f"gsp_id=={gsp_id}")
+        gsp_forecast_values_da = forecast_values_dataarray.sel(gsp_id=gsp_id)
 
-        for i, forecast_value in gsp_forecast_values_df.iterrows():
+        for target_time in gsp_forecast_values_da.target_datetime_utc.values:
             # add timezone
-            target_time = forecast_value.target_datetime_utc.replace(tzinfo=timezone.utc)
+            target_time_utc = target_time.replace(tzinfo=timezone.utc)
+            this_da = gsp_forecast_values_da.sel(target_datetime_utc=target_time)
+            
             forecast_value_sql = ForecastValue(
-                target_time=target_time,
-                expected_power_generation_megawatts=forecast_value.forecast_mw,
+                target_time=target_time_utc,
+                expected_power_generation_megawatts=this_da.forecast_mw.item(),
             ).to_orm()
+            
             forecast_value_sql.adjust_mw = 0.0
-            forecast_values.append(forecast_value_sql)
+            
+            forecast_value_sql.properties = {}
+            if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_labels:
+                forecast_value_sql.properties["10"] = this_da.forecast_mw_plevel_10.item()
 
+            if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_labels:
+                forecast_value_sql.properties["90"] = this_da.forecast_mw_plevel_90.item()
+            
+            forecast_values.append(forecast_value_sql)
+            
         # make forecast object
         forecast = ForecastSQL(
             model=model,
@@ -210,7 +223,6 @@ def app(
             method="ffill",
         )
         .sel(gsp_id=gsp_ids)
-        .to_dataframe()
         .effective_capacity_mwp
     )
 
@@ -313,50 +325,56 @@ def app(
     logger.info("Processing raw predictions to DataFrame")
 
     n_times = normed_preds.shape[1]
-
-    df_normed = pd.DataFrame(
-        normed_preds.T,
-        columns=gsp_ids_all_batches,
-        index=pd.Index(
-            [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
-            name="target_datetime_utc",
+    
+    if model.use_quantile_regression:
+        output_labels = model.output_quantiles
+        output_labels = [f"forecast_mw_plevel_{q*100:02}" for q in model.output_quantiles]
+        output_labels[output_labels.index("forecast_mw_plevel_50")] = "forecast_mw"
+    else:
+        output_labels = ["forecast_mw"]
+        normed_preds = normed_preds[..., np.newaxis]
+    
+    da_normed = xr.DataArray(
+        data=normed_preds,
+        dims=["gsp_id", "target_datetime_utc", "output_labels"],
+        coords=dict(
+            gsp_id=(gsp_ids_all_batches),
+            target_datetime_utc=pd.to_datetime(
+                [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
+            ),
+            output_labels = output_labels,
         ),
     )
 
-    # Reorder columns which end up shuffled if multiprocessing is used
-    df_normed = df_normed.loc[:, gsp_ids]
+    # Reorder GSP order which ends up shuffled if multiprocessing is used
+    da_normed = da_normed.sel(gsp_id=gsp_ids)
 
     # Multiply normalised forecasts by capacities and clip negatives
     logger.info(f"Converting to absolute MW using {gsp_capacities}")
-    df_abs = df_normed.clip(0, None) * gsp_capacities.T
+    da_abs = da_normed.clip(0, None) * gsp_capacities
     logger.info(f"Maximum predictions: {df_abs.max()}")
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
     logger.info("Summing to national forecast")
-    df_abs.insert(0, 0, df_abs.sum(axis=1))
-    logger.info(f"National forecast is {df_abs[0]}")
+    da_abs_national = da_abs.sum(dim="gsp_id")
+    da_abs_national = da_abs_national.expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
+    da_abs = da_abs.merge(da_abs_national)
+    logger.info(f"National forecast is {da_abs.sel(gsp_id=0).forecast_mw.values}")
 
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
     if not write_predictions:
-        return df_abs
+        return da_abs
 
     # ---------------------------------------------------------------------------
     # 7. Write predictions to database
     logger.info("Writing to database")
 
-    # Flatten DataFrame
-    df = df_abs.reset_index().melt(
-        "target_datetime_utc",
-        var_name="gsp_id",
-        value_name="forecast_mw",
-    )
-
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
-        sql_forecasts = convert_df_to_forecasts(
-            df, session, model_name=model_name_ocf_db, version=pvnet.__version__
+        sql_forecasts = convert_dataarray_to_forecasts(
+            da_abs, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
 
         save_sql_forecasts(
