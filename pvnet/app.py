@@ -119,6 +119,7 @@ def convert_dataarray_to_forecasts(
     forecasts = []
 
     for gsp_id in forecast_values_dataarray.gsp_id.values:
+        gsp_id = int(gsp_id)
         # make forecast values
         forecast_values = []
 
@@ -127,7 +128,7 @@ def convert_dataarray_to_forecasts(
 
         gsp_forecast_values_da = forecast_values_dataarray.sel(gsp_id=gsp_id)
 
-        for target_time in gsp_forecast_values_da.target_datetime_utc.values:
+        for target_time in pd.to_datetime(gsp_forecast_values_da.target_datetime_utc.values):
             # add timezone
             target_time_utc = target_time.replace(tzinfo=timezone.utc)
             this_da = gsp_forecast_values_da.sel(target_datetime_utc=target_time)
@@ -384,7 +385,7 @@ def app(
         sql_forecasts = convert_dataarray_to_forecasts(
             da_abs, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
-
+                
         save_sql_forecasts(
             forecasts=sql_forecasts,
             session=session,
