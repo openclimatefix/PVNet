@@ -92,11 +92,11 @@ def convert_dataarray_to_forecasts(
     forecast_values_dataarray: xr.DataArray, session: Session, model_name: str, version: str
 ) -> list[ForecastSQL]:
     """
-    Make a ForecastSQL object from a dataframe.
+    Make a ForecastSQL object from a DataArray.
 
     Args:
         forecast_values_dataarray: Dataarray of forecasted values. Must have `target_datetime_utc` 
-            `gsp_id`, and `output_labels` coords. The `output_labels` coords must have 
+            `gsp_id`, and `output_label` coords. The `output_label` coords must have 
             `"forecast_mw"` as an element.
         session: database session
         model_name: the name of the model
@@ -105,11 +105,11 @@ def convert_dataarray_to_forecasts(
         List of ForecastSQL objects
     """
 
-    logger.debug("Converting dataframe to list of ForecastSQL")
+    logger.debug("Converting DataArray to list of ForecastSQL")
 
-    assert "target_datetime_utc" in forecast_values_df
-    assert "gsp_id" in forecast_values_df
-    assert "forecast_mw" in forecast_values_df.output_labels
+    assert "target_datetime_utc" in forecast_values_dataarray
+    assert "gsp_id" in forecast_values_dataarray
+    assert "forecast_mw" in forecast_values_dataarray.output_label
 
     # get last input data
     input_data_last_updated = get_latest_input_data_last_updated(session=session)
@@ -135,17 +135,23 @@ def convert_dataarray_to_forecasts(
             
             forecast_value_sql = ForecastValue(
                 target_time=target_time_utc,
-                expected_power_generation_megawatts=this_da.forecast_mw.item(),
+                expected_power_generation_megawatts=(
+                    this_da.sel(output_label="forecast_mw").item()
+                )
             ).to_orm()
             
             forecast_value_sql.adjust_mw = 0.0
             
             forecast_value_sql.properties = {}
-            if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_labels:
-                forecast_value_sql.properties["10"] = this_da.forecast_mw_plevel_10.item()
+            if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_label:
+                forecast_value_sql.properties["10"] = (
+                    this_da.sel(output_label="forecast_mw_plevel_10").item()
+                )
 
-            if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_labels:
-                forecast_value_sql.properties["90"] = this_da.forecast_mw_plevel_90.item()
+            if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_label:
+                forecast_value_sql.properties["90"] =  (
+                    this_da.sel(output_label="forecast_mw_plevel_90").item()
+                )
             
             forecast_values.append(forecast_value_sql)
             
@@ -183,7 +189,7 @@ def app(
         gsp_ids (array_like): List of gsp_ids to make predictions for. This list of GSPs are summed
             to national.
         write_predictions (bool): Whether to write prediction to the database. Else returns as
-            DataFrame for local testing.
+            DataArray for local testing.
         num_workers (int): Number of workers to use to load batches of data. When set to default
             value of -1, it will use one less than the number of CPU cores workers.
     """
@@ -216,13 +222,14 @@ def app(
 
     ds_gsp = next(iter(OpenGSPFromDatabase()))
 
-    # DataFrame of most recent GSP capacities
+    # DataArray of most recent GSP capacities
     gsp_capacities = (
         ds_gsp.sel(
             time_utc=t0,
             method="ffill",
         )
         .sel(gsp_id=gsp_ids)
+        .reset_coords()
         .effective_capacity_mwp
     )
 
@@ -302,9 +309,9 @@ def app(
             logger.info("Zeroing predictions after sundown")
             elevation = batch[BatchKey.gsp_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
             # We only need elevation mask for forecasted values, not history
-            elevation = elevation[:, -preds.shape[-1] :]
+            elevation = elevation[:, -preds.shape[1] :]
             sun_down_mask = elevation < MIN_DAY_ELEVATION
-
+            
             # Zero out after sundown
             preds[sun_down_mask] = 0
 
@@ -321,14 +328,14 @@ def app(
     logger.info(f"{gsp_ids_all_batches.shape}")
 
     # ---------------------------------------------------------------------------
-    # 5. Merge batch results to pandas df
-    logger.info("Processing raw predictions to DataFrame")
+    # 5. Merge batch results to xarray DataArray
+    logger.info("Processing raw predictions to DataArray")
 
     n_times = normed_preds.shape[1]
-    
+        
     if model.use_quantile_regression:
         output_labels = model.output_quantiles
-        output_labels = [f"forecast_mw_plevel_{q*100:02}" for q in model.output_quantiles]
+        output_labels = [f"forecast_mw_plevel_{int(q*100):02}" for q in model.output_quantiles]
         output_labels[output_labels.index("forecast_mw_plevel_50")] = "forecast_mw"
     else:
         output_labels = ["forecast_mw"]
@@ -336,13 +343,13 @@ def app(
     
     da_normed = xr.DataArray(
         data=normed_preds,
-        dims=["gsp_id", "target_datetime_utc", "output_labels"],
+        dims=["gsp_id", "target_datetime_utc", "output_label"],
         coords=dict(
             gsp_id=(gsp_ids_all_batches),
             target_datetime_utc=pd.to_datetime(
                 [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
             ),
-            output_labels = output_labels,
+            output_label = output_labels,
         ),
     )
 
@@ -352,16 +359,17 @@ def app(
     # Multiply normalised forecasts by capacities and clip negatives
     logger.info(f"Converting to absolute MW using {gsp_capacities}")
     da_abs = da_normed.clip(0, None) * gsp_capacities
-    logger.info(f"Maximum predictions: {df_abs.max()}")
+    max_preds = da_abs.sel(output_label='forecast_mw').max(dim='target_datetime_utc')
+    logger.info(f"Maximum predictions: {max_preds}")
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
     logger.info("Summing to national forecast")
     da_abs_national = da_abs.sum(dim="gsp_id")
     da_abs_national = da_abs_national.expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
-    da_abs = da_abs.merge(da_abs_national)
-    logger.info(f"National forecast is {da_abs.sel(gsp_id=0).forecast_mw.values}")
-
+    da_abs = xr.concat([da_abs_national, da_abs], dim="gsp_id")
+    logger.info(f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}")
+    
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
     if not write_predictions:
