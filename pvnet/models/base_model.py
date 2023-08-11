@@ -97,6 +97,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_model_code: Optional[str] = None,
+        card_template_path=None,
         **kwargs,
     ) -> Optional[str]:
         """
@@ -113,6 +114,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the Huggingface Hub after saving it.
             wandb_model_code: Identifier of the model on wandb.
+            card_template_path: Path to the huggingface model card template. Defaults to card in
+                PVNet library if set to None.
             kwargs:
                 Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
@@ -130,7 +133,10 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
-        card_template_path = f"{os.path.dirname(os.path.abspath(__file__))}/model_card_template.md"
+        if card_template_path is None:
+            card_template_path = (
+                f"{os.path.dirname(os.path.abspath(__file__))}/model_card_template.md"
+            )
 
         card = ModelCard.from_template(
             card_data,
