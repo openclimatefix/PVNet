@@ -318,7 +318,7 @@ def app(
         ):
             warnings.warn(
                 f"The PVNet version running in this app is "
-                f"{pvnet_model_name}/{pvnet_model_version}."
+                f"{model_name}/{model_version}."
                 f"The summation model running in this app was trained on outputs from PVNet "
                 f"version {summation_model.model_name}/{summation_model.model_version}. "
                 f"Combining these models may lead to an error if the shape of PVNet output doesn't "
