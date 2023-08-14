@@ -362,16 +362,16 @@ def app(
 
     normed_preds = np.concatenate(normed_preds)
     sun_down_masks = np.concatenate(sun_down_masks)
-    
+
     gsp_ids_all_batches = np.concatenate(gsp_ids_each_batch).squeeze()
-    
+
     # Reorder GSP order which ends up shuffled if multiprocessing is used
     inds = gsp_ids_all_batches.argsort()
-    
+
     normed_preds = normed_preds[inds]
     sun_down_masks = sun_down_masks[inds]
     gsp_ids_all_batches = gsp_ids_all_batches[inds]
-    
+
     logger.info(f"{gsp_ids_all_batches.shape}")
 
     # ---------------------------------------------------------------------------
@@ -399,7 +399,7 @@ def app(
             output_label=output_labels,
         ),
     )
-    
+
     da_sundown_mask = xr.DataArray(
         data=sun_down_masks,
         dims=["gsp_id", "target_datetime_utc"],
@@ -416,7 +416,7 @@ def app(
     da_abs = da_normed.clip(0, None) * gsp_capacities
     max_preds = da_abs.sel(output_label="forecast_mw").max(dim="target_datetime_utc")
     logger.info(f"Maximum predictions: {max_preds}")
-    
+
     # Apply sundown mask
     da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
 
@@ -458,13 +458,13 @@ def app(
                 output_label=sum_output_labels,
             ),
         )
-        
+
         # Multiply normalised forecasts by capacities and clip negatives
         da_abs_national = da_normed_national.clip(0, None) * national_capacity
 
         # Apply sundown mask - All GSPs must be masked to mask national
         da_abs_national = da_abs_national.where(~da_sundown_mask.all(dim="gsp_id")).fillna(0.0)
-        
+
         da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
 
     else:
