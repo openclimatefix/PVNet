@@ -44,7 +44,7 @@ def test_app(db_session, nwp_data, sat_data, gsp_yields_and_systems, me_latest):
     # (317 GSPs + 1 National) = 318 forecasts
     # Doubled for historic and forecast
     forecasts = db_session.query(ForecastSQL).all()
-    assert len(forecasts) == 318*2
+    assert len(forecasts) == 318 * 2
 
     # Check probabilistic added
     assert "90" in forecasts[0].forecast_values[0].properties
