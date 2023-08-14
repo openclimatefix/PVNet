@@ -69,9 +69,7 @@ model_version = os.getenv("APP_MODEL_VERSION", default="96ac8c67fa8663844ddcfa82
 
 # Huggingfacehub model repo and commit for PVNet summation (GSP sum to national model)
 # If summation_model_name is set to None, a simple sum is computed instead
-summation_model_name = os.getenv(
-    "APP_SUMMATION_MODEL", default="openclimatefix/pvnet_v2_summation"
-)
+summation_model_name = os.getenv("APP_SUMMATION_MODEL", default="openclimatefix/pvnet_v2_summation")
 summation_model_version = os.getenv(
     "APP_SUMMATION_MODEL", default="4a145d74c725ffc72f482025d3418659a6869c94"
 )
