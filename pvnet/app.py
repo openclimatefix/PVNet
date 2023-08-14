@@ -7,6 +7,7 @@ This app expects these evironmental variables to be available:
 """
 
 import logging
+import warnings
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -38,7 +39,9 @@ from torchdata.datapipes.iter import IterableWrapper
 
 import pvnet
 from pvnet.data.datamodule import batch_to_tensor, copy_batch_to_device
-from pvnet.models.base_model import BaseModel
+from pvnet.models.base_model import BaseModel as PVNetBaseModel
+from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
+
 from pvnet.utils import GSPLocationLookup
 
 # ---------------------------------------------------------------------------
@@ -61,9 +64,14 @@ all_gsp_ids = list(range(1, 318))
 # Batch size used to make forecasts for all GSPs
 batch_size = 10
 
-# Huggingfacehub model repo and commit
+# Huggingfacehub model repo and commit for PVNet (GSP-level model)
 model_name = "openclimatefix/pvnet_v2"
 model_version = "96ac8c67fa8663844ddcfa82aece51ef94f34453"
+
+# Huggingfacehub model repo and commit for PVNet summation (GSP sum to national model)
+# If summation_model_name is set to None, a simple sum is computed instead
+summation_model_name = "openclimatefix/pvnet_v2_summation"
+summation_model_version = "4a145d74c725ffc72f482025d3418659a6869c94"
 
 model_name_ocf_db = "pvnet_v2"
 use_adjuster = os.getenv("USE_ADJUSTER", "True").lower() == "true"
@@ -145,14 +153,22 @@ def convert_dataarray_to_forecasts(
             forecast_value_sql.properties = {}
 
             if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_label:
-                forecast_value_sql.properties["10"] = this_da.sel(
+                val = this_da.sel(
                     output_label="forecast_mw_plevel_10"
                 ).item()
+                # `val` can be NaN if PVNet has probabilistic outputs and PVNet_summation doesn't,
+                # or if PVNet_summation has probabilistic outputs and PVNet doesn't.
+                # Do not log the value if NaN
+                if not np.isnan(val): 
+                    forecast_value_sql.properties["10"] = val
 
             if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_label:
-                forecast_value_sql.properties["90"] = this_da.sel(
+                val = this_da.sel(
                     output_label="forecast_mw_plevel_90"
                 ).item()
+                    
+                if not np.isnan(val): 
+                    forecast_value_sql.properties["90"] = val
 
             forecast_values.append(forecast_value_sql)
 
@@ -233,6 +249,9 @@ def app(
         .reset_coords()
         .effective_capacity_mwp
     )
+    
+    # National capacity is needed if using summation model
+    national_capacity = gsp_capacities.sum().item()
 
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
@@ -283,11 +302,39 @@ def app(
     # ---------------------------------------------------------------------------
     # 3. set up model
     logger.info(f"Loading model: {model_name} - {model_version}")
-
-    model = BaseModel.from_pretrained(
-        os.getenv("APP_MODEL", default=model_name),
-        revision=os.getenv("APP_MODEL_VERSION", default=model_version),
+    
+    pvnet_model_name = os.getenv("APP_MODEL", default=model_name)
+    pvnet_model_version = os.getenv("APP_MODEL_VERSION", default=model_version)
+    
+    model = PVNetBaseModel.from_pretrained(
+        pvnet_model_name,
+        revision=pvnet_model_version,
     ).to(device)
+    
+    
+    if summation_model_name is not None:
+        summation_model = SummationBaseModel.from_pretrained(
+            os.getenv("APP_SUMMATION_MODEL", default=summation_model_name),
+            revision=os.getenv("APP_SUMMATION_MODEL_VERSION", default=summation_model_version),
+        ).to(device)
+        
+        if (
+            summation_model.pvnet_model_name != pvnet_model_name
+            or
+            summation_model.pvnet_model_version != pvnet_model_version
+        ):   
+            warnings.warn(
+                f"The PVNet version running in this app is "
+                f"{pvnet_model_name}/{pvnet_model_version}."
+                f"The summation model running in this app was trained on outputs from PVNet "
+                f"version {summation_model.model_name}/{summation_model.model_version}. "
+                f"Combining these models may lead to an error if the shape of PVNet output doesn't "
+                f"match the expected shape of the summation model. Combining may lead to "
+                f"unreliable results even if the shapes match."
+            )
+        
+        
+        
 
     # 4. Make prediction
     logger.info("Processing batches")
@@ -346,7 +393,7 @@ def app(
         data=normed_preds,
         dims=["gsp_id", "target_datetime_utc", "output_label"],
         coords=dict(
-            gsp_id=(gsp_ids_all_batches),
+            gsp_id=gsp_ids_all_batches,
             target_datetime_utc=pd.to_datetime(
                 [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
             ),
@@ -366,15 +413,56 @@ def app(
     # ---------------------------------------------------------------------------
     # 6. Make national total
     logger.info("Summing to national forecast")
-    da_abs_national = da_abs.sum(dim="gsp_id")
-    da_abs_national = da_abs_national.expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
-    da_abs = xr.concat([da_abs_national, da_abs], dim="gsp_id")
-    logger.info(f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}")
+    
+    if summation_model_name is not None:
+        logger.info("Using summation model")
+        
+        # Make national predictions using summation model
+        inputs = {
+            "pvnet_outputs": torch.Tensor(da_normed.values[np.newaxis]).to(device),
+            "effective_capacity": (
+                torch.Tensor(gsp_capacities.values/national_capacity).to(device)
+                .unsqueeze(0).unsqueeze(-1)
+            ),
+        }
+        normed_national = summation_model(inputs).detach().squeeze().cpu().numpy()
+        
+        # Convert national predictions to DataArray
+        if summation_model.use_quantile_regression:
+            sum_output_labels = summation_model.output_quantiles
+            sum_output_labels = [
+                f"forecast_mw_plevel_{int(q*100):02}" for q in summation_model.output_quantiles
+            ]
+            sum_output_labels[sum_output_labels.index("forecast_mw_plevel_50")] = "forecast_mw"
+        else:
+            sum_output_labels = ["forecast_mw"]
+        
+        da_abs_national = xr.DataArray(
+            data=normed_national[np.newaxis]*national_capacity,
+            dims=["gsp_id", "target_datetime_utc", "output_label"],
+            coords=dict(
+                gsp_id=[0],
+                target_datetime_utc=da_abs.target_datetime_utc,
+                output_label=sum_output_labels,
+            ),
+        )
+        da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
+        
+    else:
+        logger.info("Using simple sum")
+        da_abs_national = (
+            da_abs
+            .sum(dim="gsp_id")
+            .expand_dims(dim="gsp_id", axis=0)
+            .assign_coords(gsp_id=[0])
+        )
+        da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
+        logger.info(f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}")
 
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
     if not write_predictions:
-        return da_abs
+        return da_abs_all
 
     # ---------------------------------------------------------------------------
     # 7. Write predictions to database
@@ -383,7 +471,7 @@ def app(
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
         sql_forecasts = convert_dataarray_to_forecasts(
-            da_abs, session, model_name=model_name_ocf_db, version=pvnet.__version__
+            da_abs_all, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
 
         save_sql_forecasts(
