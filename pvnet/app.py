@@ -7,8 +7,8 @@ This app expects these evironmental variables to be available:
 """
 
 import logging
-import warnings
 import os
+import warnings
 from datetime import datetime, timedelta, timezone
 
 import fsspec
@@ -33,6 +33,7 @@ from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
 from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
+from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
@@ -40,8 +41,6 @@ from torchdata.datapipes.iter import IterableWrapper
 import pvnet
 from pvnet.data.datamodule import batch_to_tensor, copy_batch_to_device
 from pvnet.models.base_model import BaseModel as PVNetBaseModel
-from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
-
 from pvnet.utils import GSPLocationLookup
 
 # ---------------------------------------------------------------------------
@@ -153,21 +152,17 @@ def convert_dataarray_to_forecasts(
             forecast_value_sql.properties = {}
 
             if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_label:
-                val = this_da.sel(
-                    output_label="forecast_mw_plevel_10"
-                ).item()
+                val = this_da.sel(output_label="forecast_mw_plevel_10").item()
                 # `val` can be NaN if PVNet has probabilistic outputs and PVNet_summation doesn't,
                 # or if PVNet_summation has probabilistic outputs and PVNet doesn't.
                 # Do not log the value if NaN
-                if not np.isnan(val): 
+                if not np.isnan(val):
                     forecast_value_sql.properties["10"] = val
 
             if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_label:
-                val = this_da.sel(
-                    output_label="forecast_mw_plevel_90"
-                ).item()
-                    
-                if not np.isnan(val): 
+                val = this_da.sel(output_label="forecast_mw_plevel_90").item()
+
+                if not np.isnan(val):
                     forecast_value_sql.properties["90"] = val
 
             forecast_values.append(forecast_value_sql)
@@ -249,7 +244,7 @@ def app(
         .reset_coords()
         .effective_capacity_mwp
     )
-    
+
     # National capacity is needed if using summation model
     national_capacity = gsp_capacities.sum().item()
 
@@ -302,27 +297,25 @@ def app(
     # ---------------------------------------------------------------------------
     # 3. set up model
     logger.info(f"Loading model: {model_name} - {model_version}")
-    
+
     pvnet_model_name = os.getenv("APP_MODEL", default=model_name)
     pvnet_model_version = os.getenv("APP_MODEL_VERSION", default=model_version)
-    
+
     model = PVNetBaseModel.from_pretrained(
         pvnet_model_name,
         revision=pvnet_model_version,
     ).to(device)
-    
-    
+
     if summation_model_name is not None:
         summation_model = SummationBaseModel.from_pretrained(
             os.getenv("APP_SUMMATION_MODEL", default=summation_model_name),
             revision=os.getenv("APP_SUMMATION_MODEL_VERSION", default=summation_model_version),
         ).to(device)
-        
+
         if (
             summation_model.pvnet_model_name != pvnet_model_name
-            or
-            summation_model.pvnet_model_version != pvnet_model_version
-        ):   
+            or summation_model.pvnet_model_version != pvnet_model_version
+        ):
             warnings.warn(
                 f"The PVNet version running in this app is "
                 f"{pvnet_model_name}/{pvnet_model_version}."
@@ -332,9 +325,6 @@ def app(
                 f"match the expected shape of the summation model. Combining may lead to "
                 f"unreliable results even if the shapes match."
             )
-        
-        
-        
 
     # 4. Make prediction
     logger.info("Processing batches")
@@ -413,20 +403,22 @@ def app(
     # ---------------------------------------------------------------------------
     # 6. Make national total
     logger.info("Summing to national forecast")
-    
+
     if summation_model_name is not None:
         logger.info("Using summation model")
-        
+
         # Make national predictions using summation model
         inputs = {
             "pvnet_outputs": torch.Tensor(da_normed.values[np.newaxis]).to(device),
             "effective_capacity": (
-                torch.Tensor(gsp_capacities.values/national_capacity).to(device)
-                .unsqueeze(0).unsqueeze(-1)
+                torch.Tensor(gsp_capacities.values / national_capacity)
+                .to(device)
+                .unsqueeze(0)
+                .unsqueeze(-1)
             ),
         }
         normed_national = summation_model(inputs).detach().squeeze().cpu().numpy()
-        
+
         # Convert national predictions to DataArray
         if summation_model.use_quantile_regression:
             sum_output_labels = summation_model.output_quantiles
@@ -436,9 +428,9 @@ def app(
             sum_output_labels[sum_output_labels.index("forecast_mw_plevel_50")] = "forecast_mw"
         else:
             sum_output_labels = ["forecast_mw"]
-        
+
         da_abs_national = xr.DataArray(
-            data=normed_national[np.newaxis]*national_capacity,
+            data=normed_national[np.newaxis] * national_capacity,
             dims=["gsp_id", "target_datetime_utc", "output_label"],
             coords=dict(
                 gsp_id=[0],
@@ -447,17 +439,16 @@ def app(
             ),
         )
         da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
-        
+
     else:
         logger.info("Using simple sum")
         da_abs_national = (
-            da_abs
-            .sum(dim="gsp_id")
-            .expand_dims(dim="gsp_id", axis=0)
-            .assign_coords(gsp_id=[0])
+            da_abs.sum(dim="gsp_id").expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
         )
         da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
-        logger.info(f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}")
+        logger.info(
+            f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}"
+        )
 
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
