@@ -1,5 +1,5 @@
 nowcasting_utils
-PVNet-summation==0.0.3
+PVNet-summation==0.0.4
 nowcasting_datamodel==1.4.14
 ocf_datapipes==1.2.44
 ocf_ml_metrics
