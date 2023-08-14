@@ -332,6 +332,7 @@ def app(
     logger.info("Processing batches")
     normed_preds = []
     gsp_ids_each_batch = []
+    sun_down_masks = []
 
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
@@ -352,11 +353,9 @@ def app(
             elevation = elevation[:, -preds.shape[1] :]
             sun_down_mask = elevation < MIN_DAY_ELEVATION
 
-            # Zero out after sundown
-            preds[sun_down_mask] = 0
-
             # Store predictions
             normed_preds += [preds]
+            sun_down_masks += [sun_down_mask]
 
             # log max prediction
             logger.info(f"GSP IDs: {these_gsp_ids}")
@@ -364,7 +363,17 @@ def app(
             logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
+    sun_down_masks = np.concatenate(sun_down_masks)
+    
     gsp_ids_all_batches = np.concatenate(gsp_ids_each_batch).squeeze()
+    
+    # Reorder GSP order which ends up shuffled if multiprocessing is used
+    inds = gsp_ids_all_batches.argsort()
+    
+    normed_preds = normed_preds[inds]
+    sun_down_masks = sun_down_masks[inds]
+    gsp_ids_all_batches = gsp_ids_all_batches[inds]
+    
     logger.info(f"{gsp_ids_all_batches.shape}")
 
     # ---------------------------------------------------------------------------
@@ -392,15 +401,26 @@ def app(
             output_label=output_labels,
         ),
     )
-
-    # Reorder GSP order which ends up shuffled if multiprocessing is used
-    da_normed = da_normed.sel(gsp_id=gsp_ids)
+    
+    da_sundown_mask = xr.DataArray(
+        data=sun_down_masks,
+        dims=["gsp_id", "target_datetime_utc"],
+        coords=dict(
+            gsp_id=gsp_ids_all_batches,
+            target_datetime_utc=pd.to_datetime(
+                [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
+            ),
+        ),
+    )
 
     # Multiply normalised forecasts by capacities and clip negatives
     logger.info(f"Converting to absolute MW using {gsp_capacities}")
     da_abs = da_normed.clip(0, None) * gsp_capacities
     max_preds = da_abs.sel(output_label="forecast_mw").max(dim="target_datetime_utc")
     logger.info(f"Maximum predictions: {max_preds}")
+    
+    # Apply sundown mask
+    da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
 
     # ---------------------------------------------------------------------------
     # 6. Make national total
@@ -411,7 +431,7 @@ def app(
 
         # Make national predictions using summation model
         inputs = {
-            "pvnet_outputs": torch.Tensor(da_normed.values[np.newaxis]).to(device),
+            "pvnet_outputs": torch.Tensor(normed_preds[np.newaxis]).to(device),
             "effective_capacity": (
                 torch.Tensor(gsp_capacities.values / national_capacity)
                 .to(device)
@@ -431,8 +451,8 @@ def app(
         else:
             sum_output_labels = ["forecast_mw"]
 
-        da_abs_national = xr.DataArray(
-            data=normed_national[np.newaxis] * national_capacity,
+        da_normed_national = xr.DataArray(
+            data=normed_national[np.newaxis],
             dims=["gsp_id", "target_datetime_utc", "output_label"],
             coords=dict(
                 gsp_id=[0],
@@ -440,6 +460,13 @@ def app(
                 output_label=sum_output_labels,
             ),
         )
+        
+        # Multiply normalised forecasts by capacities and clip negatives
+        da_abs_national = da_normed_national.clip(0, None) * national_capacity
+
+        # Apply sundown mask - All GSPs must be masked to mask national
+        da_abs_national = da_abs_national.where(~da_sundown_mask.all(dim="gsp_id")).fillna(0.0)
+        
         da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
 
     else:
