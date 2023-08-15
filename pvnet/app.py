@@ -15,6 +15,7 @@ import fsspec
 import numpy as np
 import pandas as pd
 import torch
+import typer
 import xarray as xr
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
@@ -506,4 +507,4 @@ def app(
 
 
 if __name__ == "__main__":
-    2  # typer.run(app)
+    typer.run(app)
