@@ -10,12 +10,12 @@ import logging
 import os
 import warnings
 from datetime import datetime, timedelta, timezone
-import typer
 
 import fsspec
 import numpy as np
 import pandas as pd
 import torch
+import typer
 import xarray as xr
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
