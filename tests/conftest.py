@@ -162,7 +162,6 @@ def gsp_yields_and_systems(db_session):
     gsp_yields = []
     locations = []
     for i in range(0, 318):
-        
         location_sql: LocationSQL = get_location(
             session=db_session,
             gsp_id=i,
