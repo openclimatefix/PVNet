@@ -249,7 +249,15 @@ def app(
     )
 
     # National capacity is needed if using summation model
-    national_capacity = gsp_capacities.sum().item()
+    ds_gsp_national = next(iter(OpenGSPFromDatabase(national_only=True)))
+    national_capacity = (
+        ds_gsp_national.sel(
+            time_utc=time_utc, 
+            method="ffill"
+        )
+        .effective_capacity_mwp
+        .item()
+    )
 
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
@@ -504,4 +512,4 @@ def app(
 
 
 if __name__ == "__main__":
-    typer.run(app)
+    2#typer.run(app)
