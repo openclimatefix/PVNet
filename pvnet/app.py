@@ -8,13 +8,13 @@ This app expects these evironmental variables to be available:
 
 import logging
 import os
+import warnings
 from datetime import datetime, timedelta, timezone
 
 import fsspec
 import numpy as np
 import pandas as pd
 import torch
-import typer
 import xarray as xr
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
@@ -32,13 +32,14 @@ from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
 from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
+from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
 
 import pvnet
 from pvnet.data.datamodule import batch_to_tensor, copy_batch_to_device
-from pvnet.models.base_model import BaseModel
+from pvnet.models.base_model import BaseModel as PVNetBaseModel
 from pvnet.utils import GSPLocationLookup
 
 # ---------------------------------------------------------------------------
@@ -61,9 +62,17 @@ all_gsp_ids = list(range(1, 318))
 # Batch size used to make forecasts for all GSPs
 batch_size = 10
 
-# Huggingfacehub model repo and commit
-model_name = "openclimatefix/pvnet_v2"
-model_version = "96ac8c67fa8663844ddcfa82aece51ef94f34453"
+# Huggingfacehub model repo and commit for PVNet (GSP-level model)
+model_name = os.getenv("APP_MODEL", default="openclimatefix/pvnet_v2")
+model_version = os.getenv("APP_MODEL_VERSION", default="96ac8c67fa8663844ddcfa82aece51ef94f34453")
+
+# Huggingfacehub model repo and commit for PVNet summation (GSP sum to national model)
+# If summation_model_name is set to None, a simple sum is computed instead
+summation_model_name = os.getenv("APP_SUMMATION_MODEL", default="openclimatefix/pvnet_v2_summation")
+summation_model_version = os.getenv(
+    "APP_SUMMATION_MODEL", default="4a145d74c725ffc72f482025d3418659a6869c94"
+)
+
 
 model_name_ocf_db = "pvnet_v2"
 use_adjuster = os.getenv("USE_ADJUSTER", "True").lower() == "true"
@@ -145,14 +154,18 @@ def convert_dataarray_to_forecasts(
             forecast_value_sql.properties = {}
 
             if "forecast_mw_plevel_10" in gsp_forecast_values_da.output_label:
-                forecast_value_sql.properties["10"] = this_da.sel(
-                    output_label="forecast_mw_plevel_10"
-                ).item()
+                val = this_da.sel(output_label="forecast_mw_plevel_10").item()
+                # `val` can be NaN if PVNet has probabilistic outputs and PVNet_summation doesn't,
+                # or if PVNet_summation has probabilistic outputs and PVNet doesn't.
+                # Do not log the value if NaN
+                if not np.isnan(val):
+                    forecast_value_sql.properties["10"] = val
 
             if "forecast_mw_plevel_90" in gsp_forecast_values_da.output_label:
-                forecast_value_sql.properties["90"] = this_da.sel(
-                    output_label="forecast_mw_plevel_90"
-                ).item()
+                val = this_da.sel(output_label="forecast_mw_plevel_90").item()
+
+                if not np.isnan(val):
+                    forecast_value_sql.properties["90"] = val
 
             forecast_values.append(forecast_value_sql)
 
@@ -234,6 +247,12 @@ def app(
         .effective_capacity_mwp
     )
 
+    # National capacity is needed if using summation model
+    ds_gsp_national = next(iter(OpenGSPFromDatabase(national_only=True)))
+    national_capacity = ds_gsp_national.sel(
+        time_utc=t0, method="ffill"
+    ).effective_capacity_mwp.item()
+
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
 
@@ -284,15 +303,36 @@ def app(
     # 3. set up model
     logger.info(f"Loading model: {model_name} - {model_version}")
 
-    model = BaseModel.from_pretrained(
-        os.getenv("APP_MODEL", default=model_name),
-        revision=os.getenv("APP_MODEL_VERSION", default=model_version),
+    model = PVNetBaseModel.from_pretrained(
+        model_name,
+        revision=model_version,
     ).to(device)
+
+    if summation_model_name is not None:
+        summation_model = SummationBaseModel.from_pretrained(
+            summation_model_name,
+            revision=summation_model_version,
+        ).to(device)
+
+        if (
+            summation_model.pvnet_model_name != model_name
+            or summation_model.pvnet_model_version != model_version
+        ):
+            warnings.warn(
+                f"The PVNet version running in this app is "
+                f"{model_name}/{model_version}."
+                f"The summation model running in this app was trained on outputs from PVNet "
+                f"version {summation_model.model_name}/{summation_model.model_version}. "
+                f"Combining these models may lead to an error if the shape of PVNet output doesn't "
+                f"match the expected shape of the summation model. Combining may lead to "
+                f"unreliable results even if the shapes match."
+            )
 
     # 4. Make prediction
     logger.info("Processing batches")
     normed_preds = []
     gsp_ids_each_batch = []
+    sun_down_masks = []
 
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
@@ -313,11 +353,9 @@ def app(
             elevation = elevation[:, -preds.shape[1] :]
             sun_down_mask = elevation < MIN_DAY_ELEVATION
 
-            # Zero out after sundown
-            preds[sun_down_mask] = 0
-
             # Store predictions
             normed_preds += [preds]
+            sun_down_masks += [sun_down_mask]
 
             # log max prediction
             logger.info(f"GSP IDs: {these_gsp_ids}")
@@ -325,7 +363,17 @@ def app(
             logger.info(f"Completed batch: {i}")
 
     normed_preds = np.concatenate(normed_preds)
+    sun_down_masks = np.concatenate(sun_down_masks)
+
     gsp_ids_all_batches = np.concatenate(gsp_ids_each_batch).squeeze()
+
+    # Reorder GSP order which ends up shuffled if multiprocessing is used
+    inds = gsp_ids_all_batches.argsort()
+
+    normed_preds = normed_preds[inds]
+    sun_down_masks = sun_down_masks[inds]
+    gsp_ids_all_batches = gsp_ids_all_batches[inds]
+
     logger.info(f"{gsp_ids_all_batches.shape}")
 
     # ---------------------------------------------------------------------------
@@ -346,7 +394,7 @@ def app(
         data=normed_preds,
         dims=["gsp_id", "target_datetime_utc", "output_label"],
         coords=dict(
-            gsp_id=(gsp_ids_all_batches),
+            gsp_id=gsp_ids_all_batches,
             target_datetime_utc=pd.to_datetime(
                 [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
             ),
@@ -354,8 +402,16 @@ def app(
         ),
     )
 
-    # Reorder GSP order which ends up shuffled if multiprocessing is used
-    da_normed = da_normed.sel(gsp_id=gsp_ids)
+    da_sundown_mask = xr.DataArray(
+        data=sun_down_masks,
+        dims=["gsp_id", "target_datetime_utc"],
+        coords=dict(
+            gsp_id=gsp_ids_all_batches,
+            target_datetime_utc=pd.to_datetime(
+                [t0 + timedelta(minutes=30 * (i + 1)) for i in range(n_times)],
+            ),
+        ),
+    )
 
     # Multiply normalised forecasts by capacities and clip negatives
     logger.info(f"Converting to absolute MW using {gsp_capacities}")
@@ -363,18 +419,70 @@ def app(
     max_preds = da_abs.sel(output_label="forecast_mw").max(dim="target_datetime_utc")
     logger.info(f"Maximum predictions: {max_preds}")
 
+    # Apply sundown mask
+    da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
+
     # ---------------------------------------------------------------------------
     # 6. Make national total
     logger.info("Summing to national forecast")
-    da_abs_national = da_abs.sum(dim="gsp_id")
-    da_abs_national = da_abs_national.expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
-    da_abs = xr.concat([da_abs_national, da_abs], dim="gsp_id")
-    logger.info(f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}")
+
+    if summation_model_name is not None:
+        logger.info("Using summation model to produce national forecast")
+
+        # Make national predictions using summation model
+        inputs = {
+            "pvnet_outputs": torch.Tensor(normed_preds[np.newaxis]).to(device),
+            "effective_capacity": (
+                torch.Tensor(gsp_capacities.values / national_capacity)
+                .to(device)
+                .unsqueeze(0)
+                .unsqueeze(-1)
+            ),
+        }
+        normed_national = summation_model(inputs).detach().squeeze().cpu().numpy()
+
+        # Convert national predictions to DataArray
+        if summation_model.use_quantile_regression:
+            sum_output_labels = summation_model.output_quantiles
+            sum_output_labels = [
+                f"forecast_mw_plevel_{int(q*100):02}" for q in summation_model.output_quantiles
+            ]
+            sum_output_labels[sum_output_labels.index("forecast_mw_plevel_50")] = "forecast_mw"
+        else:
+            sum_output_labels = ["forecast_mw"]
+
+        da_normed_national = xr.DataArray(
+            data=normed_national[np.newaxis],
+            dims=["gsp_id", "target_datetime_utc", "output_label"],
+            coords=dict(
+                gsp_id=[0],
+                target_datetime_utc=da_abs.target_datetime_utc,
+                output_label=sum_output_labels,
+            ),
+        )
+
+        # Multiply normalised forecasts by capacities and clip negatives
+        da_abs_national = da_normed_national.clip(0, None) * national_capacity
+
+        # Apply sundown mask - All GSPs must be masked to mask national
+        da_abs_national = da_abs_national.where(~da_sundown_mask.all(dim="gsp_id")).fillna(0.0)
+
+        da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
+
+    else:
+        logger.info("Summing across GSPs to produce national forecast")
+        da_abs_national = (
+            da_abs.sum(dim="gsp_id").expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
+        )
+        da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
+        logger.info(
+            f"National forecast is {da_abs.sel(gsp_id=0, output_label='forecast_mw').values}"
+        )
 
     # ---------------------------------------------------------------------------
     # Escape clause for making predictions locally
     if not write_predictions:
-        return da_abs
+        return da_abs_all
 
     # ---------------------------------------------------------------------------
     # 7. Write predictions to database
@@ -383,7 +491,7 @@ def app(
     connection = DatabaseConnection(url=os.environ["DB_URL"])
     with connection.get_session() as session:
         sql_forecasts = convert_dataarray_to_forecasts(
-            da_abs, session, model_name=model_name_ocf_db, version=pvnet.__version__
+            da_abs_all, session, model_name=model_name_ocf_db, version=pvnet.__version__
         )
 
         save_sql_forecasts(
@@ -398,4 +506,4 @@ def app(
 
 
 if __name__ == "__main__":
-    typer.run(app)
+    2  # typer.run(app)

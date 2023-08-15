@@ -35,21 +35,22 @@ def test_app(db_session, nwp_data, sat_data, gsp_yields_and_systems, me_latest):
 
         # Set model version
         os.environ["APP_MODEL_VERSION"] = "96ac8c67fa8663844ddcfa82aece51ef94f34453"
+        os.environ["APP_SUMMATION_MODEL_VERSION"] = "4a145d74c725ffc72f482025d3418659a6869c94"
 
         # Run prediction
-        app(gsp_ids=list(range(1, 11)))
+        app(gsp_ids=list(range(1, 318)))
 
     # Check forecasts have been made
-    # (10 GSPs + 1 National) = 11 forecasts
+    # (317 GSPs + 1 National) = 318 forecasts
     # Doubled for historic and forecast
     forecasts = db_session.query(ForecastSQL).all()
-    assert len(forecasts) == 22
+    assert len(forecasts) == 318 * 2
 
     # Check probabilistic added
     assert "90" in forecasts[0].forecast_values[0].properties
     assert "10" in forecasts[0].forecast_values[0].properties
 
-    # 11 GSPs * 16 time steps in forecast
-    assert len(db_session.query(ForecastValueSQL).all()) == 11 * 16
-    assert len(db_session.query(ForecastValueLatestSQL).all()) == 11 * 16
-    assert len(db_session.query(ForecastValueSevenDaysSQL).all()) == 11 * 16
+    # 318 GSPs * 16 time steps in forecast
+    assert len(db_session.query(ForecastValueSQL).all()) == 318 * 16
+    assert len(db_session.query(ForecastValueLatestSQL).all()) == 318 * 16
+    assert len(db_session.query(ForecastValueSevenDaysSQL).all()) == 318 * 16
