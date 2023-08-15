@@ -10,6 +10,7 @@ import logging
 import os
 import warnings
 from datetime import datetime, timedelta, timezone
+import typer
 
 import fsspec
 import numpy as np
