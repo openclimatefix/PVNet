@@ -15,7 +15,6 @@ import fsspec
 import numpy as np
 import pandas as pd
 import torch
-import typer
 import xarray as xr
 from nowcasting_datamodel.connection import DatabaseConnection
 from nowcasting_datamodel.models import (
@@ -250,14 +249,9 @@ def app(
 
     # National capacity is needed if using summation model
     ds_gsp_national = next(iter(OpenGSPFromDatabase(national_only=True)))
-    national_capacity = (
-        ds_gsp_national.sel(
-            time_utc=time_utc, 
-            method="ffill"
-        )
-        .effective_capacity_mwp
-        .item()
-    )
+    national_capacity = ds_gsp_national.sel(
+        time_utc=time_utc, method="ffill"
+    ).effective_capacity_mwp.item()
 
     # Set up ID location query object
     gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
@@ -512,4 +506,4 @@ def app(
 
 
 if __name__ == "__main__":
-    2#typer.run(app)
+    2  # typer.run(app)
