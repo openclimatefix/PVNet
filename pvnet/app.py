@@ -425,7 +425,7 @@ def app(
     logger.info("Summing to national forecast")
 
     if summation_model_name is not None:
-        logger.info("Using summation model")
+        logger.info("Using summation model to produce national forecast")
 
         # Make national predictions using summation model
         inputs = {
@@ -468,7 +468,7 @@ def app(
         da_abs_all = xr.concat([da_abs_national, da_abs], dim="gsp_id")
 
     else:
-        logger.info("Using simple sum")
+        logger.info("Summing across GSPs to produce national forecast")
         da_abs_national = (
             da_abs.sum(dim="gsp_id").expand_dims(dim="gsp_id", axis=0).assign_coords(gsp_id=[0])
         )
