@@ -22,7 +22,7 @@ def main():
         default_summation_model_name,
         revision=default_model_version,
     )
-    
+
     # Model will be downloaded and saved to cache on disk
     SummationBaseModel.from_pretrained(
         default_summation_model_name,
