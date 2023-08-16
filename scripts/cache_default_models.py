@@ -8,6 +8,7 @@ import typer
 from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
 
 from pvnet.app import (
+    default_model_name,
     default_model_version,
     default_summation_model_name,
     default_summation_model_version,
@@ -19,7 +20,7 @@ def main():
     """Download model from Huggingface and save it to cache."""
     # Model will be downloaded and saved to cache on disk
     PVNetBaseModel.from_pretrained(
-        default_summation_model_name,
+        default_model_name,
         revision=default_model_version,
     )
     
