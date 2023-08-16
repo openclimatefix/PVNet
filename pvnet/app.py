@@ -33,11 +33,10 @@ from ocf_datapipes.training.pvnet import construct_sliced_data_pipeline
 from ocf_datapipes.transform.numpy.batch.sun_position import ELEVATION_MEAN, ELEVATION_STD
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
+from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
 from sqlalchemy.orm import Session
 from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
 from torchdata.datapipes.iter import IterableWrapper
-
-from pvnet_summation.models.base_model import BaseModel as SummationBaseModel
 
 import pvnet
 from pvnet.data.datamodule import batch_to_tensor, copy_batch_to_device
@@ -212,12 +211,14 @@ def app(
 
     logger.info(f"Using `pvnet` library version: {pvnet.__version__}")
     logger.info(f"Using {num_workers} workers")
-    
+
     # Allow environment overwrite of model
     model_name = os.getenv("APP_MODEL", default=default_model_name)
     model_version = os.getenv("APP_MODEL_VERSION", default=default_model_version)
     summation_model_name = os.getenv("APP_SUMMATION_MODEL", default=default_summation_model_name)
-    summation_model_version = os.getenv("APP_SUMMATION_MODEL", default=default_summation_model_version)
+    summation_model_version = os.getenv(
+        "APP_SUMMATION_MODEL", default=default_summation_model_version
+    )
 
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes
