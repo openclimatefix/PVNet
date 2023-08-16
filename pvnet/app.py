@@ -64,16 +64,13 @@ all_gsp_ids = list(range(1, 318))
 batch_size = 10
 
 # Huggingfacehub model repo and commit for PVNet (GSP-level model)
-model_name = os.getenv("APP_MODEL", default="openclimatefix/pvnet_v2")
-model_version = os.getenv("APP_MODEL_VERSION", default="96ac8c67fa8663844ddcfa82aece51ef94f34453")
+default_model_name = "openclimatefix/pvnet_v2"
+default_model_version = "96ac8c67fa8663844ddcfa82aece51ef94f34453"
 
 # Huggingfacehub model repo and commit for PVNet summation (GSP sum to national model)
 # If summation_model_name is set to None, a simple sum is computed instead
-summation_model_name = os.getenv("APP_SUMMATION_MODEL", default="openclimatefix/pvnet_v2_summation")
-summation_model_version = os.getenv(
-    "APP_SUMMATION_MODEL", default="4a145d74c725ffc72f482025d3418659a6869c94"
-)
-
+default_summation_model_name = "openclimatefix/pvnet_v2_summation"
+default_summation_model_version = "4a145d74c725ffc72f482025d3418659a6869c94"
 
 model_name_ocf_db = "pvnet_v2"
 use_adjuster = os.getenv("USE_ADJUSTER", "True").lower() == "true"
@@ -214,6 +211,14 @@ def app(
 
     logger.info(f"Using `pvnet` library version: {pvnet.__version__}")
     logger.info(f"Using {num_workers} workers")
+
+    # Allow environment overwrite of model
+    model_name = os.getenv("APP_MODEL", default=default_model_name)
+    model_version = os.getenv("APP_MODEL_VERSION", default=default_model_version)
+    summation_model_name = os.getenv("APP_SUMMATION_MODEL", default=default_summation_model_name)
+    summation_model_version = os.getenv(
+        "APP_SUMMATION_MODEL", default=default_summation_model_version
+    )
 
     # ---------------------------------------------------------------------------
     # 0. If inference datetime is None, round down to last 30 minutes

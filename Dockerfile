@@ -24,12 +24,17 @@ RUN pip install -r app/requirements.txt
 COPY pvnet/ app/pvnet/
 COPY tests/ app/tests/
 COPY configs/ app/configs/
+COPY scripts/ app/scripts/
 
 # change to app folder
 WORKDIR /app
 
 # install library
 RUN pip install -e .
+
+# download models so app can used cached
+RUN python scripts/cache_default_models.py
+
 
 RUN if [ "$TESTING" = 1 ]; then pip install pytest pytest-cov coverage; fi
 
