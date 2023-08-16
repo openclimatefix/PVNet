@@ -19,12 +19,12 @@ def main():
     """Download model from Huggingface and save it to cache.
     """
     # Model will be downloaded and saved to cache on disk
-    model = SummationBaseModel.from_pretrained(
+    model = PVNetBaseModel.from_pretrained(
         default_summation_model_name,
         revision=default_model_version,
     )
     # Model will be downloaded and saved to cache on disk
-    model = PVNetBaseModel.from_pretrained(
+    model = SummationBaseModel.from_pretrained(
         default_summation_model_name,
         revision=default_summation_model_version,
     )
