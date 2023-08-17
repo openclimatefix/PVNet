@@ -16,6 +16,7 @@ typer
 sqlalchemy
 fsspec[s3]
 wandb
+huggingface-hub
 tensorboard
 tqdm
 omegaconf
