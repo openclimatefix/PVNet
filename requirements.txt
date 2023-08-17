@@ -1,6 +1,4 @@
 nowcasting_utils
-PVNet-summation==0.0.5
-nowcasting_datamodel==1.4.14
 ocf_datapipes==1.2.44
 ocf_ml_metrics
 numpy
@@ -16,15 +14,10 @@ pytest
 pytest-cov
 typer
 sqlalchemy
-jedi
 fsspec[s3]
-tables
-tilemapbase
-testcontainers
 wandb
 tensorboard
 tqdm
-rich
 omegaconf
 hydra-core
 python-dotenv
