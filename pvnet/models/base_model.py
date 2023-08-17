@@ -14,6 +14,7 @@ import wandb
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
+from huggingface_hub.hf_api import HfApi
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
 from nowcasting_utils.models.loss import WeightedLosses
 from nowcasting_utils.models.metrics import (
@@ -147,12 +148,14 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         (save_directory / "README.md").write_text(str(card))
 
         if push_to_hub:
-            kwargs = kwargs.copy()  # soft-copy to avoid mutating input
-            if config is not None:  # kwarg for `push_to_hub`
-                kwargs["config"] = config
-            if repo_id is None:
-                repo_id = save_directory.name  # Defaults to `save_directory` name
-            return self.push_to_hub(repo_id=repo_id, **kwargs)
+            api = HfApi()
+
+            api.upload_folder(
+                repo_id=repo_id,
+                repo_type="model",
+                folder_path=save_directory,
+            )
+
         return None
 
 
