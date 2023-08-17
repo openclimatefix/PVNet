@@ -1,4 +1,5 @@
 ocf_datapipes==1.2.44
+nowcasting_utils
 ocf_ml_metrics
 numpy
 pandas
