@@ -1,4 +1,4 @@
-"""Run training
+"""Run model training
 """
 
 import os
