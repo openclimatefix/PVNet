@@ -40,10 +40,9 @@ The OCF PVNet is also missing forecasts that would not be representive of how ou
 
 Hence, this report is broken into different sections to fairly evaluate each PVNet and PVLive Intraday against each other. Firstly Just PVNet is evaluated against PVLive Updated. Then, for the data that is available for both PVLive Intraday and PVNet, a further similar evaluation process is carried out.
 
+![Data Availability](./imgs/data_availability_across_2022.png)
+*Fig : The data availability across the 3 datasets used in this analysis.*
 
-
-
-- **Root Mean Square Error (RMSE)**: Indicates the sample standard deviation of the differences between predicted and observed values.
 
 ---
 
