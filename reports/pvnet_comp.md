@@ -215,8 +215,8 @@ MBE
 
 <table>
 <tr>
-<td><img src="./pvnet_comp_imgs/pvnet_vs_pvlin/v2/plots/heatmaps/pvlin_all_heatmap_MBE_Month.png"/></td>
-<td><img src="./pvnet_comp_imgs/pvnet_vs_pvlin/v2/plots/heatmaps/pvnet_all_heatmap_MBE_Month.png"/></td>
+<td><img src="./imgs/pvlin_all_heatmap_MBE_Month.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MBE_Month.png"/></td>
 </tr>
 <tr>
 <td>Fig : PVLive Intraday MBE heatmap for Hour vs Month.</td>
@@ -227,8 +227,8 @@ MBE
 
 <table>
 <tr>
-<td><img src="./pvnet_comp_imgs/pvnet_vs_pvlin/v2/plots/heatmaps/pvlin_all_heatmap_MBE_week.png"/></td>
-<td><img src="./pvnet_comp_imgs/pvnet_vs_pvlin/v2/plots/heatmaps/pvnet_all_heatmap_MBE_week.png"/></td>
+<td><img src="./imgs/pvlin_all_heatmap_MBE_week.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MBE_week.png"/></td>
 </tr>
 <tr>
 <td>Fig : PVLive Intraday MBE heatmap for Hour vs Week.</td>
