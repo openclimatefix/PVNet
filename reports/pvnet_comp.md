@@ -1,26 +1,23 @@
-# Analysis Report: Forecast Evaluation
+# OCF PVNet Forecast Evaluation
 
 ## Introduction
 
-In this report, we evaluate the performance of OCFs national PV forecast (PVNet) against the Shefield solar PVLive Intraday forecast. The PVLive Updated forecast will be used as the truth for this comparison. This report looks into various error metrics and discuss the implications of our findings.
+In this report, we evaluate the performance of OCFs national PV forecast (PVNet) against the Shefield solar PVLive Intraday forecast. The Updated PVLive forecast will be used as the truth for this comparison. This report will look into various error metrics and discuss the implications of our findings. First we will compare how PVLive Intraday and PVNet perform against PVLive Updated over periods in which we have data for. Then a more comprehensive evaluation of PVNet vs PVLive Updated is completed across the year of 2022, including evaluating the performance across different forecast horizons.
+
+This report should be used to indicate the difference in the forecasting capaboilities between the two as well as provide a framework for future analysis to completed over an larger number of data points.
 
 
 ## Table of Contents
 1. [Data Overview](#data-overview)
-2. [PVNet Model Evaluation](#pvnet-model-evaluation)
-    * [Results Table](#pvnet-results-table)
-    * [Plots](#pvnet-plots)
-    * [Heatmaps](#pvnet-heatmaps)
-    * [Evaluation Across Horizons](#pvnet-horizons)
-    * [Probabalistic Forecasts Evaluation](#pvnet-prob)
-    * [Ramp Rates Across Horizons](#pvnet-prob)
-3. [PVLive Intraday and PVNet vs PVLive Updated](#pvlin-and-pvnet-vs-pvlup)
+2. [PVLive Intraday and PVNet vs PVLive Updated](#pvlin-and-pvnet-vs-pvlup)
     * [Results Table](#pvlup)
-    * [Plots](#error-metrics)
-    * [Heatmaps](#heatmaps)
-    * [Real Time Ramp Rates](#real-time-ramp-rates)
+    * [Mean Absolute Error](#error-metrics)
+    * [Mean Bias Error](#heatmaps)
     * [Error Distribution](#error-distribution)
-4. [Relative Performance of PVNet vs PVLive](#pvnet-vs-pvlive)
+3. [PVNet Model Evaluation](#pvnet-model-evaluation)
+    * [Results Table](#pvnet-results-table)
+    * [Mean Absolute Error](#pvnet-plots)
+    * [Mean Bias Error](#pvnet-heatmaps)
 5. [Conclusion](#conclusion)
 6. [Appendix](#mathematical-formulas)
 
@@ -28,162 +25,64 @@ In this report, we evaluate the performance of OCFs national PV forecast (PVNet)
 
 ## Data Overview
 
-The aim of these results which to evaluate the performance of the OCF PVNet model against the PVLive Intraday forecast over 2022. However, we are slightly restricted by the amount of data that is available.
+The aim of these results is to evaluate the performance of the OCF PVNet model against the PVLive Intraday forecast over 2022. As PVLive Intraday is forecast with just a single horizon (at t=0 (now)), an equivlent horizon has been extracted from the PVNet forecast to make it a fair comparison. 
 
-OCF only starting recording the data from PVLive intraday from 2022-06-14.
-
-The OCF PVNet is also missing forecasts that would not be representive of how our forecast would perform in production, due to us not having certain bits of data avaiable when carrying out this backtest of our latest model. These are.
+The number of datapoints that can be used to compare is restricted by two factors. Firstly, OCF started recording the data from PVLive intraday around halfway through 2022 (on 2022-06-14). Hence for the time preceeding this period we do not currently have the data available to compare against PVNet. Secondly, when creating the PVNet backtest there was some missing data, in paricular:
 
 - ~1 month of missing NWP data
 - ~1 month of missing satelitte data
 - 2 days every month in which the statelittes switch over.
 
-Hence, this report is broken into different sections to fairly evaluate each PVNet and PVLive Intraday against each other. Firstly Just PVNet is evaluated against PVLive Updated. Then, for the data that is available for both PVLive Intraday and PVNet, a further similar evaluation process is carried out.
+This missing data would not occur in a production environment and ultimately would misreprsent the performance of the model. Hence these forecasts have been ommited from the comparison. The quantities of data available can be seen in the chart below (fig 1) where the y axis represents the date, with the top indicating the start of 2022 and the bottom indicating the end of 2022 and the x axis labelling the different data used. The darkend areas illustrates data that is available where as the white areas show missing or ommitted data.
 
 ![Data Availability](./imgs/data_availability_across_2022.png)
 *Fig : The data availability across the 3 datasets used in this analysis.*
 
+This report will first look into just the overlapping datapoints from PVLive Intraday and PVNet as shown in the graph above before then moving on to compare all of the datapoints available for PVNet and PVLive updated.
 
 ---
 
 
 
-## PVNet Model Evaluation
 
-PVNet was evaluated against PVLive updated for the period of:
-* 2022-01-01 to 2022-11-19
-
-The initial evaluation only consideres the 0th horizon forefats (aka the realtime forecast). Evaluation across different horizons can be found later on in this section. 
-
-### PVNet Results Table
-
-| Metric | PVNet ± Standard Erorr| Standard Deviation
-|--------|-----------------------|-------------------
-| MAE    | 126.92 ± 1.80         |200.40
-| RMSE   | 237.20 ± 3.52         |392.69            
-| MBE    | -11.01 ± 2.12         |237.00            
-| R^2    | 0.990                 |
-| RTRR   | 96.40 ± 1.36          |152.00
-
-* RTRR: Real Time Ramp Rate (See formula in Apendix)
-
-### PVNet Plots
-
-![PVNet MAE](./imgs/pvnet_all_MAE_monthly.png)
-*Fig 1: Average monthly MAE for PVNet across 2022.*
-
-![PVNet RMSE](./imgs/pvnet_all_RMSE_monthly.png)
-*Fig 2: Average monthly RMSE for PVNet across 2022.*
-
-![PVNet MBE](./imgs/pvnet_all_MBE_monthly.png)
-*Fig 3: Average monthly MBE for PVNet across 2022.*
-
-
-
-
-
-### PVNet Heatmaps
-
-<!-- ![Error Distribution of Model A](./pvnet_comp_imgs/full_pvnet/coolwarm_v2/pvnet_all_heatmap_MAE_month.png)
-*Figure 2: Distribution of forecast errors for Model A.*
-
-![Error Distribution of Model A](./pvnet_comp_imgs/full_pvnet/coolwarm_v2/pvnet_all_heatmap_MAE_week.png)
-*Figure 2: Distribution of forecast errors for Model A.* -->
-
-
-<table>
-<tr>
-<td><img src="./imgs/pvnet_all_heatmap_MAE_month.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MAE_week.png"/></td>
-</tr>
-<tr>
-<td>Fig 4: PVNet MAE heatmap for Hour vs Month.</td>
-<td>Fig 5: PVNet MAE heatmap for Hour vs Week.</td>
-</tr>
-</table>
-
-
-
-<table>
-<tr>
-<td><img src="./imgs/pvnet_all_heatmap_MBE_month.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MBE_week.png"/></td>
-</tr>
-<tr>
-<td>Fig 6: PVNet MBE heatmap for Hour vs Month.</td>
-<td>Fig 7: PVNet MBE heatmap for Hour vs Week.</td>
-</tr>
-</table>
-
-
-
-
-
-<!-- ![Model Forecast vs. Actuals](./pvnet_comp_imgs/full_pvnet/coolwarm_v2/pvnet_all_heatmap_MBE_month.png)
-*Figure 1: Comparison of model forecast vs. actuals.*
-
-![Model Forecast vs. Actuals](./pvnet_comp_imgs/full_pvnet/coolwarm_v2/pvnet_all_heatmap_MBE_week.png)
-*Figure 1: Comparison of model forecast vs. actuals.* -->
-
-
-
-### Evaluation Across Horizons
-
-
-![PVNet Horizon MAE](./imgs/pvnet_all_horizon_MAE.png)
-*Fig 8: PVNet horizon vs MAE averaged across 2022.*
-
-![PVNet Horizon RMSE](./imgs/pvnet_all_horizon_RMSE.png)
-*Fig 10: PVNet horizon vs RMSE averaged across 2022.*
-
-![PVNet Horizon MBE](./imgs/pvnet_all_horizon_MBE.png)
-*Fig 11: PVNet horizon vs MBE averaged across 2022.*
-
-
-
-### Probabalistic Forecasts Evaluation
-
-Pinball Scores
-
-% of predicitons over certain value
-
-
-
-## PVlin and PVNet vs PVlup
+## PVLive Intraday and PVNet vs PVLive Updated
 
 ### Results Table
 
-| Forecast | MAE                     | RMSE                   | R2     | MBE                     |RTRR
-|----------|-------------------------|------------------------|--------|-------------------------|----
-| PVLin    | 197.37 ± 4.19           | 357.56 ± 7.33          | 0.978  | 187.91 ± 4.28           |64.96 ± 1.47
-| PVNet    | 129.75 ± 2.73           | 233.49 ± 5.21          | 0.99   | 6.30 ± 3.28             |100.69 ± 2.17
+| Forecast | MAE                     | RMSE                   | R2     | MBE                     |
+|----------|-------------------------|------------------------|--------|-------------------------|
+| PVLive Intraday    | 197.37 ± 4.19           | 357.56 ± 7.33          | 0.978  | -187.91 ± 4.28           |
+| PVNet    | 129.75 ± 2.73           | 233.49 ± 5.21          | 0.99   | 6.30 ± 3.28             |
 
 The ± represents the standard error in the metric.
 
+PVNet has a statiscially significant MAE of 129.75 MW compared to PVLive Intradays MAE of 197.37 MW(shown to be statstically significant with a sample size of n = 5053). Across the data points tested PVNet has a 34.3% reduction in MAE compared to PVLive Intraday.
+
+PVNet also shows a significant reduction in MBE compared to PVLive Intraday. PVLive intraday has an MBE of -187.91 MW indicating a strong tendency to underpredict the actual value where as PVNet has an MBE of 6.30 MW indicating a very slight tendency to overpredict.
+
 ### Standard Deviations of Metrics
 
-| Forecast | Std MAE        | StdRMSE       | Std MBE     |Std RTRR
-|----------|----------------|---------------|-------------|---------
-| PVLin    | 298.17         | 521.04        | 304.23      |104.73
-| PVNet    | 194.14         | 370.62        | 233.43      |152.01
+| Forecast | Std MAE        | StdRMSE       | Std MBE     |
+|----------|----------------|---------------|-------------|
+| PVLive Intraday    | 298.17         | 521.04        | 304.23      |
+| PVNet    | 194.14         | 370.62        | 233.43      |
+
+Across all metrics, PVNet has lower standard deviations compared to PVLive Intraday, sugesting that PVNets errors are more concentrated around the mean and as such are more reliable.
 
 
 
-### Plots
+### Mean Absolute Error (MAE)
+
+
+
 
 ![Model Forecast vs. Actuals](./imgs/pvnet_vs_pvlin_MAE_monthly.png)
-*Fig : Average monthly MAE for PVNet and PVLive Intraday*
+*Fig : Average monthly MAE (MW) for PVNet and PVLive Intraday*
 
-![Error Distribution of Model A](./imgs/pvnet_vs_pvlin_RMSE_monthly.png)
-*Fig : Average monthly RMSE for PVNet and PVLive Intraday*
+Errors are larger in the summer months for both forecasts due to increased solar radiation which inturn leads to greater differenced between the forecasted and actual values. This error generally decreases as the years goes into the winter months. PVNet shows a significant improvement in MAE, espcially over June and July. This difference decreases before then a similar performance in MAE is observed in November.
 
-![Error Distribution of Model A](./imgs/pvnet_vs_pvlin_MBE_monthly.png)
-*Fig : Average monthly MBE for PVNet and PVLive Intraday*
+The following heatmaps will break this down to show how the average MAE per hour varys across the day, firstly broken down months and then weeks. A heatmap is used to show the errors, with light red showing a low MAE for that period and a darker red showing a hgih MAE for that period. The weeks in which there is no data available have been removed, as such the week number, shown in the y axis, may skip a week or two at points.
 
-### Heatmap
-
-
-MAE
 
 <table>
 <tr>
@@ -207,10 +106,17 @@ MAE
 </tr>
 </table>
 
+From the heatmaps we can see that most of the worst errors of PVLive intraday occur between 9-12am where as with PVNet they are more evenly distributed across all hours.
 
 
-MBE
+### Mean Bias Error
 
+![Error Distribution of Model A](./imgs/pvnet_vs_pvlin_MBE_monthly.png)
+*Fig : Average monthly MBE for PVNet and PVLive Intraday*
+
+Looking at the Mean Bias Error across the months, PVLive Intraday has strong tendency to unpredicted, with this bias strongest in the summer months. PVNet also has a slight tendency to unpredict in these summer months as well before switching to having a slight tendency to overpredict in the winter. As the year progresses towards the winter months PVLive Intradays bias does start to decrease where it reaches around -60 in Novemeber compared to PVNet which sits around +50.
+
+Like before, the following heatmaps will break the MAE down into the average MAE per hour for months and weeks. With red showing an overprediction (the darker the red the greater the overprediction) and blue showing an underprediction (the darker the blue the greater the underprediction) for that period.
 
 <table>
 <tr>
@@ -227,7 +133,7 @@ MBE
 <table>
 <tr>
 <td><img src="./imgs/pvlin_all_heatmap_MBE_week.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MBE_week.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MBE_week_F.png"/></td>
 </tr>
 <tr>
 <td>Fig : PVLive Intraday MBE heatmap for Hour vs Week.</td>
@@ -235,30 +141,96 @@ MBE
 </tr>
 </table>
 
-### Error Distribution
+The heatmaps shows that PVLive Intraday has a strong tendecy to underpredict with only 1 week having strong signs of an overprediction (week 35). PVNet illustrates and tendency to underpredict in the very early and later hours of the day (around sunrise and sunset) and slight tendency to overpredict in the middle of the day, but with some underpreictions occuring (primarily during week 30 to 34).
 
-![Model Forecast vs. Actuals](./imgs/pvnet_pvlin_Error_nights_excluded_kde.png)
-*Fig : Kernel density estimation of error distribution of PVNet and PVLive Inraday, with nights removed.*
+### Error Distribution
 
 ![Model Forecast vs. Actuals](./imgs/pvnet_pvlin_Error_nights_excluded_hist.png)
 *Fig : Histrogram of error distribution of PVNet and PVLive Inraday, with nights removed.*
 
+When viewing the error distrubtion, the effect of the mean bias in each of the forecasts becomes visible. With PVLive Intraday having a strong negative skew and PVNet having a symetrical distribution.
+
+---
 
 
-## Relative Performance of PVNet vs PVLive
+## PVNet Model Evaluation
+
+Next this report will look at the performance of PVNet compared to PVLive updated across 2022. PVNet was evaluated against PVLive updated, where data was present for each, over the period of:
+* 2022-01-01 to 2022-11-19
+
+The results shown in the table below are from taking that 0th hour forecast (now), which is the same that was used for the PVLive Intraday comparison above, and comparing the results to PVLive Updated. This section also contains graphs which illustrate the performance of PVNet across its different forecasting horizons (0-8hours).
+
+### PVNet Results Table
+
+| Metric | PVNet ± Standard Erorr| Standard Deviation
+|--------|-----------------------|-------------------
+| MAE    | 126.92 ± 1.80         |200.40
+| RMSE   | 237.20 ± 3.52         |392.69            
+| MBE    | 11.01 ± 2.12          |237.00            
+| R^2    | 0.990                 |
+
+### Mean Absolute Error
+
+![PVNet MAE](./imgs/pvnet_all_MAE_monthly.png)
+*Fig 1: Average monthly MAE for PVNet across 2022.*
+
+The MAE starts to increase from February to May where it then stablises over the summer before then decreasing from August right through to November.
+
+![PVNet Horizon MAE](./imgs/pvnet_all_horizon_MAE.png)
+*Fig 8: PVNet horizon vs MAE averaged across 2022.*
+
+Over the 8 hours that PVNet makes predictions for, its MAE increases from 126 to around 180 which equates to an around 43% increase in error over the 8 hours.
+
+<table>
+<tr>
+<td><img src="./imgs/pvnet_all_heatmap_MAE_month.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MAE_week.png"/></td>
+</tr>
+<tr>
+<td>Fig 4: PVNet MAE heatmap for Hour vs Month.</td>
+<td>Fig 5: PVNet MAE heatmap for Hour vs Week.</td>
+</tr>
+</table>
 
 
 
+### Mean Bias Error
 
+![PVNet MBE](./imgs/pvnet_all_MBE_monthly.png)
+*Fig 3: Average monthly MBE for PVNet across 2022.*
+
+An almost inverse in pattern is seen between MAE and MBE with overpredictions happening in the autumn and winter months and underpredictions in spring and summer, peaking in August with an average MBE for that month around -40 MW.
+
+![PVNet Horizon MBE](./imgs/pvnet_all_horizon_MBE.png)
+*Fig 11: PVNet horizon vs MBE averaged across 2022.*
+
+Reviewing how MBE changes across horizons show that past 6 hours (360 minutes), the negative MBE starts to increase.
+
+<table>
+<tr>
+<td><img src="./imgs/pvnet_all_heatmap_MBE_month.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MBE_week.png"/></td>
+</tr>
+<tr>
+<td>Fig 6: PVNet MBE heatmap for Hour vs Month.</td>
+<td>Fig 7: PVNet MBE heatmap for Hour vs Week.</td>
+</tr>
+</table>
+
+The MBE heatmaps across the year confirm the earlier evaluation of a tendency to underpredict during sunrise and sunset hours.
 
 ---
 
 ## Conclusion
 
-From this analysis
+The report evaluates the performance of OCF’s national PV forecast (PVNet) against Sheffield Solar’s PVLive Intraday forecast, using PVLive Updated as the baseline for comparison, focusing on various error metrics across 2022. Due to limitations in data availability, the comparison initially considers overlapping data points for PVLive Intraday and PVNet before extending to all available data for PVNet and PVLive Updated.
+
+
+PVNet outperforms PVLive Intraday, with a Mean Absolute Error (MAE) of 129.75 MW and a Mean Bias Error (MBE) of 6.30 MW, compared to PVLive Intraday’s MAE of 197.37 MW and MBE of -187.91 MW. This demonstrates statistically significant improvements and increased reliability from PVNet. Additionally, PVNet has greater consistency evident from its lower standard deviations in all metrics compared to PVLive Intraday, indicating that PVNet's errors are more tightly concentrated around the mean.
+
+PVLive Intraday predominantly underpredicts, with a pronounced negative skew in error distribution and the bias peaking in the early summer months. In contrast, PVNet exhibits a symmetrical error distribution but with a tendency to underpredict around sunrise and sunset.
 
 ---
-
 
 
 ## Appendix
@@ -269,7 +241,6 @@ To compute the error metrics, we utilised the following mathematical formulas:
 1. **MAE (Mean Absolute Error)**:
 $$\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} \left| y_{\text{true},i} - y_{\text{pred},i} \right|$$
 
-- **Mean Absolute Error (MAE)**: Represents the average of the absolute differences between the forecasted and actual values. It provides an idea of the magnitude of errors.
 
 2. **RMSE (Root Mean Squared Error)**:
 $$\text{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} \left( y_{\text{true},i} - y_{\text{pred},i} \right)^2}$$
@@ -282,14 +253,6 @@ Where $\bar{y_{\text{true}}}$ is the mean of the true values.
 4. **MBE (Mean Bias Error)**:
 $$\text{MBE} = \frac{1}{n} \sum_{i=1}^{n} \left( y_{\text{pred},i} - y_{\text{true},i} \right)$$
 
-5. **RealTimeRampRateDiff**:
-$$\text{RampRateDiff} = \frac{1}{n} \sum_{i=1}^{n} \left| \Delta y_{\text{true},i} - \Delta y_{\text{pred},i} \right|$$
-Where $\Delta y$ represents the difference between consecutive values.
-
-<!-- 6. **Pinball Loss**:
-$$\text{Pinball Loss} = \frac{1}{n} \sum_{i=1}^{n} \left( y_{\text{true},i} - y_{\text{pred},i} \right) \times (\tau - \mathbb{1}(y_{\text{true},i} < y_{\text{pred},i}))$$
-Where \(\tau\) is a quantile (0.5 in your case) and \(\mathbb{1}(.)\) is the indicator function. -->
-
 ### Variability of Error Metrics
 
 The **Standard Deviations** of these metrics are calculated as follows:
@@ -299,5 +262,23 @@ Where $\bar{\text{Metric}}$ is the mean of the metric across all data points.
 The **Standard Error of The Mean** of these metrics are calcuated as follows:
 $$ SE = \frac{\sigma}{\sqrt{n}}$$
 
+
+
+
+## Additional Graphs
+
+![Error Distribution of Model A](./imgs/pvnet_vs_pvlin_RMSE_monthly.png)
+*Fig : Average monthly RMSE for PVNet and PVLive Intraday*
+
+
+![PVNet RMSE](./imgs/pvnet_all_RMSE_monthly.png)
+*Fig 2: Average monthly RMSE for PVNet across 2022.*
+
+![Model Forecast vs. Actuals](./imgs/pvnet_pvlin_Error_nights_excluded_kde.png)
+*Fig : Kernel density estimation of error distribution of PVNet and PVLive Inraday, with nights removed.*
+
+
+![PVNet Horizon RMSE](./imgs/pvnet_all_horizon_RMSE.png)
+*Fig 10: PVNet horizon vs RMSE averaged across 2022.*
 
 
