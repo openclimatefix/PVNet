@@ -1,25 +1,29 @@
-# OCF PVNet Forecast Evaluation
+# OCFs PVNet Forecast Evaluation
+
+This report compares the accuracy of OCF’s national PV forecast (PVNet) and Sheffield Solar PVLive Intraday forecast, using the updated PVLive as the benchmark as well as additional analtysis on PVNets overall performance.
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Data Overview](#data-overview)
+3. [PVLive Intraday and PVNet vs PVLive Updated](#pvlive-intraday-and-pvnet-vs-pvlive-updated)
+   * [Results Table](#results-table)
+   * [Mean Absolute Error](#mean-absolute-error)
+   * [Mean Bias Error](#mean-bias-error)
+   * [Error Distribution](#error-distribution)
+4. [PVNet Model Evaluation](#pvnet-model-evaluation)
+   * [PVNet Results Table](#pvnet-results-table)
+   * [Mean Absolute Error](#mean-absolute-error-1)
+   * [Mean Bias Error](#mean-bias-error-1)
+5. [Conclusion](#conclusion)
+6. [Appendix](#appendix)
 
 ## Introduction
 
-In this report, we evaluate the performance of OCFs national PV forecast (PVNet) against the Shefield solar PVLive Intraday forecast. The Updated PVLive forecast will be used as the truth for this comparison. This report will look into various error metrics and discuss the implications of our findings. First we will compare how PVLive Intraday and PVNet perform against PVLive Updated over periods in which we have data for. Then a more comprehensive evaluation of PVNet vs PVLive Updated is completed across the year of 2022, including evaluating the performance across different forecast horizons.
+In this report, we evaluate the performance of OCFs national PV forecast (PVNet) against the Shefield Solar PVLive Intraday forecast, using the updated PVLive forecast as the benchmark truth for this comparison. This report will look into various error metrics and discuss the implications of our findings. First we will compare how PVLive Intraday and PVNet perform against PVLive Updated over periods in which we have data for. Then a more comprehensive evaluation of PVNet vs PVLive Updated is completed across the year of 2022, including evaluating the performance across different forecast horizons.
 
 This report should be used to indicate the difference in the forecasting capaboilities between the two as well as provide a framework for future analysis to completed over an larger number of data points.
 
 
-## Table of Contents
-1. [Data Overview](#data-overview)
-2. [PVLive Intraday and PVNet vs PVLive Updated](#pvlin-and-pvnet-vs-pvlup)
-    * [Results Table](#pvlup)
-    * [Mean Absolute Error](#error-metrics)
-    * [Mean Bias Error](#heatmaps)
-    * [Error Distribution](#error-distribution)
-3. [PVNet Model Evaluation](#pvnet-model-evaluation)
-    * [Results Table](#pvnet-results-table)
-    * [Mean Absolute Error](#pvnet-plots)
-    * [Mean Bias Error](#pvnet-heatmaps)
-5. [Conclusion](#conclusion)
-6. [Appendix](#mathematical-formulas)
 
 ---
 
@@ -45,14 +49,14 @@ This report will first look into just the overlapping datapoints from PVLive Int
 
 
 
-## PVLive Intraday and PVNet vs PVLive Updated
+## PVLive Intraday and PVNet vs PVLive Updated 
 
 ### Results Table
 
-| Forecast | MAE                     | RMSE                   | R2     | MBE                     |
-|----------|-------------------------|------------------------|--------|-------------------------|
-| PVLive Intraday    | 197.37 ± 4.19           | 357.56 ± 7.33          | 0.978  | -187.91 ± 4.28           |
-| PVNet    | 129.75 ± 2.73           | 233.49 ± 5.21          | 0.99   | 6.30 ± 3.28             |
+| Forecast | MAE                     | RMSE                   | MBE              | R2
+|----------|-------------------------|------------------------|------------------|-------
+| PVLive Intraday | 197.37 ± 4.19    | 357.56 ± 7.33          | -187.91 ± 4.28   | 0.978
+| PVNet    | 129.75 ± 2.73           | 233.49 ± 5.21          | 6.30 ± 3.28      | 0.99
 
 The ± represents the standard error in the metric.
 
