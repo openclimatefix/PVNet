@@ -150,7 +150,7 @@ Next this report will look at the performance of PVNet compared to PVLive update
 
 * 2022-01-01 to 2022-11-19
 
-The results shown in the table below are from taking the  PVNet 30 minute forecast, which is the same that was used for the PVLive Intraday comparison above, and comparing the results to PVLive Updated. This section also contains graphs which illustrate the performance of PVNet across its different forecasting horizons (30 - 480 minutes).
+The results shown in the table below are from taking the  PVNet 30 minute forecast, which is the same that was used for the PVLive Intraday comparison above, and comparing the results to PVLive Updated. This section also contains graphs which illustrate the performance of PVNet across its different forecasting horizons (30 to 480 minutes).
 
 ### PVNet Results Table
 
@@ -261,9 +261,9 @@ The following graphs show results for the root-mean-square deviation (RMSE).
 *Fig 22: (Similar to Fig 13) Average monthly RMSE for PVNet across 2022.*
 
 ![PVNet Horizon RMSE](./imgs/pvnet_all_horizon_RMSE.png)
-*Fig 23:(Similar to Fig 14) PVNet horizon vs RMSE averaged across 2022.*
+*Fig 23: (Similar to Fig 14) PVNet horizon vs RMSE averaged across 2022.*
 
 The following graph uses a Kernal density plot as another way to visualise the error distribution.
 
 ![Model Forecast vs. Actuals](./imgs/pvnet_pvlin_Error_nights_excluded_kde.png)
-*Fig 24: (Similar to Fig 12) Kernel density estimation of error distribution of PVNet and PVLive Inraday, with nights removed.*
+*Fig 24: (Similar to Fig 12) Kernel density estimation of error distribution of PVNet and PVLive Intraday, with nights removed.*
