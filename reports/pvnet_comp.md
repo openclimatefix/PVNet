@@ -1,6 +1,6 @@
-# OCFs PVNet Forecast Evaluation
+# OCF's PVNet Forecast Evaluation
 
-This report compares the accuracy of OCF’s national PV forecast (PVNet) and Sheffield Solar PVLive Intraday forecast, using the updated PVLive as the benchmark as well as additional analtysis on PVNets overall performance.
+This report compares the accuracy of OCF’s national PV forecast (PVNet) and Sheffield Solar PVLive Intraday forecast, using the updated PVLive as the benchmark as well as additional analysis on PVNets overall performance.
 
 ## Table of Contents
 
@@ -20,28 +20,28 @@ This report compares the accuracy of OCF’s national PV forecast (PVNet) and Sh
 
 ## Introduction
 
-In this report, we evaluate the performance of OCFs national PV forecast (PVNet) against the Shefield Solar PVLive Intraday forecast, using the updated PVLive forecast as the benchmark truth for this comparison. This report will look into various error metrics and discuss the implications of our findings. First we will compare how PVLive Intraday and PVNet perform against PVLive Updated over periods in which we have data for. Then a more comprehensive evaluation of PVNet vs PVLive Updated is completed across the year of 2022, including evaluating the performance across different forecast horizons.
+In this report, we evaluate the performance of OCF's national PV forecast (PVNet) against the Sheffield Solar PVLive Intraday forecast, using the updated PVLive forecast as the benchmark truth for this comparison. This report will look into various error metrics and discuss the implications of our findings. First we will compare how PVLive Intraday and PVNet perform against PVLive Updated over periods in which we have data for. Then a more comprehensive evaluation of PVNet vs PVLive Updated is completed across the year of 2022, including evaluating the performance across different forecast horizons.
 
-This report should be used to indicate the difference in the forecasting capaboilities between the two as well as provide a framework for future analysis to completed over an larger number of data points.
+This report should be used to indicate the difference in the forecasting capabilities between the two as well as provide a framework for future analysis to completed over a larger number of data points.
 
 ---
 
 ## Data Overview
 
-The aim of these results is to evaluate the performance of the OCF PVNet model against the PVLive Intraday forecast over 2022. As PVLive Intraday is forecast with just a single horizon (at t=0 (now)), an equivlent horizon has been extracted from the PVNet forecast to make it a fair comparison.
+The aim of these results is to evaluate the performance of the OCF PVNet model against the PVLive Intraday forecast over 2022. The PVLive Intraday forecast is compared against the PVNet 30-minute horizon forecast (at t0 + 30 minutes).
 
-The number of datapoints that can be used to compare is restricted by two factors. Firstly, OCF started recording the data from PVLive intraday around halfway through 2022 (on 2022-06-14). Hence for the time preceeding this period we do not currently have the data available to compare against PVNet. Secondly, when creating the PVNet backtest there was some missing data, in paricular:
+The number of datapoints that can be used to compare is restricted by two factors. Firstly, OCF started recording the data from PVLive intraday around halfway through 2022 (on 2022-06-14). Hence for the time preceding this period we do not currently have the data available to compare against PVNet. Secondly, some input data which the PVNet model relies on was missing from our historic archive. In particular:
 
 * ~1 month of missing NWP data
-* ~1 month of missing satelitte data
-* 2 days every month in which the statelittes switch over.
+* ~1 month of missing satellite data
+* 2 days every month in which the satellites switch over.
 
-This missing data would not occur in a production environment and ultimately would misreprsent the performance of the model. Hence these forecasts have been ommited from the comparison. The quantities of data available can be seen in the chart below (fig 1) where the y axis represents the date, with the top indicating the start of 2022 and the bottom indicating the end of 2022 and the x axis labelling the different data used. The darkend areas illustrates data that is available where as the white areas show missing or ommitted data.
+These inputs gaps do not occur in our production environment. These forecasts could not be made without the missing inputs, and hence have been omitted from the comparison. The quantities of data available can be seen in the chart below (fig 1) where the y axis represents the date, with the top indicating the start of 2022 and the bottom indicating the end of 2022 and the x axis labelling the different data used. The darkened areas illustrates data that is available whereas the white areas show missing or ommitted data.
 
 ![Data Availability](./imgs/data_availability_across_2022.png)
 *Fig 1: The data availability across the 3 datasets used in this analysis.*
 
-This report will first look into just the overlapping datapoints from PVLive Intraday and PVNet as shown in the graph above before then moving on to compare all of the datapoints available for PVNet and PVLive updated.
+This report will first look into just the overlapping datapoints from PVLive Intraday and PVNet as shown in the graph above before then moving on to compare all of the datapoints available for PVNet and PVLive updated. Metrics such as the Mean Absolute Error (MAE), Root-Mean-Square Error (RMSE), Mean Bias Error (MBE) and the Coefficient of Determination (R2) will be used for this analysis.
 
 ---
 
@@ -56,7 +56,7 @@ This report will first look into just the overlapping datapoints from PVLive Int
 
 The ± represents the standard error in the metric.
 
-PVNet has a statiscially significant MAE of 129.75 MW compared to PVLive Intradays MAE of 197.37 MW(shown to be statstically significant with a sample size of n = 5053). Across the data points tested PVNet has a 34.3% reduction in MAE compared to PVLive Intraday.
+PVNet has a significantly better MAE of 129.75 MW compared to PVLive Intraday's MAE of 197.37 MW (shown to be statistically significant with a sample size of n = 5053). Across the data points tested PVNet has a 34.3% reduction in MAE compared to PVLive Intraday.
 
 PVNet also shows a significant reduction in MBE compared to PVLive Intraday. PVLive intraday has an MBE of -187.91 MW indicating a strong tendency to underpredict the actual value where as PVNet has an MBE of 6.30 MW indicating a very slight tendency to overpredict.
 
@@ -67,16 +67,16 @@ PVNet also shows a significant reduction in MBE compared to PVLive Intraday. PVL
 | PVLive Intraday    | 298.17         | 521.04        | 304.23      |
 | PVNet    | 194.14         | 370.62        | 233.43      |
 
-Across all metrics, PVNet has lower standard deviations compared to PVLive Intraday, sugesting that PVNets errors are more concentrated around the mean and as such are more reliable.
+Across all metrics, PVNet has lower standard deviations compared to PVLive Intraday, suggesting that PVNets errors are more concentrated around the mean and as such are more reliable.
 
 ### Mean Absolute Error (MAE)
 
 ![Model Forecast vs. Actuals](./imgs/pvnet_vs_pvlin_MAE_monthly.png)
 *Fig 2: Average monthly MAE (MW) for PVNet and PVLive Intraday*
 
-Errors are larger in the summer months for both forecasts due to increased solar radiation which inturn leads to greater differenced between the forecasted and actual values. This error generally decreases as the years goes into the winter months. PVNet shows a significant improvement in MAE, espcially over June and July. This difference decreases before then a similar performance in MAE is observed in November.
+Errors are larger in the summer months for both forecasts due to increased solar radiation, which in turn leads to greater differences between the forecasted and actual values. This error generally decreases as the year progresses into the winter months. PVNet shows a significant improvement in MAE, especially over June, July and October. A similar performance in MAE is observed for November for the two forecasts.
 
-The following heatmaps will break this down to show how the average MAE per hour varys across the day, firstly broken down months and then weeks. A heatmap is used to show the errors, with light red showing a low MAE for that period and a darker red showing a hgih MAE for that period. The weeks in which there is no data available have been removed, as such the week number, shown in the y axis, may skip a week or two at points.
+The following heatmaps will break this down to show how the average MAE per hour varies across the day, firstly broken down by months and then by weeks. A heatmap is used to display the errors, with light red showing a low MAE for that period and a darker red indicating a high MAE for that period. The weeks for which there is no data available have been removed; as such, the week number, shown on the y-axis, may skip a week or two at points.
 
 <table>
 <tr>
@@ -107,7 +107,7 @@ From the heatmaps we can see that most of the worst errors of PVLive intraday oc
 ![Error Distribution of Model A](./imgs/pvnet_vs_pvlin_MBE_monthly.png)
 *Fig 7: Average monthly MBE for PVNet and PVLive Intraday*
 
-Looking at the Mean Bias Error across the months, PVLive Intraday has strong tendency to unpredicted, with this bias strongest in the summer months. PVNet also has a slight tendency to unpredict in these summer months as well before switching to having a slight tendency to overpredict in the winter. As the year progresses towards the winter months PVLive Intradays bias does start to decrease where it reaches around -60 in Novemeber compared to PVNet which sits around +50.
+Looking at the Mean Bias Error across the months, PVLive Intraday has strong tendency to underpredict, with this bias strongest in the summer months. PVNet also has a slight tendency to unpredict in these summer months as well before switching to having a slight tendency to overpredict in the winter. As the year progresses towards the winter months PVLive Intradays bias does start to decrease where it reaches around -60 in Novemeber compared to PVNet which sits around +50.
 
 Like before, the following heatmaps will break the MAE down into the average MAE per hour for months and weeks. With red showing an overprediction (the darker the red the greater the overprediction) and blue showing an underprediction (the darker the blue the greater the underprediction) for that period.
 
