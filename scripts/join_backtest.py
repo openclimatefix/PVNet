@@ -1,15 +1,11 @@
-""" A script to download and processing the PVNet backtests that have been uploaded to GCP,
-    to ouput the pv data saved as Zarr. Currently set up for the 2022 backtest used for
-    the PVLive and PVNet evaluation.
+""" A script to download and processing the PVNet backtests that have been uploaded to GCP.
+
+To ouput the forecast as a zarr.
 """
 
-# dir = "gs://solar-pv-nowcasting-data/backtest/pvnet_v2_2022/hindcasts/"
-# filename = 'gs://solar-pv-nowcasting-data/backtest/pvnet_v2_2022/hindcasts/2022-01-01T03:00:00.nc'
-# save_to = "/home/zak/data/fc_bt_comp/pvnet_backtest_2022.zarr"
-
 import click
-import xarray as xr
 import fsspec
+import xarray as xr
 
 
 @click.command()
@@ -26,13 +22,17 @@ import fsspec
     help="The location to save the processed data including the filename.",
 )
 def main(dir, save_to):
+    """
+    Process the specified directory and save the processed data to the specified location.
+    """
     # get all the files
     fs = fsspec.open(dir).fs
     files = fs.ls(dir)
 
     # Can select a proportion of the data to processes as a test
-    N_start = 10080
-    N_end = 10100
+    # N_start = 10080
+    # N_end = 10100
+
     N_files = len(files)
     all_dataset_xr = []
     # Change to iterate through N_start to N_end if wanting to use a sample
