@@ -80,8 +80,8 @@ The following heatmaps will break this down to show how the average MAE per hour
 
 <table>
 <tr>
-<td><img src="./imgs/pvlin_all_heatmap_MAE_Month.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MAE_Month.png"/></td>
+<td><img src="./imgs/pvlin_all_heatmap_MAE_month.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MAE_month.png"/></td>
 </tr>
 <tr>
 <td>Fig 3: PVLive Intraday MAE heatmap for Hour vs Month.</td>
@@ -91,8 +91,8 @@ The following heatmaps will break this down to show how the average MAE per hour
 
 <table>
 <tr>
-<td><img src="./imgs/pvlin_all_heatmap_MAE_Week.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MAE_Week.png"/></td>
+<td><img src="./imgs/pvlin_all_heatmap_MAE_week.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MAE_week.png"/></td>
 </tr>
 <tr>
 <td>Fig 5: PVLive Intraday MAE heatmap for Hour vs Week.</td>
@@ -113,8 +113,8 @@ Like before, the following heatmaps will break the MAE down into the average MAE
 
 <table>
 <tr>
-<td><img src="./imgs/pvlin_all_heatmap_MBE_Month.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MBE_Month.png"/></td>
+<td><img src="./imgs/pvlin_all_heatmap_MBE_month.png"/></td>
+<td><img src="./imgs/pvnet_all_heatmap_MBE_month.png"/></td>
 </tr>
 <tr>
 <td>Fig 8: PVLive Intraday MBE heatmap for Hour vs Month.</td>
@@ -175,8 +175,8 @@ Over the 8 hours that PVNet makes predictions for, its MAE increases from 126 to
 
 <table>
 <tr>
-<td><img src="./imgs/pvnet_all_heatmap_MAE_month.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MAE_week.png"/></td>
+<td><img src="./imgs/pvnet_full_heatmap_MAE_month.png"/></td>
+<td><img src="./imgs/pvnet_full_heatmap_MAE_week.png"/></td>
 </tr>
 <tr>
 <td>Fig 15: PVNet MAE heatmap for Hour vs Month.</td>
@@ -198,8 +198,8 @@ Reviewing how MBE changes across horizons shows that past 6 hours (360 minutes),
 
 <table>
 <tr>
-<td><img src="./imgs/pvnet_all_heatmap_MBE_month.png"/></td>
-<td><img src="./imgs/pvnet_all_heatmap_MBE_week.png"/></td>
+<td><img src="./imgs/pvnet_full_heatmap_MBE_month.png"/></td>
+<td><img src="./imgs/pvnet_full_heatmap_MBE_week.png"/></td>
 </tr>
 <tr>
 <td>Fig 19: PVNet MBE heatmap for Hour vs Month.</td>
