@@ -150,7 +150,7 @@ Next this report will look at the performance of PVNet compared to PVLive update
 
 * 2022-01-01 to 2022-11-19
 
-The results shown in the table below are from taking that 0th hour forecast (now), which is the same that was used for the PVLive Intraday comparison above, and comparing the results to PVLive Updated. This section also contains graphs which illustrate the performance of PVNet across its different forecasting horizons (0-8hours).
+The results shown in the table below are from taking the  PVNet 30 minute forecast, which is the same that was used for the PVLive Intraday comparison above, and comparing the results to PVLive Updated. This section also contains graphs which illustrate the performance of PVNet across its different forecasting horizons (0-8hours).
 
 ### PVNet Results Table
 
