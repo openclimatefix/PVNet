@@ -275,18 +275,18 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # calculate mse, mae with exp weighted loss
         mse_exp = self.weighted_losses.get_mse_exp(output=y_hat, target=y)
         mae_exp = self.weighted_losses.get_mae_exp(output=y_hat, target=y)
-        
+
         if self.use_quantile_regression:
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
-        
+
         # Ramp Rate - % of GSP capacity per hour
         start_step = 1
         end_step = 3
-        interval_hours = (end_step - start_step)/2
+        interval_hours = (end_step - start_step) / 2
         ramp_rate = y[:, end_step] - y[:, start_step] / interval_hours
         ramp_rate_hat = y_hat[:, end_step] - y_hat[:, start_step] / interval_hours
-        ramp_rate_mae = F.l1_loss(ramp_rate_hat, ramp_rate) 
+        ramp_rate_mae = F.l1_loss(ramp_rate_hat, ramp_rate)
 
         # TODO: Compute correlation coef using np.corrcoef(tensor with
         # shape (2, num_timesteps))[0, 1] on each example, and taking
