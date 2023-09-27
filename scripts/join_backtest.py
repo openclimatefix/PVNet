@@ -43,9 +43,7 @@ def main(dir, save_to):
         with fsspec.open(f"gs://{filename}", mode="rb") as file:
             dataset = xr.open_dataset(file, engine="h5netcdf")
             national = dataset.sel(gsp_id=0)
-            national = national.assign_coords(
-                forecast_init_time=national.forecast_init_time.values
-            )
+            national = national.assign_coords(forecast_init_time=national.forecast_init_time.values)
             idx = range(0, len(national.target_datetime_utc.values))
             national = national.assign_coords(target_datetime_utc=idx)
             national = national.load()
