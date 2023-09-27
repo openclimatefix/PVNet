@@ -267,3 +267,44 @@ The following graph uses a Kernal density plot as another way to visualise the e
 
 ![Model Forecast vs. Actuals](./imgs/pvnet_pvlin_Error_nights_excluded_kde.png)
 *Fig 24: (Similar to Fig 12) Kernel density estimation of error distribution of PVNet and PVLive Intraday, with nights removed.*
+
+
+## Temp Graph Space
+
+![Model Forecast vs. Actuals](./imgs/average_absolute_errors_by_hours_t100.png)
+*Fig*
+
+![Model Forecast vs. Actuals](./imgs//average_errors_by_hours_t100.png)
+*Fig*
+
+![Model Forecast vs. Actuals](./imgs/boxplot_errors_pvlive_pvnet.png)
+*Fig*
+
+
+![Model Forecast vs. Actuals](./imgs/boxplot_errors_pvlive-pvnet_err_diff.png)
+*Fig*
+
+
+![Model Forecast vs. Actuals](./imgs/threshold_plots_pvlive_pvnet_100_200_300_month.png)
+*Fig*
+
+
+![Model Forecast vs. Actuals](./imgs/threshold_plots_pvlive_pvnet_200_350_500_month.png)
+*Fig*
+
+
+![Model Forecast vs. Actuals](./imgs/timerange_bar_pvlive_pvnet_4-8_t0.png)
+*Fig*
+
+
+![Model Forecast vs. Actuals](./imgs/mae_mbe_headline_box.png)
+*Fig*
+
+![Model Forecast vs. Actuals](./imgs/violin_errors_pvlive_pvnet.png)
+*Fig*
+
+![Model Forecast vs. Actuals](./imgs/violin_errors_pvlive-pvnet_err_diff.png)
+*Fig*
+
+![Model Forecast vs. Actuals](./imgs/forecast_production_timeline.png)
+*Fig*
