@@ -1,4 +1,4 @@
-"""Basic blocks for immage sequence encoders"""
+"""Basic blocks for image sequence encoders"""
 from abc import ABCMeta, abstractmethod
 
 import torch
