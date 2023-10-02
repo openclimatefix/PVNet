@@ -1,6 +1,6 @@
 _target_: pvnet.models.multimodal.multimodal.Model
 
-output_quantiles: null
+output_quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
 
 #--------------------------------------------
 # NWP encoder
@@ -37,9 +37,11 @@ add_image_embedding_channel: True
 pv_encoder:
   _target_: pvnet.models.multimodal.site_encoders.encoders.SimpleLearnedAggregator
   _partial_: True
-  out_features: 256
   num_sites: 349
-
+  out_features: 64
+  value_dim: 64
+  value_enc_resblocks: 2
+  final_resblocks: 2
 
 #--------------------------------------------
 # Tabular network settings
@@ -55,7 +57,7 @@ output_network:
 
 embedding_dim: 16
 include_sun: True
-include_gsp_yield_history: True
+include_gsp_yield_history: False
 
 #--------------------------------------------
 # Times
@@ -64,6 +66,9 @@ include_gsp_yield_history: True
 # Foreast and time settings
 forecast_minutes: 480
 history_minutes: 120
+
+min_sat_delay_minutes: 60
+
 # --- set to null if same as history_minutes ---
 sat_history_minutes: 90
 nwp_history_minutes: 120
