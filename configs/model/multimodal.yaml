@@ -3,24 +3,43 @@ _target_: pvnet.models.multimodal.multimodal.Model
 output_quantiles: null
 
 #--------------------------------------------
-# Sat/NWP encoder settings
+# NWP encoder
 #--------------------------------------------
 
-image_encoder:
+nwp_encoder:
   _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
   _partial_: True
-encoder_out_features: 256
-encoder_kwargs:
+  in_channels: 2
+  out_features: 256
   number_of_conv3d_layers: 6
   conv3d_channels: 32
+  image_size_pixels: 24
 
-include_sat: True
-include_nwp: True
+#--------------------------------------------
+# Sat encoder settings
+#--------------------------------------------
+
+sat_encoder:
+  _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+  _partial_: True
+  in_channels: 11
+  out_features: 256
+  number_of_conv3d_layers: 6
+  conv3d_channels: 32
+  image_size_pixels: 24
+
 add_image_embedding_channel: True
-sat_image_size_pixels: 24
-nwp_image_size_pixels: 24
-number_sat_channels: 11
-number_nwp_channels: 2
+
+#--------------------------------------------
+# PV encoder settings
+#--------------------------------------------
+
+pv_encoder:
+  _target_: pvnet.models.multimodal.site_encoders.encoders.SimpleLearnedAggregator
+  _partial_: True
+  out_features: 256
+  num_sites: 349
+
 
 #--------------------------------------------
 # Tabular network settings
@@ -29,7 +48,6 @@ number_nwp_channels: 2
 output_network:
   _target_: pvnet.models.multimodal.linear_networks.networks.ResFCNet2
   _partial_: True
-output_network_kwargs:
   fc_hidden_features: 128
   n_res_blocks: 6
   res_block_layers: 2
@@ -39,6 +57,10 @@ embedding_dim: 16
 include_sun: True
 include_gsp_yield_history: True
 
+#--------------------------------------------
+# Times
+#--------------------------------------------
+
 # Foreast and time settings
 forecast_minutes: 480
 history_minutes: 120
@@ -46,8 +68,11 @@ history_minutes: 120
 sat_history_minutes: 90
 nwp_history_minutes: 120
 nwp_forecast_minutes: 480
-# ----------------------------------------------
+pv_history_minutes: 180
 
+# ----------------------------------------------
+# Optimizer
+# ----------------------------------------------
 optimizer:
   _target_: pvnet.optimizers.AdamWReduceLROnPlateau
   lr: 0.0001

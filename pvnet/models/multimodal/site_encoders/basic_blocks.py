@@ -25,6 +25,7 @@ class AbstractPVSitesEncoder(nn.Module, metaclass=ABCMeta):
             out_features: Number of output features.
         """
         super().__init__()
+        self.out_features = out_features
 
     @abstractmethod
     def forward(self):

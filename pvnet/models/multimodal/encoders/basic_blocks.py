@@ -28,6 +28,8 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
             out_features: Number of output features.
         """
         super().__init__()
+        self.out_features = out_features
+        self.image_size_pixels = image_size_pixels
 
     @abstractmethod
     def forward(self):
