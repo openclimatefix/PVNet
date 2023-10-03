@@ -85,7 +85,7 @@ class SimpleLearnedAggregator(AbstractPVSitesEncoder):
     
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        pv_site_seqs = x[BatchKey.pv]
+        pv_site_seqs = x[BatchKey.pv].float()
         batch_size = pv_site_seqs.shape[0]
         
         pv_site_seqs = pv_site_seqs.swapaxes(1,2).flatten(0,1)
@@ -97,7 +97,7 @@ class SimpleLearnedAggregator(AbstractPVSitesEncoder):
     def forward(self, x):
         """Run model forward"""
         # Output has shape: [batch size, num_sites, value_dim]
-        encodeded_seqs = self.encode_value(x)
+        encodeded_seqs = self._encode_value(x)
         
         # Calculate learned averaging weights
         attn_avg_weights = self._calculate_attention(x)
