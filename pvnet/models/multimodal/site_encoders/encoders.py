@@ -47,9 +47,6 @@ class SimpleLearnedAggregator(AbstractPVSitesEncoder):
 
         super().__init__(sequence_length, num_sites, out_features)
         
-        self.sequence_length = sequence_length
-        self.num_sites = num_sites
-        
         # Network used to encode each PV site sequence
         self._value_encoder = nn.Sequential(
             ResFCNet2(
@@ -107,5 +104,150 @@ class SimpleLearnedAggregator(AbstractPVSitesEncoder):
         
         # Put through final processing layers
         x_out = self.output_network(value_weighted_avg)
+        
+        return x_out
+
+    
+class SingleAttentionNetwork(AbstractPVSitesEncoder):
+    """A simple attention-based model with a single multihead attention layer
+    
+    For the attention layer the query is based on the target GSP alone, the key is based on the PV
+    ID and the recent PV data, the value is based on the recent PV data.
+    
+    """
+    def __init__(
+        self, 
+        sequence_length: int, 
+        num_sites: int, 
+        out_features: int,
+        kdim: int = 10, 
+        num_heads: int = 2, 
+        pv_id_embed_dim: int = 10,
+        n_kv_res_blocks: int = 2,
+        kv_res_block_layers: int = 2,
+        use_pv_id_in_value: bool = False,
+        ):
+        """A simple attention-based model with a single multihead attention layer
+        
+        Args:
+            sequence_length: The time sequence length of the data.
+            num_sites: Number of PV sites in the input data.
+            out_features: Number of output features. In this network this is also the the value 
+                dimension in the multi-head attention layer.
+            kdim: The dimensions used in both the keys and queries.
+            num_heads: Number of parallel attention heads. Note that `out_features` will be split 
+                across `num_heads` so `out_features` must be a multiple of `num_heads`.
+            pv_id_embed_dim: The dimension of the PV ID embedding used in calculating the key.
+            n_kv_res_blocks: Number of residual blocks to use in the key and value encoders.
+            kv_res_block_layers: Number of fully-connected layers used in each residual block within
+                the key and value encoders.
+            use_pv_id_in_value: Whether to use the PV ID in network used to produce the value for
+                the attention layer.
+            
+        """
+        super().__init__(sequence_length, num_sites, out_features)
+        
+        self.gsp_id_embedding = nn.Embedding(318, kdim)
+        self.pv_id_embedding = nn.Embedding(num_sites, pv_id_embed_dim)
+        self._pv_ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
+        self.use_pv_id_in_value = use_pv_id_in_value
+        
+        if use_pv_id_in_value:
+            self.value_pv_id_embedding = nn.Embedding(num_sites, pv_id_embed_dim)
+            
+        self._value_encoder = nn.Sequential(
+            ResFCNet2(
+                in_features=sequence_length+int(use_pv_id_in_value)*pv_id_embed_dim,
+                out_features=out_features,
+                fc_hidden_features=sequence_length,
+                n_res_blocks=n_kv_res_blocks,
+                res_block_layers=kv_res_block_layers,
+                dropout_frac=0,
+            ),
+            nn.Linear(out_features, kdim),
+        )
+        
+        self._key_encoder =  nn.Sequential(
+            ResFCNet2(
+                in_features=pv_id_embed_dim+sequence_length,
+                out_features=kdim,
+                fc_hidden_features=pv_id_embed_dim+sequence_length,
+                n_res_blocks=n_kv_res_blocks,
+                res_block_layers=kv_res_block_layers,
+                dropout_frac=0,
+            ),
+            nn.Linear(kdim, kdim)
+        )
+        
+        self.multihead_attn = nn.MultiheadAttention(
+            embed_dim=kdim, 
+            num_heads=num_heads,
+            batch_first=True,
+            vdim=out_features,
+        )
+        
+        
+    def _encode_query(self, x):
+        gsp_ids = x[BatchKey.gsp_id].squeeze().int()
+        query = self.gsp_id_embedding(gsp_ids).unsqueeze(1)
+        return query
+    
+    def _encode_key(self, x):
+        # Shape: [batch size, sequence length, PV site]
+        pv_site_seqs = x[BatchKey.pv].float()
+        batch_size = pv_site_seqs.shape[0]
+        
+        # PV ID embeddings are the same for each sample
+        pv_id_embed = torch.tile(self.pv_id_embedding(self._pv_ids), (batch_size, 1, 1))
+        
+        # Each concated (PV sequence, PV ID embedding) is processed with encoder
+        x_seq_in = torch.cat((pv_site_seqs.swapaxes(1,2), pv_id_embed), dim=2).flatten(0,1)
+        key = self._key_encoder(x_seq_in)
+        
+        # Reshape to [batch size, PV site, kdim]
+        key = key.unflatten(0, (batch_size, self.num_sites))
+        return key
+    
+    def _encode_value(self, x):
+        # Shape: [batch size, sequence length, PV site]
+        pv_site_seqs = x[BatchKey.pv].float()
+        batch_size = pv_site_seqs.shape[0]
+        
+        if self.use_pv_id_in_value:
+            # PV ID embeddings are the same for each sample
+            pv_id_embed = torch.tile(self.value_pv_id_embedding(self._pv_ids), (batch_size, 1, 1))
+            # Each concated (PV sequence, PV ID embedding) is processed with encoder
+            x_seq_in = torch.cat((pv_site_seqs.swapaxes(1,2), pv_id_embed), dim=2).flatten(0,1)
+        else:
+            # Encode each PV sequence independently
+            x_seq_in = pv_site_seqs.swapaxes(1,2).flatten(0,1)
+        
+        value = self._value_encoder(x_seq_in)
+        
+        # Reshape to [batch size, PV site, vdim]
+        value = value.unflatten(0, (batch_size, self.num_sites))
+        return value
+        
+    def _attention_forward(self, x, average_attn_weights=True):
+        
+        query = self._encode_query(x)
+        key = self._encode_key(x)
+        value = self._encode_value(x)
+
+        attn_output, attn_weights = self.multihead_attn(
+            query, 
+            key, 
+            value, 
+            average_attn_weights=average_attn_weights
+        )
+                
+        return attn_output, attn_weights 
+        
+    def forward(self, x):
+        """Run model forward"""
+        attn_output, attn_output_weights = self._attention_forward(x)
+        
+        # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]
+        x_out = attn_output.squeeze()
         
         return x_out

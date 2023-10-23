@@ -35,13 +35,13 @@ add_image_embedding_channel: False
 #--------------------------------------------
 
 pv_encoder:
-  _target_: pvnet.models.multimodal.site_encoders.encoders.SimpleLearnedAggregator
+  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork
   _partial_: True
   num_sites: 349
-  out_features: 64
-  value_dim: 64
-  value_enc_resblocks: 2
-  final_resblocks: 2
+  out_features: 40
+  num_heads: 4
+  kdim: 40
+  pv_id_embed_dim: 20
 
 #--------------------------------------------
 # Tabular network settings
@@ -79,11 +79,9 @@ pv_history_minutes: 180
 # Optimizer
 # ----------------------------------------------
 optimizer:
-  _target_: pvnet.optimizers.AdamWReduceLROnPlateau
-  lr: 
-    pv_encoder: 0.002
-    default: 0.0001
-  weight_decay: 0.02
+  _target_: pvnet.optimizers.EmbAdamWReduceLROnPlateau
+  lr: 0.0001
+  weight_decay: 0.01
   amsgrad: True
   patience: 5
   factor: 0.1
