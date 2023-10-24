@@ -26,8 +26,8 @@ class Model(BaseModel):
     - NWP, if included, is put through a similar encoder.
     - PV site-level data, if included, is put through an encoder which transforms it from 2D, with
         time and system-ID dimensions, to become a 1D feature vector.
-    - The satellite features*, NWP features*, PV site-level features*, GSP ID embedding*, and sun 
-        paramters* are concatenated into a 1D feature vector and passed through another neural 
+    - The satellite features*, NWP features*, PV site-level features*, GSP ID embedding*, and sun
+        paramters* are concatenated into a 1D feature vector and passed through another neural
         network to combine them and produce a forecast.
 
     * if included
@@ -55,10 +55,7 @@ class Model(BaseModel):
         pv_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-        """Neural network which combines information from different sources.
-
-
-        """
+        """Neural network which combines information from different sources."""
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = sat_encoder is not None
         self.include_nwp = nwp_encoder is not None
@@ -68,17 +65,17 @@ class Model(BaseModel):
         self.add_image_embedding_channel = add_image_embedding_channel
 
         super().__init__(history_minutes, forecast_minutes, optimizer, output_quantiles)
-            
+
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
         fusion_input_features = 0
-        
+
         if self.include_sat:
             # We limit the history to have a delay of 15 mins in satellite data
 
             if sat_history_minutes is None:
                 sat_history_minutes = history_minutes
-            
+
             self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
 
             self.sat_encoder = sat_encoder(
@@ -89,8 +86,8 @@ class Model(BaseModel):
                 self.sat_embed = ImageEmbedding(
                     318, self.sat_sequence_len, self.sat_encoder.image_size_pixels
                 )
-                
-            # Update num features
+
+            # Update num features
             fusion_input_features += self.sat_encoder.out_features
 
         if self.include_nwp:
@@ -108,25 +105,25 @@ class Model(BaseModel):
                 self.nwp_embed = ImageEmbedding(
                     318, nwp_sequence_len, self.nwp_encoder.image_size_pixels
                 )
-            
-            # Update num features
+
+            # Update num features
             fusion_input_features += self.nwp_encoder.out_features
-            
+
         if self.include_pv:
             if pv_history_minutes is None:
                 pv_history_minutes = history_minutes
-            
+
             self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes//5 + 1,
+                sequence_length=pv_history_minutes // 5 + 1,
             )
-            
-            # Update num features
+
+            # Update num features
             fusion_input_features += self.pv_encoder.out_features
 
         if self.embedding_dim:
             self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
-            
-            # Update num features
+
+            # Update num features
             fusion_input_features += embedding_dim
 
         if self.include_sun:
@@ -135,19 +132,19 @@ class Model(BaseModel):
                 in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1),
                 out_features=16,
             )
-            
-            # Update num features
+
+            # Update num features
             fusion_input_features += 16
-        
+
         if include_gsp_yield_history:
-            # Update num features
+            # Update num features
             fusion_input_features += self.history_len_30
 
         self.output_network = output_network(
             in_features=fusion_input_features,
             out_features=self.num_output_features,
         )
-        
+
         self.save_hyperparameters()
 
     def forward(self, x):
@@ -156,7 +153,7 @@ class Model(BaseModel):
         # ******************* Satellite imagery *************************
         if self.include_sat:
             # Shape: batch_size, seq_length, channel, height, width
-            sat_data = x[BatchKey.satellite_actual][:, :self.sat_sequence_len]
+            sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
             if self.add_image_embedding_channel:
                 id = x[BatchKey.gsp_id][:, 0].int()
@@ -172,12 +169,11 @@ class Model(BaseModel):
                 id = x[BatchKey.gsp_id][:, 0].int()
                 nwp_data = self.nwp_embed(nwp_data, id)
             modes["nwp"] = self.nwp_encoder(nwp_data)
-            
-            
+
         # *********************** PV Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            modes["pv"] =  self.pv_encoder(x)
+            modes["pv"] = self.pv_encoder(x)
 
         # *********************** GSP Data ************************************
         # add gsp yield history

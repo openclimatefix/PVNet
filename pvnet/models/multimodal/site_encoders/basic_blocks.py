@@ -29,7 +29,6 @@ class AbstractPVSitesEncoder(nn.Module, metaclass=ABCMeta):
         self.num_sites = num_sites
         self.out_features = out_features
 
-
     @abstractmethod
     def forward(self):
         """Run model forward"""
