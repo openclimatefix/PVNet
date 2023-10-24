@@ -76,7 +76,7 @@ def find_other_than_submodule_parameters(model, ignore_modules):
     
     Args:
         model: torch Module to search through
-        search_modules: List of submodule types to ignore
+        ignore_modules: List of submodule types to ignore
     """
     if isinstance(model, ignore_modules):
         return []
