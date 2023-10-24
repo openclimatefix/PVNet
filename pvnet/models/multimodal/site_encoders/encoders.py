@@ -11,8 +11,7 @@ from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEn
 
 
 class SimpleLearnedAggregator(AbstractPVSitesEncoder):
-    """A simple model which learns a different weighted-average across all of the PV sites for each
-    GSP.
+    """A simple model which learns a different weighted-average across all PV sites for each GSP.
 
     Each sequence from each site is independently encodeded through some dense layers wih skip-
     connections, then the encoded form of each sequence is aggregated through a learned weighted-sum
