@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import xarray as xr
 import torch
-import hydra 
+import hydra
 
 from ocf_datapipes.utils.consts import BatchKey
 from datetime import timedelta
@@ -144,62 +144,57 @@ def encoder_model_kwargs():
     )
     return kwargs
 
+
 @pytest.fixture()
 def site_encoder_model_kwargs():
     # Used to test site encoder model on PV data
     kwargs = dict(
-        sequence_length=180 // 5 +1,
+        sequence_length=180 // 5 + 1,
         num_sites=349,
         out_features=128,
     )
     return kwargs
 
+
 @pytest.fixture()
 def multimodal_model_kwargs(model_minutes_kwargs):
-
     kwargs = dict(
-        
         sat_encoder=dict(
-          _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
-          _partial_=True,
-          in_channels=11,
-          out_features=128,
-          number_of_conv3d_layers=6,
-          conv3d_channels=32,
-          image_size_pixels=24,
+            _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
+            _partial_=True,
+            in_channels=11,
+            out_features=128,
+            number_of_conv3d_layers=6,
+            conv3d_channels=32,
+            image_size_pixels=24,
         ),
-        
         nwp_encoder=dict(
-          _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
-          _partial_=True,
-          in_channels=2,
-          out_features=128,
-          number_of_conv3d_layers=6,
-          conv3d_channels=32,
-          image_size_pixels=24,
+            _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
+            _partial_=True,
+            in_channels=2,
+            out_features=128,
+            number_of_conv3d_layers=6,
+            conv3d_channels=32,
+            image_size_pixels=24,
         ),
-        
         add_image_embedding_channel=True,
-        
         pv_encoder=dict(
-          _target_=pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork,
-          _partial_=True,
-          num_sites=349,
-          out_features=40,
-          num_heads=4,
-          kdim=40,
-          pv_id_embed_dim=20,
+            _target_=pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork,
+            _partial_=True,
+            num_sites=349,
+            out_features=40,
+            num_heads=4,
+            kdim=40,
+            pv_id_embed_dim=20,
         ),
-        
         output_network=dict(
-          _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
-          _partial_=True,
-          fc_hidden_features=128,
-          n_res_blocks=6,
-          res_block_layers=2,
-          dropout_frac=0.0,
+            _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
+            _partial_=True,
+            fc_hidden_features=128,
+            n_res_blocks=6,
+            res_block_layers=2,
+            dropout_frac=0.0,
         ),
-        
         embedding_dim=16,
         include_sun=True,
         include_gsp_yield_history=True,
@@ -208,10 +203,9 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         nwp_forecast_minutes=480,
         pv_history_minutes=180,
         min_sat_delay_minutes=30,
-        
     )
-    
+
     kwargs = hydra.utils.instantiate(kwargs)
-    
+
     kwargs.update(model_minutes_kwargs)
     return kwargs
