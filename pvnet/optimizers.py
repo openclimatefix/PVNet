@@ -53,7 +53,7 @@ class AdamW(AbstractOptimizer):
 
 def find_submodule_parameters(model, search_modules):
     """Finds all parameters within given submodule types
-    
+
     Args:
         model: torch Module to search through
         search_modules: List of submodule types to search for
@@ -73,7 +73,7 @@ def find_submodule_parameters(model, search_modules):
 
 def find_other_than_submodule_parameters(model, ignore_modules):
     """Finds all parameters not with given submodule types
-    
+
     Args:
         model: torch Module to search through
         search_modules: List of submodule types to ignore
