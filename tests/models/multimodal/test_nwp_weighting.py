@@ -12,7 +12,7 @@ def nwp_weighting_model(model_minutes_kwargs):
     )
     return model
 
-
+@pytest.mark.skip(reason="This model is no longer maintained")
 def test_model_forward(nwp_weighting_model, sample_batch):
     y = nwp_weighting_model(sample_batch)
 
@@ -20,7 +20,7 @@ def test_model_forward(nwp_weighting_model, sample_batch):
     # batch size=2, forecast_len=15
     assert tuple(y.shape) == (2, 16), y.shape
 
-
+@pytest.mark.skip(reason="This model is no longer maintained")
 def test_model_backwards(nwp_weighting_model, sample_batch):
     opt = SGD(nwp_weighting_model.parameters(), lr=0.001)
 
