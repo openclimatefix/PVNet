@@ -58,6 +58,10 @@ def push_to_huggingface(
         checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt")
 
     model.load_state_dict(state_dict=checkpoint["state_dict"])
+    
+    # Check for optional data config
+    data_config = f"{checkpoint_dir_path}/data_config.yaml"
+    data_config = data_config if os.path.isfile(data_config) else None
 
     # Push to hub
     if local_path is None:
@@ -69,6 +73,7 @@ def push_to_huggingface(
     model.save_pretrained(
         model_output_dir,
         config=model_config,
+        data_config=data_config,
         wandb_model_code=wandb_id,
         push_to_hub=push_to_hub,
         repo_id="openclimatefix/pvnet_v2" if push_to_hub else None,

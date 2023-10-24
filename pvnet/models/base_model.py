@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -95,6 +96,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         self,
         save_directory: Union[str, Path],
         config: dict,
+        data_config: Optional[str] = None,
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_model_code: Optional[str] = None,
@@ -109,6 +111,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 Path to directory in which the model weights and configuration will be saved.
             config (`dict`):
                 Model configuration specified as a key/value dictionary.
+            data_config (`str`, *optional*):
+                The path to the data config.
             repo_id (`str`, *optional*):
                 ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
@@ -128,9 +132,12 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # saving model weights/files
         self._save_pretrained(save_directory)
 
-        # saving config
+        # saving model and data config
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
+            
+        if data_config is not None:
+            shutil.copyfile(data_config, save_directory / "data_config.yaml")
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
