@@ -135,7 +135,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # saving model and data config
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
-            
+
         if data_config is not None:
             shutil.copyfile(data_config, save_directory / "data_config.yaml")
 

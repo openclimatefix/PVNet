@@ -58,8 +58,8 @@ def push_to_huggingface(
         checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt")
 
     model.load_state_dict(state_dict=checkpoint["state_dict"])
-    
-    # Check for optional data config
+
+    # Check for optional data config
     data_config = f"{checkpoint_dir_path}/data_config.yaml"
     data_config = data_config if os.path.isfile(data_config) else None
 
