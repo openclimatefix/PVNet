@@ -55,7 +55,46 @@ class Model(BaseModel):
         pv_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
-        """Neural network which combines information from different sources."""
+        """Neural network which combines information from different sources.
+
+        Notes:
+            In the args, where it says a module `m` is partially instantiated, it means that a 
+            normal pytorch module will be returned by running `mod = m(**kwargs)`. In this library,
+            this partial instantiation is generally achieved using partial instantiation via hydra. 
+            However, the arg is still valid as long as `m(**kwargs)` returns a valid pytorch module 
+            - for example if `m` is a regular function.
+
+        Args:
+            output_network: A partially instatiated pytorch Module class used to combine the 1D 
+                features to produce the forecast.
+            output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
+                None the output is a single value.
+            nwp_encoder: A partially instatiated pytorch Module class used to encode the NWP data 
+                from 4D into an 1D feature vector.
+            sat_encoder: A partially instatiated pytorch Module class used to encode the satellite 
+                data from 4D into an 1D feature vector.
+            pv_encoder: A partially instatiated pytorch Module class used to encode the site-level 
+                PV data from 2D into an 1D feature vector.
+            add_image_embedding_channel: Add a channel to the NWP and satellite data with the
+                embedding of the GSP ID.
+            include_gsp_yield_history: Include GSP yield data.
+            include_sun: Include sun azimuth and altitude data.
+            embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
+                `None`.
+            forecast_minutes: The amount of minutes that should be forecasted.
+            history_minutes: The default amount of historical minutes that are used.
+            sat_history_minutes: Length of recent observations used for satellite inputs. Defaults 
+                to `history_minutes` if not provided.
+            min_sat_delay_minutes: Minimum delay with respect to t0 of the latest available 
+                satellite image.
+            nwp_forecast_minutes: Period of future NWP forecast data used as input. Defaults to
+                `forecast_minutes` if not provided.
+            nwp_history_minutes: Period of historical NWP forecast used as input. Defaults to
+                `history_minutes` if not provided.
+            pv_history_minutes: Length of recent site-level PV data data used as input. Defaults to
+                `history_minutes` if not provided.
+            optimizer: Optimizer factory function used for network.
+        """
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = sat_encoder is not None
         self.include_nwp = nwp_encoder is not None
