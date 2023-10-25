@@ -17,7 +17,7 @@ from pvnet.optimizers import AbstractOptimizer
 
 
 class Model(BaseModel):
-    """Neural network which combines information from different sources.
+    """Neural network which combines information from different sources
 
     Architecture is roughly as follows:
 
