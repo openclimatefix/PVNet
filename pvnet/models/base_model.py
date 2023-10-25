@@ -463,4 +463,4 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         if self.lr is not None:
             # Use learning rate found by learning rate finder callback
             self._optimizer.lr = self.lr
-        return self._optimizer(self.parameters())
+        return self._optimizer(self)
