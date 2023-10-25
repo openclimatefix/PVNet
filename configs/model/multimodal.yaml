@@ -15,13 +15,9 @@ nwp_encoder:
   conv3d_channels: 32
   image_size_pixels: 24
 
-include_sat: False
-include_nwp: True
-add_image_embedding_channel: True
-sat_image_size_pixels: 48
-nwp_image_size_pixels: 48
-number_sat_channels: 11
-number_nwp_channels: 2
+#--------------------------------------------
+# Sat encoder
+#--------------------------------------------
 
 sat_encoder:
   _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
