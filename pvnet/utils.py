@@ -16,7 +16,7 @@ import yaml
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from ocf_datapipes.utils.consts import BatchKey, Location
-from ocf_datapipes.utils.geospatial import osgb_to_lat_lon
+from ocf_datapipes.utils.geospatial import osgb_to_lon_lat
 from omegaconf import DictConfig, OmegaConf
 
 import pvnet
@@ -318,7 +318,7 @@ def construct_ocf_ml_metrics_batch_df(batch, y, y_hat):
 
     y_osgb_centre = _get_numpy(BatchKey.gsp_y_osgb)
     x_osgb_centre = _get_numpy(BatchKey.gsp_x_osgb)
-    latitude, longitude = osgb_to_lat_lon(x=x_osgb_centre, y=y_osgb_centre)
+    longitude, latitude = osgb_to_lon_lat(x=x_osgb_centre, y=y_osgb_centre)
 
     # Store df columns in dict
     df_dict = {}

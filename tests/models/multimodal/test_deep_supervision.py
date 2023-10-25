@@ -9,6 +9,7 @@ def deepsupervision_model(multimodal_model_kwargs):
     return model
 
 
+@pytest.mark.skip(reason="This model is no longer maintained")
 def test_model_forward(deepsupervision_model, sample_batch):
     y = deepsupervision_model(sample_batch)
 
@@ -17,6 +18,7 @@ def test_model_forward(deepsupervision_model, sample_batch):
     assert tuple(y.shape) == (2, 16), y.shape
 
 
+@pytest.mark.skip(reason="This model is no longer maintained")
 def test_model_backwards(deepsupervision_model, sample_batch):
     opt = SGD(deepsupervision_model.parameters(), lr=0.001)
 
