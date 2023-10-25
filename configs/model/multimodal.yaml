@@ -15,9 +15,13 @@ nwp_encoder:
   conv3d_channels: 32
   image_size_pixels: 24
 
-#--------------------------------------------
-# Sat encoder settings
-#--------------------------------------------
+include_sat: False
+include_nwp: True
+add_image_embedding_channel: True
+sat_image_size_pixels: 48
+nwp_image_size_pixels: 48
+number_sat_channels: 11
+number_nwp_channels: 2
 
 sat_encoder:
   _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
@@ -57,14 +61,14 @@ output_network:
 
 embedding_dim: 16
 include_sun: True
-include_gsp_yield_history: False
+include_gsp_yield_history: false
 
 #--------------------------------------------
 # Times
 #--------------------------------------------
 
 # Foreast and time settings
-forecast_minutes: 480
+forecast_minutes: 2880 # 48 hours
 history_minutes: 120
 
 min_sat_delay_minutes: 60
@@ -72,9 +76,7 @@ min_sat_delay_minutes: 60
 # --- set to null if same as history_minutes ---
 sat_history_minutes: 90
 nwp_history_minutes: 120
-nwp_forecast_minutes: 480
-pv_history_minutes: 180
-
+nwp_forecast_minutes: 2880 # 48 hours
 # ----------------------------------------------
 # Optimizer
 # ----------------------------------------------
