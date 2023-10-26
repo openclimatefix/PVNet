@@ -1,4 +1,4 @@
-ocf_datapipes==2.0.4
+ocf_datapipes>=2.0.6
 nowcasting_utils
 ocf_ml_metrics
 numpy
