@@ -140,7 +140,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             n_kv_res_blocks: Number of residual blocks to use in the key and value encoders.
             kv_res_block_layers: Number of fully-connected layers used in each residual block within
                 the key and value encoders.
-            use_pv_id_in_value: Whether to use a PV ID embedding in network used to produce the 
+            use_pv_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
 
         """
@@ -232,8 +232,8 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
         attn_output, attn_weights = self.multihead_attn(
             query, key, value, average_attn_weights=average_attn_weights
-        )        
-        
+        )
+
         return attn_output, attn_weights
 
     def forward(self, x):
