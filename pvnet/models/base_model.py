@@ -1,6 +1,5 @@
 """Base model for all PVNet submodels"""
 import json
-import yaml
 import logging
 import os
 from pathlib import Path
@@ -12,6 +11,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
+import yaml
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
@@ -32,7 +32,6 @@ from pvnet.models.utils import (
 )
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
-
 
 DATA_CONFIG_NAME = "data_config.yaml"
 
@@ -58,18 +57,18 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     config["general"]["description"] = "Config for training the saved PVNet model"
     config["general"]["name"] = "PVNet current"
 
-    for source in ["gsp","nwp", "satellite", "hrvsatellite"]:
+    for source in ["gsp", "nwp", "satellite", "hrvsatellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
-            if config["input_data"][source][f"{source}_zarr_path"]!="":
+            if config["input_data"][source][f"{source}_zarr_path"] != "":
                 config["input_data"][source][f"{source}_zarr_path"] = f"{placeholder}.zarr"
 
     if "pv" in config["input_data"]:
         for d in config["input_data"]["pv"]["pv_files_groups"]:
-            d['pv_filename'] = f"{placeholder}.netcdf"
-            d['pv_metadata_filename'] = f"{placeholder}.csv"
+            d["pv_filename"] = f"{placeholder}.netcdf"
+            d["pv_metadata_filename"] = f"{placeholder}.csv"
 
-    with open(output_path, 'w') as outfile:
+    with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
 
 
