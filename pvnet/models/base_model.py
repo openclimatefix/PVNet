@@ -33,6 +33,10 @@ from pvnet.models.utils import (
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
 
+
+DATA_CONFIG_NAME = "data_config.yaml"
+
+
 logger = logging.getLogger(__name__)
 
 activities = [torch.profiler.ProfilerActivity.CPU]
@@ -91,6 +95,39 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         return model
 
+    @classmethod
+    @_deprecate_positional_args(version="0.16")
+    def get_data_config(
+        cls,
+        *,
+        model_id: str,
+        revision: str,
+        cache_dir: Optional[Union[str, Path]] = None,
+        force_download: bool = False,
+        proxies: Optional[Dict] = None,
+        resume_download: bool = False,
+        local_files_only: bool = False,
+        token: Optional[Union[str, bool]] = None,
+    ):
+        """Load data config file."""
+        if os.path.isdir(model_id):
+            print("Loading data config from local directory")
+            data_config_file = os.path.join(model_id, DATA_CONFIG_NAME)
+        else:
+            data_config_file = hf_hub_download(
+                repo_id=model_id,
+                filename=DATA_CONFIG_NAME,
+                revision=revision,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                token=token,
+                local_files_only=local_files_only,
+            )
+
+        return data_config_file
+    
     @_deprecate_positional_args(version="0.16")
     def save_pretrained(
         self,
@@ -137,7 +174,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
             
         if data_config is not None:
-            shutil.copyfile(data_config, save_directory / "data_config.yaml")
+            shutil.copyfile(data_config, save_directory / DATA_CONFIG_NAME)
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
