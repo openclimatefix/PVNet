@@ -59,9 +59,9 @@ def push_to_huggingface(
 
     model.load_state_dict(state_dict=checkpoint["state_dict"])
     
-    # Check for optional data config
+    # Check for data config
     data_config = f"{checkpoint_dir_path}/data_config.yaml"
-    data_config = data_config if os.path.isfile(data_config) else None
+    assert os.path.isfile(data_config)
 
     # Push to hub
     if local_path is None:
