@@ -109,14 +109,14 @@ def train(config: DictConfig) -> Optional[float]:
                 # Also save model config here - this makes for easy model push to huggingface
                 os.makedirs(callback.dirpath, exist_ok=True)
                 OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
-                
+
                 # Similarly save the data config
                 data_config = config.datamodule.configuration
                 if data_config is None:
                     # Data config can be none if using presaved batches. We go to the presaved
-                    # batches to get the data config
+                    # batches to get the data config
                     data_config = f"{config.datamodule.batch_dir}/data_configuration.yaml"
-                
+
                 assert os.path.isfile(data_config), f"Data config file not found: {data_config}"
                 shutil.copyfile(data_config, f"{callback.dirpath}/data_config.yaml")
                 break
