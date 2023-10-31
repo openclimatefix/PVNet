@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
+import yaml
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
@@ -32,11 +33,43 @@ from pvnet.models.utils import (
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
 
+DATA_CONFIG_NAME = "data_config.yaml"
+
+
 logger = logging.getLogger(__name__)
 
 activities = [torch.profiler.ProfilerActivity.CPU]
 if torch.cuda.is_available():
     activities.append(torch.profiler.ProfilerActivity.CUDA)
+
+
+def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
+    """Resave the data config and replace the filepaths with a placeholder.
+
+    Args:
+        input_path: Path to input datapipes configuration file
+        output_path: Location to save the output configuration file
+        placeholder: String placeholder for data sources
+    """
+    with open(input_path) as cfg:
+        config = yaml.load(cfg, Loader=yaml.FullLoader)
+
+    config["general"]["description"] = "Config for training the saved PVNet model"
+    config["general"]["name"] = "PVNet current"
+
+    for source in ["gsp", "nwp", "satellite", "hrvsatellite"]:
+        if source in config["input_data"]:
+            # If not empty - i.e. if used
+            if config["input_data"][source][f"{source}_zarr_path"] != "":
+                config["input_data"][source][f"{source}_zarr_path"] = f"{placeholder}.zarr"
+
+    if "pv" in config["input_data"]:
+        for d in config["input_data"]["pv"]["pv_files_groups"]:
+            d["pv_filename"] = f"{placeholder}.netcdf"
+            d["pv_metadata_filename"] = f"{placeholder}.csv"
+
+    with open(output_path, "w") as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
 
 
 class PVNetModelHubMixin(PyTorchModelHubMixin):
@@ -90,11 +123,42 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         return model
 
-    @_deprecate_positional_args(version="0.16")
+    @classmethod
+    def get_data_config(
+        cls,
+        model_id: str,
+        revision: str,
+        cache_dir: Optional[Union[str, Path]] = None,
+        force_download: bool = False,
+        proxies: Optional[Dict] = None,
+        resume_download: bool = False,
+        local_files_only: bool = False,
+        token: Optional[Union[str, bool]] = None,
+    ):
+        """Load data config file."""
+        if os.path.isdir(model_id):
+            print("Loading data config from local directory")
+            data_config_file = os.path.join(model_id, DATA_CONFIG_NAME)
+        else:
+            data_config_file = hf_hub_download(
+                repo_id=model_id,
+                filename=DATA_CONFIG_NAME,
+                revision=revision,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                token=token,
+                local_files_only=local_files_only,
+            )
+
+        return data_config_file
+
     def save_pretrained(
         self,
         save_directory: Union[str, Path],
         config: dict,
+        data_config: Union[str, Path],
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_model_code: Optional[str] = None,
@@ -109,6 +173,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 Path to directory in which the model weights and configuration will be saved.
             config (`dict`):
                 Model configuration specified as a key/value dictionary.
+            data_config (`str` or `Path`):
+                The path to the data config.
             repo_id (`str`, *optional*):
                 ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
@@ -128,9 +194,12 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # saving model weights/files
         self._save_pretrained(save_directory)
 
-        # saving config
+        # saving model and data config
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
+
+        # Save cleaned datapipes configuration file
+        make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
