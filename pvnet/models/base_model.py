@@ -198,15 +198,9 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # saving model and data config
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
-<<<<<<< HEAD
 
-        # Save cleaned out datapipes configuration file
+        # Save cleaned datapipes configuration file
         make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
-=======
-
-        if data_config is not None:
-            shutil.copyfile(data_config, save_directory / "data_config.yaml")
->>>>>>> c88505b6ad7eb6efe4f3adba80157909fe554452
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
