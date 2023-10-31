@@ -154,7 +154,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             )
 
         return data_config_file
-    
+
     def save_pretrained(
         self,
         save_directory: Union[str, Path],
@@ -199,7 +199,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
 <<<<<<< HEAD
-            
+
         # Save cleaned out datapipes configuration file
         make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
 =======

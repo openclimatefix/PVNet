@@ -58,8 +58,8 @@ def push_to_huggingface(
         checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt")
 
     model.load_state_dict(state_dict=checkpoint["state_dict"])
-    
-    # Check for data config
+
+    # Check for data config
     data_config = f"{checkpoint_dir_path}/data_config.yaml"
     assert os.path.isfile(data_config)
 
