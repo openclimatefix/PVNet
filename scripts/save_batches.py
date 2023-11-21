@@ -30,6 +30,7 @@ from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
+from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
 from pvnet.data.datamodule import batch_to_tensor
@@ -80,7 +81,7 @@ def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, dataloader
 
 @hydra.main(config_path="../configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
-    "Constructs and saves validation and training batches."
+    """Constructs and saves validation and training batches."""
     config_dm = config.datamodule
 
     print_config(config, resolve=False)
