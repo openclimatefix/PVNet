@@ -2,7 +2,7 @@
 """
 
 import torch
-from torchdata.datapipes.iter import FileLister
+from torch.utils.data.datapipes.iter import FileLister
 
 from pvnet.data.datamodule import BatchSplitter
 

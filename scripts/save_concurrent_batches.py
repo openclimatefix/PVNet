@@ -7,9 +7,9 @@ the same config file currently set to train the model.
 use:
 ```
 python save_concurrent_batches.py \
-    +batch_output_dir="/mnt/disks/batches/concurrent_batches_v0" \
-    +num_train_batches=1_000 \
-    +num_val_batches=200
+    +batch_output_dir="/mnt/disks/nwp_rechunk/concurrent_batches_v3.9" \
+    +num_train_batches=20_000 \
+    +num_val_batches=4_000
 ```
 
 """
@@ -31,8 +31,7 @@ from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
-from torchdata.datapipes.iter import IterableWrapper
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from pvnet.data.datamodule import batch_to_tensor
@@ -123,13 +122,12 @@ def _get_datapipe(config_path, start_time, end_time, n_batches):
     return data_pipeline
 
 
-def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
+def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, dataloader_kwargs):
     save_func = _save_batch_func_factory(batch_dir)
     filenumber_pipe = IterableWrapper(np.arange(num_batches)).sharding_filter()
     save_pipe = filenumber_pipe.zip(batch_pipe).map(save_func)
 
-    rs = MultiProcessingReadingService(**rs_config)
-    dataloader = DataLoader2(save_pipe, reading_service=rs)
+    dataloader = DataLoader(save_pipe, **dataloader_kwargs)
 
     pbar = tqdm(total=num_batches)
     for i, batch in zip(range(num_batches), dataloader):
@@ -163,10 +161,20 @@ def main(config: DictConfig):
     os.mkdir(f"{config.batch_output_dir}/train")
     os.mkdir(f"{config.batch_output_dir}/val")
 
-    readingservice_config = dict(
-        num_workers=config_dm.num_workers,
-        multiprocessing_context="spawn",
-        worker_prefetch_cnt=config_dm.prefetch_factor,
+    
+    dataloader_kwargs = dict(
+        shuffle=False,
+        batch_size=None, # batched in datapipe step
+        sampler=None,
+        batch_sampler=None, 
+        num_workers=config_dm.num_workers, 
+        collate_fn=None,
+        pin_memory=False, 
+        drop_last=False, 
+        timeout=0,
+        worker_init_fn=None,
+        prefetch_factor=config_dm.prefetch_factor,
+        persistent_workers=False
     )
 
     print("----- Saving val batches -----")
@@ -181,7 +189,7 @@ def main(config: DictConfig):
         batch_pipe=val_batch_pipe,
         batch_dir=f"{config.batch_output_dir}/val",
         num_batches=config.num_val_batches,
-        rs_config=readingservice_config,
+        dataloader_kwargs=dataloader_kwargs,
     )
 
     print("----- Saving train batches -----")
@@ -196,7 +204,7 @@ def main(config: DictConfig):
         batch_pipe=train_batch_pipe,
         batch_dir=f"{config.batch_output_dir}/train",
         num_batches=config.num_train_batches,
-        rs_config=readingservice_config,
+        dataloader_kwargs=dataloader_kwargs,
     )
 
     print("done")

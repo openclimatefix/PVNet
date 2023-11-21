@@ -1,4 +1,4 @@
-ocf_datapipes>=2.0.6
+ocf_datapipes>=2.2.2
 nowcasting_utils
 ocf_ml_metrics
 numpy
@@ -9,7 +9,6 @@ ipykernel
 h5netcdf
 torch>=2.0
 lightning>=2.0.1
-torchdata
 torchvision
 pytest
 pytest-cov
