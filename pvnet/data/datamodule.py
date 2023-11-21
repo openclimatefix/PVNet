@@ -3,16 +3,14 @@ from datetime import datetime
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from torch.utils.data.datapipes.datapipe import IterDataPipe
-from torch.utils.data.datapipes.iter import FileLister
-from torch.utils.data.datapipes._decorator import functional_datapipe
-
 from lightning.pytorch import LightningDataModule
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
-
+from torch.utils.data import DataLoader
+from torch.utils.data.datapipes._decorator import functional_datapipe
+from torch.utils.data.datapipes.datapipe import IterDataPipe
+from torch.utils.data.datapipes.iter import FileLister
 
 
 def copy_batch_to_device(batch, device):
