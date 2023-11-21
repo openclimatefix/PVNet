@@ -3,16 +3,13 @@ from datetime import datetime
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from torch.utils.data.datapipes.datapipe import IterDataPipe
-from torch.utils.data.datapipes._decorator import functional_datapipe
-
 from lightning.pytorch import LightningDataModule
-
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
-
+from torch.utils.data import DataLoader
+from torch.utils.data.datapipes._decorator import functional_datapipe
+from torch.utils.data.datapipes.datapipe import IterDataPipe
 
 
 def copy_batch_to_device(batch, device):
@@ -120,20 +117,20 @@ class DataModule(LightningDataModule):
         self.test_period = [
             None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in test_period
         ]
-        
+
         self._common_dataloader_kwargs = dict(
-            shuffle=False, # shuffled in datapipe step
-            batch_size=None, # batched in datapipe step
+            shuffle=False,  # shuffled in datapipe step
+            batch_size=None,  # batched in datapipe step
             sampler=None,
-            batch_sampler=None, 
-            num_workers=num_workers, 
+            batch_sampler=None,
+            num_workers=num_workers,
             collate_fn=None,
-            pin_memory=False, 
-            drop_last=False, 
+            pin_memory=False,
+            drop_last=False,
             timeout=0,
             worker_init_fn=None,
             prefetch_factor=prefetch_factor,
-            persistent_workers=False
+            persistent_workers=False,
         )
 
     def _get_datapipe(self, start_time, end_time):
@@ -184,7 +181,7 @@ class DataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("train", shuffle=True)
         else:
             datapipe = self._get_datapipe(*self.train_period)
-        rs = MultiProcessingReadingService(**self.readingservice_config)
+        MultiProcessingReadingService(**self.readingservice_config)
         return DataLoader(datapipe, **self._common_dataloader_kwargs)
 
     def val_dataloader(self):
@@ -195,7 +192,6 @@ class DataModule(LightningDataModule):
             datapipe = self._get_datapipe(*self.val_period)
         return DataLoader(datapipe, **self._common_dataloader_kwargs)
 
-
     def test_dataloader(self):
         """Construct test dataloader"""
         if self.batch_dir is not None:
@@ -203,4 +199,3 @@ class DataModule(LightningDataModule):
         else:
             datapipe = self._get_datapipe(*self.test_period)
         return DataLoader(datapipe, **self._common_dataloader_kwargs)
-
