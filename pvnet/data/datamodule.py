@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.datapipe import IterDataPipe
+from torch.utils.data.datapipes.iter import FileLister
 from torch.utils.data.datapipes._decorator import functional_datapipe
 
 from lightning.pytorch import LightningDataModule
@@ -184,7 +185,6 @@ class DataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("train", shuffle=True)
         else:
             datapipe = self._get_datapipe(*self.train_period)
-        rs = MultiProcessingReadingService(**self.readingservice_config)
         return DataLoader(datapipe, **self._common_dataloader_kwargs)
 
     def val_dataloader(self):
