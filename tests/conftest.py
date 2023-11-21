@@ -96,7 +96,7 @@ def sample_datamodule():
         configuration=None,
         batch_size=2,
         num_workers=0,
-        prefetch_factor=2,
+        prefetch_factor=None,
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
