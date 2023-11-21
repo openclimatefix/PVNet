@@ -84,7 +84,7 @@ def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, dataloader
 def main(config: DictConfig):
     "Constructs and saves validation and training batches."
     config_dm = config.datamodule
-    
+
     print_config(config, resolve=False)
 
     # Set up directory
@@ -100,20 +100,20 @@ def main(config: DictConfig):
 
     dataloader_kwargs = dict(
         shuffle=False,
-        batch_size=None, # batched in datapipe step
+        batch_size=None,  # batched in datapipe step
         sampler=None,
-        batch_sampler=None, 
-        num_workers=config_dm.num_workers, 
+        batch_sampler=None,
+        num_workers=config_dm.num_workers,
         collate_fn=None,
-        pin_memory=False, 
-        drop_last=False, 
+        pin_memory=False,
+        drop_last=False,
         timeout=0,
         worker_init_fn=None,
         prefetch_factor=config_dm.prefetch_factor,
-        persistent_workers=False
+        persistent_workers=False,
     )
-    
-    if config.num_val_batches>0:
+
+    if config.num_val_batches > 0:
         print("----- Saving val batches -----")
 
         val_batch_pipe = _get_datapipe(
@@ -128,9 +128,8 @@ def main(config: DictConfig):
             num_batches=config.num_val_batches,
             dataloader_kwargs=dataloader_kwargs,
         )
-    
-    if config.num_train_batches>0:
 
+    if config.num_train_batches > 0:
         print("----- Saving train batches -----")
 
         train_batch_pipe = _get_datapipe(

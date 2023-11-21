@@ -163,20 +163,19 @@ def main(config: DictConfig):
     os.mkdir(f"{config.batch_output_dir}/train")
     os.mkdir(f"{config.batch_output_dir}/val")
 
-    
     dataloader_kwargs = dict(
         shuffle=False,
-        batch_size=None, # batched in datapipe step
+        batch_size=None,  # batched in datapipe step
         sampler=None,
-        batch_sampler=None, 
-        num_workers=config_dm.num_workers, 
+        batch_sampler=None,
+        num_workers=config_dm.num_workers,
         collate_fn=None,
-        pin_memory=False, 
-        drop_last=False, 
+        pin_memory=False,
+        drop_last=False,
         timeout=0,
         worker_init_fn=None,
         prefetch_factor=config_dm.prefetch_factor,
-        persistent_workers=False
+        persistent_workers=False,
     )
 
     print("----- Saving val batches -----")
