@@ -7,9 +7,11 @@ the same config file currently set to train the model.
 use:
 ```
 python save_batches.py \
-    +batch_output_dir="/mnt/disks/batches/batches_v0" \
-    +num_train_batches=10_000 \
-    +num_val_batches=2_000
+    +batch_output_dir="/mnt/disks/bigbatches/batches_v0" \
+    datamodule.batch_size=2 \
+    datamodule.num_workers=2 \
+    +num_train_batches=0 \
+    +num_val_batches=2
 ```
 
 """
@@ -27,11 +29,12 @@ from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
-from torchdata.dataloader2 import DataLoader2, MultiProcessingReadingService
-from torchdata.datapipes.iter import IterableWrapper
+from torch.utils.data import DataLoader
+from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
 from pvnet.data.datamodule import batch_to_tensor
+from pvnet.utils import print_config
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
@@ -62,13 +65,12 @@ def _get_datapipe(config_path, start_time, end_time, batch_size):
     return data_pipeline
 
 
-def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, rs_config):
+def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, dataloader_kwargs):
     save_func = _save_batch_func_factory(batch_dir)
     filenumber_pipe = IterableWrapper(range(num_batches)).sharding_filter()
     save_pipe = filenumber_pipe.zip(batch_pipe).map(save_func)
 
-    rs = MultiProcessingReadingService(**rs_config)
-    dataloader = DataLoader2(save_pipe, reading_service=rs)
+    dataloader = DataLoader(save_pipe, **dataloader_kwargs)
 
     pbar = tqdm(total=num_batches)
     for i, batch in zip(range(num_batches), dataloader):
@@ -82,6 +84,8 @@ def main(config: DictConfig):
     """Constructs and saves validation and training batches."""
     config_dm = config.datamodule
 
+    print_config(config, resolve=False)
+
     # Set up directory
     os.makedirs(config.batch_output_dir, exist_ok=False)
 
@@ -93,41 +97,52 @@ def main(config: DictConfig):
     os.mkdir(f"{config.batch_output_dir}/train")
     os.mkdir(f"{config.batch_output_dir}/val")
 
-    readingservice_config = dict(
+    dataloader_kwargs = dict(
+        shuffle=False,
+        batch_size=None,  # batched in datapipe step
+        sampler=None,
+        batch_sampler=None,
         num_workers=config_dm.num_workers,
-        multiprocessing_context="spawn",
-        worker_prefetch_cnt=config_dm.prefetch_factor,
+        collate_fn=None,
+        pin_memory=False,
+        drop_last=False,
+        timeout=0,
+        worker_init_fn=None,
+        prefetch_factor=config_dm.prefetch_factor,
+        persistent_workers=False,
     )
 
-    print("----- Saving val batches -----")
+    if config.num_val_batches > 0:
+        print("----- Saving val batches -----")
 
-    val_batch_pipe = _get_datapipe(
-        config_dm.configuration,
-        *config_dm.val_period,
-        config_dm.batch_size,
-    )
+        val_batch_pipe = _get_datapipe(
+            config_dm.configuration,
+            *config_dm.val_period,
+            config_dm.batch_size,
+        )
 
-    _save_batches_with_dataloader(
-        batch_pipe=val_batch_pipe,
-        batch_dir=f"{config.batch_output_dir}/val",
-        num_batches=config.num_val_batches,
-        rs_config=readingservice_config,
-    )
+        _save_batches_with_dataloader(
+            batch_pipe=val_batch_pipe,
+            batch_dir=f"{config.batch_output_dir}/val",
+            num_batches=config.num_val_batches,
+            dataloader_kwargs=dataloader_kwargs,
+        )
 
-    print("----- Saving train batches -----")
+    if config.num_train_batches > 0:
+        print("----- Saving train batches -----")
 
-    train_batch_pipe = _get_datapipe(
-        config_dm.configuration,
-        *config_dm.train_period,
-        config_dm.batch_size,
-    )
+        train_batch_pipe = _get_datapipe(
+            config_dm.configuration,
+            *config_dm.train_period,
+            config_dm.batch_size,
+        )
 
-    _save_batches_with_dataloader(
-        batch_pipe=train_batch_pipe,
-        batch_dir=f"{config.batch_output_dir}/train",
-        num_batches=config.num_train_batches,
-        rs_config=readingservice_config,
-    )
+        _save_batches_with_dataloader(
+            batch_pipe=train_batch_pipe,
+            batch_dir=f"{config.batch_output_dir}/train",
+            num_batches=config.num_train_batches,
+            dataloader_kwargs=dataloader_kwargs,
+        )
 
     print("done")
 
