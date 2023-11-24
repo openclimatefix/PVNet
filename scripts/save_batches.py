@@ -33,7 +33,6 @@ from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
-import xarray as xr
 
 from pvnet.data.datamodule import batch_to_tensor
 from pvnet.utils import print_config
@@ -77,7 +76,9 @@ def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str 
     return data_pipeline
 
 
-def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, dataloader_kwargs, output_format: str = "torch"):
+def _save_batches_with_dataloader(
+    batch_pipe, batch_dir, num_batches, dataloader_kwargs, output_format: str = "torch"
+):
     save_func = _save_batch_func_factory(batch_dir, output_format=output_format)
     filenumber_pipe = IterableWrapper(range(num_batches)).sharding_filter()
     save_pipe = filenumber_pipe.zip(batch_pipe).map(save_func)
