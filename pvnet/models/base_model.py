@@ -17,18 +17,15 @@ from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
-from nowcasting_utils.models.loss import WeightedLosses
-from nowcasting_utils.models.metrics import (
-    mae_each_forecast_horizon,
-    mse_each_forecast_horizon,
-)
 from ocf_datapipes.utils.consts import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
+from ocf_ml_metrics.metrics.errors import common_metrics
 
 from pvnet.models.utils import (
     BatchAccumulator,
     MetricAccumulator,
     PredAccumulator,
+    WeightedLosses,
 )
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
@@ -381,8 +378,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
 
-        mse_each_step = mse_each_forecast_horizon(output=y_hat, target=y)
-        mae_each_step = mae_each_forecast_horizon(output=y_hat, target=y)
+        common_metrics_each_step = common_metrics(predictions=y_hat, targets=y)
+        mse_each_step = common_metrics_each_step["rmse"] ** 2
+        mae_each_step = common_metrics_each_step["mae"]
 
         losses.update({f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)})
         losses.update({f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_step)})
