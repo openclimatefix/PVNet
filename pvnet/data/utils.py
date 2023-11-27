@@ -25,7 +25,7 @@ def batch_to_tensor(batch):
 
 def split_batches(batch):
     """Splits a single batch of data."""
-    n_samples = batch[BatchKey.sensor].shape[0]
+    n_samples = batch[BatchKey.gsp].shape[0]
     keys = list(batch.keys())
     examples = [{} for _ in range(n_samples)]
     for i in range(n_samples):
