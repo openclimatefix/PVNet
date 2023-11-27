@@ -1,3 +1,4 @@
+"""Utils common between Wind and PV datamodules"""
 import numpy as np
 import torch
 from ocf_datapipes.utils.consts import BatchKey
