@@ -15,7 +15,6 @@ nwp_encoder:
   conv3d_channels: 32
   image_size_pixels: 24
 
-
 #--------------------------------------------
 # Sensor encoder settings
 #--------------------------------------------
