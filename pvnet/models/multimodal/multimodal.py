@@ -42,7 +42,7 @@ class Model(BaseModel):
         nwp_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         pv_encoder: Optional[AbstractPVSitesEncoder] = None,
-        sensor_encoder: Optional[AbstractPVSitesEncoder] = None, # TODO Change to SensorEncoder
+        sensor_encoder: Optional[AbstractPVSitesEncoder] = None,  # TODO Change to SensorEncoder
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
