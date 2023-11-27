@@ -1,17 +1,16 @@
 """ Data module for pytorch lightning """
+import glob
 from datetime import datetime
 
-import torch
 from lightning.pytorch import LightningDataModule
-from ocf_datapipes.training.pvnet import pvnet_datapipe
+from ocf_datapipes.training.windnet import windnet_netcdf_datapipe
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from torch.utils.data import DataLoader
-from torch.utils.data.datapipes.iter import FileLister
 
 from pvnet.data.utils import batch_to_tensor
 
 
-class DataModule(LightningDataModule):
+class WindDataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
 
     def __init__(
@@ -23,7 +22,6 @@ class DataModule(LightningDataModule):
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        block_nwp_and_sat=False,
         batch_dir=None,
     ):
         """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
@@ -39,20 +37,14 @@ class DataModule(LightningDataModule):
             train_period: Date range filter for train dataloader.
             val_period: Date range filter for val dataloader.
             test_period: Date range filter for test dataloader.
-            block_nwp_and_sat: If True, the dataloader does not load the requested NWP and sat data.
-                It instead returns an zero-array of the required shape. Useful for pretraining.
             batch_dir: Path to the directory of pre-saved batches. Cannot be used together with
-                `configuration` or 'train/val/test_period'.
+                'train/val/test_period'.
 
         """
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
-        self.block_nwp_and_sat = block_nwp_and_sat
         self.batch_dir = batch_dir
-
-        if not ((batch_dir is not None) ^ (configuration is not None)):
-            raise ValueError("Exactly one of `batch_dir` or `configuration` must be set.")
 
         if batch_dir is not None:
             if any([period != [None, None] for period in [train_period, val_period, test_period]]):
@@ -84,12 +76,9 @@ class DataModule(LightningDataModule):
         )
 
     def _get_datapipe(self, start_time, end_time):
-        data_pipeline = pvnet_datapipe(
+        data_pipeline = windnet_netcdf_datapipe(
             self.configuration,
-            start_time=start_time,
-            end_time=end_time,
-            block_sat=self.block_nwp_and_sat,
-            block_nwp=self.block_nwp_and_sat,
+            keys=["sensor", "nwp"],
         )
 
         data_pipeline = (
@@ -100,19 +89,22 @@ class DataModule(LightningDataModule):
         return data_pipeline
 
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
-        data_pipeline = FileLister(f"{self.batch_dir}/{subdir}", masks="*.pt", recursive=False)
+        data_pipeline = windnet_netcdf_datapipe(
+            config_filename=self.configuration,
+            keys=["sensor", "nwp"],
+            filenames=list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc")),
+        )
         if shuffle:
             data_pipeline = (
-                data_pipeline.shuffle(buffer_size=10_000)
+                data_pipeline.shuffle(buffer_size=100)
                 .sharding_filter()
-                .map(torch.load)
                 # Split the batches and reshuffle them to be combined into new batches
                 .split_batches()
                 .shuffle(buffer_size=100 * self.batch_size)
             )
         else:
             data_pipeline = (
-                data_pipeline.sharding_filter().map(torch.load)
+                data_pipeline.sharding_filter()
                 # Split the batches so we can use any batch-size
                 .split_batches()
             )
