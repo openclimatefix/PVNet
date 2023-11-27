@@ -68,6 +68,11 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
             d["pv_filename"] = f"{placeholder}.netcdf"
             d["pv_metadata_filename"] = f"{placeholder}.csv"
 
+    if "sensor" in config["input_data"]:
+        # If not empty - i.e. if used
+        if config["input_data"][source][f"{source}_filename"] != "":
+            config["input_data"][source][f"{source}_filename"] = f"{placeholder}.nc"
+
     with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
 
@@ -237,6 +242,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         forecast_minutes: int,
         optimizer: AbstractOptimizer,
         output_quantiles: Optional[list[float]] = None,
+        target_key: BatchKey = BatchKey.gsp,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -246,10 +252,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             optimizer (AbstractOptimizer): Optimizer
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
+            target_key: BatchKey of the target variable
         """
         super().__init__()
 
         self._optimizer = optimizer
+        self._target_key = target_key
 
         # Model must have lr to allow tuning
         # This setting is only used when lr is tuned with callback
@@ -424,7 +432,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat = self(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -440,7 +448,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
         y_hat = self(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))
@@ -484,7 +492,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def test_step(self, batch, batch_idx):
         """Run test step"""
         y_hat = self(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))

@@ -125,6 +125,8 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         n_kv_res_blocks: int = 2,
         kv_res_block_layers: int = 2,
         use_pv_id_in_value: bool = False,
+        use_gsp_embedding: bool = True,
+        sensor_embed_dim: int = 123,
     ):
         """A simple attention-based model with a single multihead attention layer
 
@@ -142,6 +144,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
                 the key and value encoders.
             use_pv_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
+            use_gsp_embedding: Whether to use embedding of the GSP ID
 
         """
         super().__init__(sequence_length, num_sites, out_features)

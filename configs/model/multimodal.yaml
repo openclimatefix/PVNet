@@ -44,6 +44,19 @@ pv_encoder:
   pv_id_embed_dim: 20
 
 #--------------------------------------------
+# Sensor encoder settings
+#--------------------------------------------
+
+sensor_encoder:
+  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork
+  _partial_: True
+  num_sites: 123
+  out_features: 40
+  num_heads: 4
+  kdim: 40
+  pv_id_embed_dim: 20
+
+#--------------------------------------------
 # Tabular network settings
 #--------------------------------------------
 

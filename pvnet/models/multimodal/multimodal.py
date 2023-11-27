@@ -42,9 +42,11 @@ class Model(BaseModel):
         nwp_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         pv_encoder: Optional[AbstractPVSitesEncoder] = None,
+        sensor_encoder: Optional[AbstractPVSitesEncoder] = None, # TODO Change to SensorEncoder
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
+        include_gsp: bool = True,
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -53,6 +55,7 @@ class Model(BaseModel):
         nwp_forecast_minutes: Optional[int] = None,
         nwp_history_minutes: Optional[int] = None,
         pv_history_minutes: Optional[int] = None,
+        sensor_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
     ):
         """Neural network which combines information from different sources.
@@ -100,6 +103,8 @@ class Model(BaseModel):
         self.include_nwp = nwp_encoder is not None
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
+        self.include_gsp = include_gsp
+        self.include_sensor = sensor_encoder is not None
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
 
@@ -158,6 +163,18 @@ class Model(BaseModel):
 
             # Update num features
             fusion_input_features += self.pv_encoder.out_features
+
+        if self.include_sensor:
+            if sensor_history_minutes is None:
+                sensor_history_minutes = history_minutes
+
+            self.sensor_encoder = sensor_encoder(
+                sequence_length=sensor_history_minutes // 30 + 1,
+                # Sensors are currently resampled to 30min
+            )
+
+            # Update num features
+            fusion_input_features += self.sensor_encoder.out_features
 
         if self.embedding_dim:
             self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
@@ -226,6 +243,11 @@ class Model(BaseModel):
             id = x[BatchKey.gsp_id][:, 0].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
+
+        # *********************** Sensor Data ************************************
+        # add sensor yield history
+        if self.include_sensor:
+            modes["sensor"] = self.sensor_encoder(x)
 
         if self.include_sun:
             sun = torch.cat(
