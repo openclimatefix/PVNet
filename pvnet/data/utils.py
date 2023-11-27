@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from ocf_datapipes.utils.consts import BatchKey
-from torch.utils.data import functional_datapipe, IterDataPipe
+from torch.utils.data import IterDataPipe, functional_datapipe
 
 
 def copy_batch_to_device(batch, device):

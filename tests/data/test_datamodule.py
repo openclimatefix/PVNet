@@ -2,6 +2,7 @@ from pvnet.data.datamodule import DataModule
 from pvnet.data.wind_datamodule import WindDataModule
 import os
 
+
 def test_init():
     dm = DataModule(
         configuration=None,
