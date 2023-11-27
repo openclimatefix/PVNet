@@ -15,33 +15,19 @@ nwp_encoder:
   conv3d_channels: 32
   image_size_pixels: 24
 
+
 #--------------------------------------------
-# Sat encoder settings
+# Sensor encoder settings
 #--------------------------------------------
 
-sat_encoder:
-  _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+sensor_encoder:
+  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleSensorAttentionNetwork
   _partial_: True
-  in_channels: 11
-  out_features: 256
-  number_of_conv3d_layers: 6
-  conv3d_channels: 32
-  image_size_pixels: 24
-
-add_image_embedding_channel: False
-
-#--------------------------------------------
-# PV encoder settings
-#--------------------------------------------
-
-pv_encoder:
-  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork
-  _partial_: True
-  num_sites: 349
+  num_sites: 123
   out_features: 40
   num_heads: 4
   kdim: 40
-  pv_id_embed_dim: 20
+  sensor_id_embed_dim: 20
 
 #--------------------------------------------
 # Tabular network settings
@@ -56,7 +42,7 @@ output_network:
   dropout_frac: 0.0
 
 embedding_dim: 16
-include_sun: True
+include_sun: False
 include_gsp_yield_history: False
 
 #--------------------------------------------
