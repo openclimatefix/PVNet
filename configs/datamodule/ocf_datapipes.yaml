@@ -3,7 +3,7 @@ configuration: "/home/jacob/PVNet/configs/datamodule/configuration/leonardo_wind
 num_workers: 20
 prefetch_factor: 2
 batch_size: 8
-batch_dir: "/mnt/storage_ssd_8tb/windnet_batches"
+batch_dir: "/mnt/storage_ssd_4tb/windnet_batches"
 train_period:
   - null
   - 2021-12-31
