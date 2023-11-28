@@ -26,7 +26,7 @@ input_data:
     nwp_image_size_pixels_width: 96
     x_dim_name: "longitude"
     y_dim_name: "latitude"
-    provider: "ecmwf"
+    nwp_provider: "ecmwf"
   sensor:
     sensor_filename: "/mnt/storage_ssd_4tb/ASOS/asos_india.nc"
     sensor_variables:
