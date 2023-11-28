@@ -1,14 +1,15 @@
-_target_: pvnet.data.datamodule.DataModule
-configuration: "/home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
+_target_: pvnet.data.wind_datamodule.WindDataModule
+configuration: "/home/jacob/PVNet/configs/datamodule/configuration/leonardo_wind_configuration.yaml"
 num_workers: 20
 prefetch_factor: 2
 batch_size: 8
+batch_dir: "/mnt/storage_ssd_8tb/windnet_batches"
 train_period:
   - null
-  - 2020-12-31
+  - 2021-12-31
 val_period:
-  - 2021-01-01
-  - 2021-12-31
+  - 2022-01-01
+  - 2022-12-31
 test_period:
-  - 2021-01-01
-  - 2021-12-31
+  - 2023-01-01
+  - 2023-11-28
