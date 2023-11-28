@@ -132,6 +132,7 @@ def main(config: DictConfig):
             config_dm.configuration,
             *config_dm.val_period,
             config_dm.batch_size,
+            renewable=config.renewable,
         )
 
         _save_batches_with_dataloader(
@@ -149,6 +150,7 @@ def main(config: DictConfig):
             config_dm.configuration,
             *config_dm.train_period,
             config_dm.batch_size,
+            renewable=config.renewable,
         )
 
         _save_batches_with_dataloader(
