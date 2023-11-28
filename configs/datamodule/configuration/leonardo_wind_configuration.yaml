@@ -1,0 +1,33 @@
+general:
+  description: WindNet configuration for Leonardo
+  name: windnet_india
+
+input_data:
+  default_forecast_minutes: 480
+  default_history_minutes: 60
+
+  sensor:
+    sensor_filename: /mnt/storage_ssd_4tb/ASOS/asos_india.nc
+    sensor_variables:
+      - wind_speed_knots
+  nwp:
+    nwp_zarr_path: "/mnt/storage_b/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/NWP/ECMWF/nw-india/zarr/*.zarr.zip"
+    history_minutes: 60
+    forecast_minutes: 480
+    time_resolution_minutes: 60
+    nwp_channels:
+      - t # live = t2m
+      - dswrf
+      - dlwrf
+      - hcc
+      - mcc
+      - lcc
+      - vis
+      - r # live = r2
+      - prate # live ~= rprate
+      - si10 # 10-metre wind speed | live = unknown
+    nwp_image_size_pixels_height: 96
+    nwp_image_size_pixels_width: 96
+
+output_data:
+  filepath: "not-needed"
