@@ -1,7 +1,7 @@
 _target_: lightning.pytorch.trainer.trainer.Trainer
 
 # set `1` to train on GPU, `0` to train on CPU only
-accelerator: gpu
+accelerator: cpu
 devices: auto
 
 min_epochs: null

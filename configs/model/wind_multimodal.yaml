@@ -9,11 +9,11 @@ output_quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
 nwp_encoder:
   _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
   _partial_: True
-  in_channels: 2
+  in_channels: 14
   out_features: 256
   number_of_conv3d_layers: 6
   conv3d_channels: 32
-  image_size_pixels: 24
+  image_size_pixels: 16
 
 #--------------------------------------------
 # Sensor encoder settings
@@ -22,7 +22,7 @@ nwp_encoder:
 sensor_encoder:
   _target_: pvnet.models.multimodal.site_encoders.encoders.SingleSensorAttentionNetwork
   _partial_: True
-  num_sites: 123
+  num_sites: 12
   out_features: 40
   num_heads: 4
   kdim: 40
