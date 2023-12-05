@@ -19,8 +19,10 @@ import logging
 import os
 import shutil
 import sys
+
 import dask
-dask.config.set(scheduler='single-threaded')
+
+dask.config.set(scheduler="single-threaded")
 # Tired of seeing these warnings
 import warnings
 
@@ -28,14 +30,12 @@ import hydra
 import torch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.training.windnet import windnet_datapipe
-from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
-from pvnet.data.datamodule import batch_to_tensor
 from pvnet.utils import print_config
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
@@ -71,9 +71,9 @@ def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str 
         end_time=end_time,
     )
 
-    #data_pipeline = (
+    # data_pipeline = (
     #    data_pipeline.batch(batch_size).map(stack_np_examples_into_batch).map(batch_to_tensor)
-    #)
+    # )
     return data_pipeline
 
 
@@ -116,13 +116,13 @@ def main(config: DictConfig):
         batch_size=None,  # batched in datapipe step
         sampler=None,
         batch_sampler=None,
-        num_workers=0, #config_dm.num_workers,
+        num_workers=0,  # config_dm.num_workers,
         collate_fn=None,
         pin_memory=False,
         drop_last=False,
         timeout=0,
         worker_init_fn=None,
-        prefetch_factor=None, #config_dm.prefetch_factor,
+        prefetch_factor=None,  # config_dm.prefetch_factor,
         persistent_workers=False,
     )
 
