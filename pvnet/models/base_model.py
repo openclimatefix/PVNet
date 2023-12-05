@@ -325,6 +325,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """
         # calculate quantile loss
         losses = []
+        print(f"y_quantiles.shape: {y_quantiles.shape}")
+        print(f"y.shape: {y.shape}")
         for i, q in enumerate(self.output_quantiles):
             errors = y - y_quantiles[..., i]
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
