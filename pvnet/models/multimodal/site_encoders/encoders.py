@@ -334,14 +334,16 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
         # Shape: [batch size, sequence length, PV site]
         sensor_site_seqs = x[BatchKey.sensor].float()
         batch_size = sensor_site_seqs.shape[0]
+        print(f"{sensor_site_seqs.shape=}")
 
         # Sensor ID embeddings are the same for each sample
         sensor_id_embed = torch.tile(self.pv_id_embedding(self._sensor_ids), (batch_size, 1, 1))
-
+        print(f"{sensor_id_embed.shape=}")
         # Each concated (Sensor sequence, Sensor ID embedding) is processed with encoder
         x_seq_in = torch.cat((sensor_site_seqs.swapaxes(1, 2), sensor_id_embed), dim=2).flatten(
             0, 1
         )
+        print(f"{x_seq_in.shape=}")
         key = self._key_encoder(x_seq_in)
 
         # Reshape to [batch size, PV site, kdim]
