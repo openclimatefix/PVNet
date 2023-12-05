@@ -10,8 +10,12 @@ defaults:
   - experiment: null
   - hparams_search: null
   - hydra: default.yaml
-  - renewable: "pv"
 
+renewable: "wind"
+batch_output_dir: "/mnt/storage_ssd_4tb/windnet_batches"
+num_val_batches: 3200
+num_train_batches: 64000
+num_test_batches: 100
   # enable color logging
 #  - override hydra/hydra_logging: colorlog
 #  - override hydra/job_logging: colorlog
