@@ -3,10 +3,9 @@ import glob
 
 from lightning.pytorch import LightningDataModule
 from ocf_datapipes.training.windnet import windnet_netcdf_datapipe
+from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from torch.utils.data import DataLoader
-from ocf_datapipes.utils.consts import BatchKey
-
 
 from pvnet.data.utils import batch_to_tensor
 
