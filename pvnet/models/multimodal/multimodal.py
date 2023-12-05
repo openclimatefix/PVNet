@@ -267,11 +267,9 @@ class Model(BaseModel):
             modes["sun"] = sun
 
         out = self.output_network(modes)
-        print(f"out.shape: {out.shape}")
 
         if self.use_quantile_regression:
             # Shape: batch_size, seq_length * num_quantiles
             out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))
-            print(f"out.shape: {out.shape}")
 
         return out

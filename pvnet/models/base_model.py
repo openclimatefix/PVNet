@@ -286,7 +286,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             out_features = self.forecast_len_30 * len(self.output_quantiles)
         else:
             out_features = self.forecast_len_30
-        print(f"num_output_features: {out_features}")
         return out_features
 
     def _quantiles_to_prediction(self, y_quantiles):
@@ -326,8 +325,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """
         # calculate quantile loss
         losses = []
-        print(f"y_quantiles.shape: {y_quantiles.shape}")
-        print(f"y.shape: {y.shape}")
         for i, q in enumerate(self.output_quantiles):
             errors = y - y_quantiles[..., i]
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
@@ -380,7 +377,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
-        # print(f"{y_hat.shape=}, {y.shape=}")
         common_metrics_each_step = {"mae": torch.mean(torch.abs(y_hat - y), dim=0),
                                     "rmse": torch.sqrt(torch.mean((y_hat - y) ** 2, dim=0))}
         # common_metrics_each_step = common_metrics(predictions=y_hat.numpy(), target=y.numpy())
@@ -451,10 +447,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
         y_hat = self(batch)
-        print(f"y_hat.shape: {y_hat.shape}")
-        print(f"{batch[self._target_key].shape=}")
-        print(f"{batch[self._target_key][:, -self.forecast_len_30 :, 0].shape=}")
-        print(f"{self.forecast_len_30=}")
         # Sensor seems to be in batch, station, time order
         y = batch[self._target_key][:, 0, -self.forecast_len_30 :]
 
