@@ -249,7 +249,7 @@ class Model(BaseModel):
         # *********************** Sensor Data ************************************
         # add sensor yield history
         if self.include_sensor:
-            #sensor_history = x[BatchKey.sensor][:, : self.history_len_30].float()
+            # sensor_history = x[BatchKey.sensor][:, : self.history_len_30].float()
             modes["sensor"] = self.sensor_encoder(x)
 
         if self.include_sun:
