@@ -25,9 +25,6 @@ class AbstractLinearNetwork(nn.Module, metaclass=ABCMeta):
     def cat_modes(self, x):
         """Concatenate modes of input data into 1D feature vector"""
         if isinstance(x, OrderedDict):
-            # Print out all components of the OrderedDict
-            for key, value in x.items():
-                print(f"{key}: {value.shape}")
             return torch.cat([value for key, value in x.items()], dim=1)
         elif isinstance(x, torch.Tensor):
             return x
