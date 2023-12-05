@@ -378,6 +378,9 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
         query = self._encode_query(x)
         key = self._encode_key(x)
         value = self._encode_value(x)
+        print(f"{query.shape=}")
+        print(f"{key.shape=}")
+        print(f"{value.shape=}")
 
         attn_output, attn_weights = self.multihead_attn(
             query, key, value, average_attn_weights=average_attn_weights
