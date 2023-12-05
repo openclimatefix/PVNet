@@ -286,6 +286,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             out_features = self.forecast_len_30 * len(self.output_quantiles)
         else:
             out_features = self.forecast_len_30
+        print(f"num_output_features: {out_features}")
         return out_features
 
     def _quantiles_to_prediction(self, y_quantiles):
