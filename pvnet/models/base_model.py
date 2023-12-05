@@ -449,6 +449,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
         y_hat = self(batch)
+        print(f"y_hat.shape: {y_hat.shape}")
+        print(f"{batch[self._target_key].shape}")
+        print(f"{batch[self._target_key][:, -self.forecast_len_30 :, 0].shape}")
+        print(f"{self.forecast_len_30}")
         y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
