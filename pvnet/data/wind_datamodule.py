@@ -89,11 +89,12 @@ class WindDataModule(LightningDataModule):
         return data_pipeline
 
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
+        filenames = list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc"))
         data_pipeline = windnet_netcdf_datapipe(
             config_filename=self.configuration,
             keys=["sensor", "nwp"],
-            filenames=list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc")),
-        )
+            filenames=filenames,
+        ).set_length(int(len(filenames) / self.batch_size))
         data_pipeline = (
             data_pipeline.batch(self.batch_size)
             .map(stack_np_examples_into_batch)
