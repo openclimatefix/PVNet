@@ -46,19 +46,19 @@ class WindDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.batch_dir = batch_dir
 
-        if batch_dir is not None:
-            if any([period != [None, None] for period in [train_period, val_period, test_period]]):
-                raise ValueError("Cannot set `(train/val/test)_period` with presaved batches")
+        #if batch_dir is not None:
+        #    if any([period != [None, None] for period in [train_period, val_period, test_period]]):
+        #        raise ValueError("Cannot set `(train/val/test)_period` with presaved batches")
 
-        self.train_period = [
-            None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in train_period
-        ]
-        self.val_period = [
-            None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in val_period
-        ]
-        self.test_period = [
-            None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in test_period
-        ]
+        self.train_period = [None, None]
+        #    None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in train_period
+        #]
+        self.val_period = [None, None]
+        #    None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in val_period
+        #]
+        self.test_period = [None, None]
+        #    None if d is None else datetime.strptime(d, "%Y-%m-%d") for d in test_period
+        #]
 
         self._common_dataloader_kwargs = dict(
             shuffle=False,  # shuffled in datapipe step
