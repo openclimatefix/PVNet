@@ -60,6 +60,7 @@ nwp_history_minutes: 120
 nwp_forecast_minutes: 480
 pv_history_minutes: 180
 
+target_key: "sensor"
 # ----------------------------------------------
 # Optimizer
 # ----------------------------------------------

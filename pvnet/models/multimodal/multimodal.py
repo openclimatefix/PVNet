@@ -57,6 +57,7 @@ class Model(BaseModel):
         pv_history_minutes: Optional[int] = None,
         sensor_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
+        target_key: str = "gsp",
     ):
         """Neural network which combines information from different sources.
 
@@ -108,7 +109,7 @@ class Model(BaseModel):
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
 
-        super().__init__(history_minutes, forecast_minutes, optimizer, output_quantiles)
+        super().__init__(history_minutes, forecast_minutes, optimizer, output_quantiles, target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.sensor)
 
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
