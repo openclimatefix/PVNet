@@ -2,7 +2,7 @@
 
 tensorboard:
   _target_: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
-  save_dir: "/mnt/disks/batches/tensorboard"
+  save_dir: "/mnt/storage_ssd_4tb/windnet_batches/tensorboard"
   name: "default"
   version: "${model_name}"
   log_graph: False
