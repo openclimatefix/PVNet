@@ -94,7 +94,7 @@ class WindDataModule(LightningDataModule):
             config_filename=self.configuration,
             keys=["sensor", "nwp"],
             filenames=filenames,
-        ).set_length(int(len(filenames) / self.batch_size))
+        )
         data_pipeline = (
             data_pipeline.batch(self.batch_size)
             .map(stack_np_examples_into_batch)
@@ -119,6 +119,7 @@ class WindDataModule(LightningDataModule):
             data_pipeline.batch(self.batch_size)
             .map(stack_np_examples_into_batch)
             .map(batch_to_tensor)
+            .set_length(int(len(filenames) / self.batch_size))
         )
 
         return data_pipeline
