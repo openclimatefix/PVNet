@@ -139,7 +139,9 @@ class Model(BaseModel):
                 nwp_history_minutes = history_minutes
             if nwp_forecast_minutes is None:
                 nwp_forecast_minutes = forecast_minutes
-            nwp_sequence_len = 10 # TODO Fix = nwp_history_minutes // 60 + nwp_forecast_minutes // 60 + 1
+            nwp_sequence_len = (
+                10  # TODO Fix = nwp_history_minutes // 60 + nwp_forecast_minutes // 60 + 1
+            )
 
             self.nwp_encoder = nwp_encoder(
                 sequence_length=nwp_sequence_len,
