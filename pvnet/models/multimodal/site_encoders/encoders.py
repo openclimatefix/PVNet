@@ -326,6 +326,7 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
         )
 
     def _encode_query(self, x):
+        print(x)
         gsp_ids = x[BatchKey.sensor_id].squeeze().int()
         query = self.sensor_id_embedding(gsp_ids).unsqueeze(1)
         return query
