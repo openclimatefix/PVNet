@@ -95,6 +95,9 @@ class WindDataModule(LightningDataModule):
             keys=["sensor", "nwp"],
             filenames=list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc")),
         )
+        data_pipeline = (
+            data_pipeline.batch(self.batch_size).map(stack_np_examples_into_batch).map(batch_to_tensor)
+        )
         if shuffle:
             data_pipeline = (
                 data_pipeline.shuffle(buffer_size=100)
