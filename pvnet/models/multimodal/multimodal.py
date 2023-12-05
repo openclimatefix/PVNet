@@ -171,7 +171,7 @@ class Model(BaseModel):
                 sensor_history_minutes = history_minutes
 
             self.sensor_encoder = sensor_encoder(
-                sequence_length=self.history_len_30#sensor_history_minutes // 30 + 1,
+                sequence_length=self.history_len_30  # sensor_history_minutes // 30 + 1,
                 # Sensors are currently resampled to 30min
             )
 
