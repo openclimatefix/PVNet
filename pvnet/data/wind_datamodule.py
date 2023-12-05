@@ -5,6 +5,8 @@ from lightning.pytorch import LightningDataModule
 from ocf_datapipes.training.windnet import windnet_netcdf_datapipe
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from torch.utils.data import DataLoader
+from ocf_datapipes.utils.consts import BatchKey
+
 
 from pvnet.data.utils import batch_to_tensor
 
@@ -98,14 +100,14 @@ class WindDataModule(LightningDataModule):
                 data_pipeline.shuffle(buffer_size=100)
                 .sharding_filter()
                 # Split the batches and reshuffle them to be combined into new batches
-                .split_batches()
+                .split_batches(splitting_key=BatchKey.sensor)
                 .shuffle(buffer_size=100 * self.batch_size)
             )
         else:
             data_pipeline = (
                 data_pipeline.sharding_filter()
                 # Split the batches so we can use any batch-size
-                .split_batches()
+                .split_batches(splitting_key=BatchKey.sensor)
             )
 
         data_pipeline = (
