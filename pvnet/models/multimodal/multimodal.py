@@ -212,7 +212,7 @@ class Model(BaseModel):
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
             if self.add_image_embedding_channel:
-                id = x[BatchKey.gsp_id][:, 0].int()
+                id = x[BatchKey.sensor_id][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -222,7 +222,7 @@ class Model(BaseModel):
             nwp_data = x[BatchKey.nwp].float()
             nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
             if self.add_image_embedding_channel:
-                id = x[BatchKey.gsp_id][:, 0].int()
+                id = x[BatchKey.sensor_id][:, 0].int()
                 nwp_data = self.nwp_embed(nwp_data, id)
             modes["nwp"] = self.nwp_encoder(nwp_data)
 
@@ -240,7 +240,7 @@ class Model(BaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey.gsp_id][:, 0].int()
+            id = x[BatchKey.sensor_id][:, 0].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
