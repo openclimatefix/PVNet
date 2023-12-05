@@ -335,7 +335,7 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_key(self, x):
         # Shape: [batch size, sequence length, PV site]
-        sensor_site_seqs = x[BatchKey.sensor].float()
+        sensor_site_seqs = x[BatchKey.sensor][:, : self.sequence_length].float()
         batch_size = sensor_site_seqs.shape[0]
         print(f"{sensor_site_seqs.shape=}")
 
@@ -355,7 +355,7 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        sensor_site_seqs = x[BatchKey.sensor].float()
+        sensor_site_seqs = x[BatchKey.sensor][:, : self.sequence_length].float()
         batch_size = sensor_site_seqs.shape[0]
 
         if self.use_sensor_id_in_value:
@@ -394,7 +394,6 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
     def forward(self, x):
         """Run model forward"""
         # Do slicing here to only get history
-        x[BatchKey.sensor] = x[BatchKey.sensor][:, : self.sequence_length].float()
         attn_output, attn_output_weights = self._attention_forward(x)
 
         # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]
