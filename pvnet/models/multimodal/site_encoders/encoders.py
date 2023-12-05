@@ -286,7 +286,7 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
         """
         super().__init__(sequence_length, num_sites, out_features)
-
+        self.sequence_length = sequence_length
         self.sensor_id_embedding = nn.Embedding(sensor_id_dim, out_features)
         self.pv_id_embedding = nn.Embedding(num_sites, sensor_id_embed_dim)
         self._sensor_ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
@@ -326,7 +326,6 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
         )
 
     def _encode_query(self, x):
-        print(x)
         gsp_ids = x[BatchKey.sensor_id].squeeze().int()
         query = self.sensor_id_embedding(gsp_ids).unsqueeze(1)
         return query
@@ -388,6 +387,8 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
     def forward(self, x):
         """Run model forward"""
+        # Do slicing here to only get history
+        x[BatchKey.sensor] = x[BatchKey.sensor][:, : self.sequence_length].float()
         attn_output, attn_output_weights = self._attention_forward(x)
 
         # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]
