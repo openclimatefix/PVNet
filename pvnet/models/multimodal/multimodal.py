@@ -109,7 +109,13 @@ class Model(BaseModel):
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
 
-        super().__init__(history_minutes, forecast_minutes, optimizer, output_quantiles, target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.sensor)
+        super().__init__(
+            history_minutes,
+            forecast_minutes,
+            optimizer,
+            output_quantiles,
+            target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.sensor,
+        )
 
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
