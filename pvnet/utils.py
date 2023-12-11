@@ -241,19 +241,23 @@ def finish(
             wandb.finish()
 
 
-def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None):
+def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_plot: str = "gsp"):
     """Plot a batch of data and the forecast from that batch"""
 
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
+    y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.sensor
+    y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.sensor_id
+    t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.sensor_t0_idx
+    time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.sensor_time_utc
 
-    y = batch[BatchKey.gsp].cpu().numpy()
+    y = batch[y_key].cpu().numpy()
     y_hat = y_hat.cpu().numpy()
+    gsp_ids = batch[y_id_key].cpu().numpy().squeeze()
+    t0_idx = batch[t0_idx_key]
+    plotting_name = "GSP" if key_to_plot == "gsp" else "Sensor"
 
-    gsp_ids = batch[BatchKey.gsp_id].cpu().numpy().squeeze()
-    t0_idx = batch[BatchKey.gsp_t0_idx]
-
-    times_utc = batch[BatchKey.gsp_time_utc].cpu().numpy().squeeze().astype("datetime64[s]")
+    times_utc = batch[time_utc_key].cpu().numpy().squeeze().astype("datetime64[s]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
 
     len(times_utc[0]) - t0_idx - 1
@@ -293,10 +297,11 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None):
     for ax in axes[-1, :]:
         ax.set_xlabel("Time (hour of day)")
 
+
     if batch_idx is not None:
-        title = f"Normed GSP output : batch_idx={batch_idx}"
+        title = f"Normed {plotting_name} output : batch_idx={batch_idx}"
     else:
-        title = "Normed GSP output"
+        title = f"Normed {plotting_name} output"
     plt.suptitle(title)
     plt.tight_layout()
 
