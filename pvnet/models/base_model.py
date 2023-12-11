@@ -467,7 +467,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Store these temporarily under self
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
-                self._val_batches = BatchAccumulator()
+                self._val_batches = BatchAccumulator(key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor")
 
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
