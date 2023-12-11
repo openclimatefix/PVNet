@@ -87,16 +87,17 @@ class BatchAccumulator(DictListAccumulator):
         _batches (Dict[BatchKey, list[torch.Tensor]]): Dictionary containing lists of metrics.
     """
 
-    def __init__(self):
+    def __init__(self, key_to_keep: str = "gsp"):
         """Batch accumulator"""
         self._batches = {}
+        self.key_to_keep = key_to_keep
 
     def __bool__(self):
         return self._batches != {}
 
-    @staticmethod
-    def _filter_batch_dict(d):
-        keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
+    #@staticmethod
+    def _filter_batch_dict(self, d):
+        keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc] if self.key_to_keep == "gsp" else [BatchKey.sensor, BatchKey.sensor_id, BatchKey.sensor_t0_idx, BatchKey.sensor_time_utc]
         return {k: v for k, v in d.items() if k in keep_keys}
 
     def append(self, batch: dict[BatchKey, list[torch.Tensor]]):
@@ -110,7 +111,7 @@ class BatchAccumulator(DictListAccumulator):
         """Concatenate all accumulated batches, return, and clear self"""
         batch = {}
         for k, v in self._batches.items():
-            if k == BatchKey.gsp_t0_idx:
+            if k == BatchKey.gsp_t0_idx or k == BatchKey.sensor_t0_idx:
                 batch[k] = v[0]
             else:
                 batch[k] = torch.cat(v, dim=0)
