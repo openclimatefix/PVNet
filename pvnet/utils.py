@@ -252,7 +252,7 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
     time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.sensor_time_utc
     y = batch[y_key][:, 0, :].cpu().numpy() # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()
-    gsp_ids = batch[y_id_key].cpu().numpy().squeeze()
+    gsp_ids = batch[y_id_key][:,0].cpu().numpy().squeeze()
     t0_idx = int(batch[t0_idx_key])
     plotting_name = "GSP" if key_to_plot == "gsp" else "Sensor"
 
