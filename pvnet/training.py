@@ -103,10 +103,8 @@ def train(config: DictConfig) -> Optional[float]:
         for callback in callbacks:
             log.info(f"{callback}")
             if isinstance(callback, ModelCheckpoint):
-                print(callback)
-                print(wandb_logger)
                 callback.dirpath = "/".join(
-                    callback.dirpath.split("/")[:-1] + [wandb_logger.version]
+                    callback.dirpath.split("/")[:-1]
                 )
                 # Also save model config here - this makes for easy model push to huggingface
                 os.makedirs(callback.dirpath, exist_ok=True)
