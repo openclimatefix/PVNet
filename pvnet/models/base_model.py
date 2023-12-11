@@ -271,7 +271,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len_30)
 
         self._accumulated_metrics = MetricAccumulator()
-        self._accumulated_batches = BatchAccumulator()
+        self._accumulated_batches = BatchAccumulator(key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor")
         self._accumulated_y_hat = PredAccumulator()
 
     @property
