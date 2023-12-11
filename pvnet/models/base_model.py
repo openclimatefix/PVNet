@@ -471,11 +471,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
-
+            print(self._val_batches)
             # if batch had accumulated
             if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:
                 y_hat = self._val_y_hats.flush()
                 batch = self._val_batches.flush()
+                print(f"Flushed Batch: {batch}")
 
                 fig = plot_batch_forecasts(batch, y_hat, quantiles=self.output_quantiles, key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor")
 
