@@ -170,7 +170,7 @@ def multimodal_model_kwargs(model_minutes_kwargs):
             image_size_pixels=24,
         ),
         nwp_encoders_dict={
-            "ukv":dict(
+            "ukv": dict(
                 _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
                 _partial_=True,
                 in_channels=2,
@@ -202,8 +202,8 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         include_sun=True,
         include_gsp_yield_history=True,
         sat_history_minutes=90,
-        nwp_history_minutes={"ukv":120},
-        nwp_forecast_minutes={"ukv":480},
+        nwp_history_minutes={"ukv": 120},
+        nwp_forecast_minutes={"ukv": 480},
         pv_history_minutes=180,
         min_sat_delay_minutes=30,
     )

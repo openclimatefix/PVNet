@@ -69,7 +69,7 @@ class Model(BaseModel):
                 features to produce the forecast.
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
-            nwp_encoders_dict: A dictionary of partially instatiated pytorch Module class used to 
+            nwp_encoders_dict: A dictionary of partially instatiated pytorch Module class used to
                 encode the NWP data from 4D into an 1D feature vector from different sources.
             sat_encoder: A partially instatiated pytorch Module class used to encode the satellite
                 data from 4D into an 1D feature vector.
@@ -95,10 +95,10 @@ class Model(BaseModel):
                 `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
         """
-        
+
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = sat_encoder is not None
-        self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict)!=0
+        self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
         self.embedding_dim = embedding_dim
@@ -114,7 +114,7 @@ class Model(BaseModel):
             # Param checks
             assert sat_history_minutes is not None
             assert nwp_forecast_minutes is not None
-            
+
             self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
 
             self.sat_encoder = sat_encoder(
@@ -134,25 +134,24 @@ class Model(BaseModel):
             assert nwp_forecast_minutes is not None
             assert nwp_history_minutes is not None
             # For each NWP encoder the forecast and history minutes must be set
-            assert set(nwp_encoders_dict.keys())==set(nwp_forecast_minutes.keys())
-            assert set(nwp_encoders_dict.keys())==set(nwp_history_minutes.keys())
-            
-            
+            assert set(nwp_encoders_dict.keys()) == set(nwp_forecast_minutes.keys())
+            assert set(nwp_encoders_dict.keys()) == set(nwp_history_minutes.keys())
+
             self.nwp_encoders_dict = torch.nn.ModuleDict()
             if add_image_embedding_channel:
                 self.nwp_embed_dict = torch.nn.ModuleDict()
-            
+
             for nwp_source in nwp_encoders_dict.keys():
-                                
                 nwp_sequence_len = (
-                    nwp_history_minutes[nwp_source] // 60 
-                    + nwp_forecast_minutes[nwp_source] // 60 + 1
+                    nwp_history_minutes[nwp_source] // 60
+                    + nwp_forecast_minutes[nwp_source] // 60
+                    + 1
                 )
 
                 self.nwp_encoders_dict[nwp_source] = nwp_encoders_dict[nwp_source](
                     sequence_length=nwp_sequence_len,
                     in_channels=(
-                        nwp_encoders_dict[nwp_source].keywords["in_channels"] 
+                        nwp_encoders_dict[nwp_source].keywords["in_channels"]
                         + add_image_embedding_channel
                     ),
                 )
@@ -166,7 +165,7 @@ class Model(BaseModel):
 
         if self.include_pv:
             assert pv_history_minutes is not None
-            
+
             self.pv_encoder = pv_encoder(
                 sequence_length=pv_history_minutes // 5 + 1,
             )
@@ -200,7 +199,6 @@ class Model(BaseModel):
         )
 
         self.save_hyperparameters()
-
 
     def forward(self, x):
         """Run model forward"""

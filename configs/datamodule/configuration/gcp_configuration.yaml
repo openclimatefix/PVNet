@@ -376,24 +376,24 @@ input_data:
 
   nwp:
     ukv:
-        nwp_zarr_path: 
-          - /mnt/disks/nwp_rechunk/UKV_intermediate_version_7.1.zarr
-          - /mnt/disks/nwp_rechunk/UKV_2021_NWP_missing_chunked.zarr
-          - /mnt/disks/nwp_rechunk/UKV_2022_NWP_chunked.zarr
-          - /mnt/disks/nwp_rechunk/UKV_2023_chunked.zarr
-        history_minutes: 120
-        forecast_minutes: 480
-        time_resolution_minutes: 60
-        nwp_channels:
-          - t # live = t2m
-          - dswrf
-          #- lcc
-          #- mcc
-          #- hcc
-          #- dlwrf
-        nwp_image_size_pixels_height: 24
-        nwp_image_size_pixels_width: 24
-        nwp_provider: ukv
+      nwp_zarr_path:
+        - /mnt/disks/nwp_rechunk/UKV_intermediate_version_7.1.zarr
+        - /mnt/disks/nwp_rechunk/UKV_2021_NWP_missing_chunked.zarr
+        - /mnt/disks/nwp_rechunk/UKV_2022_NWP_chunked.zarr
+        - /mnt/disks/nwp_rechunk/UKV_2023_chunked.zarr
+      history_minutes: 120
+      forecast_minutes: 480
+      time_resolution_minutes: 60
+      nwp_channels:
+        - t # live = t2m
+        - dswrf
+        #- lcc
+        #- mcc
+        #- hcc
+        #- dlwrf
+      nwp_image_size_pixels_height: 24
+      nwp_image_size_pixels_width: 24
+      nwp_provider: ukv
 
   satellite:
     satellite_zarr_path:

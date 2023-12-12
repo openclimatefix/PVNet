@@ -70,14 +70,14 @@ history_minutes: 120
 
 min_sat_delay_minutes: 60
 
-# These must also be set even if identical to forecast_minutes and  history_minutes 
+# These must also be set even if identical to forecast_minutes and  history_minutes
 sat_history_minutes: 90
 pv_history_minutes: 180
 
 # These must be set for each NWP encoder
-nwp_history_minutes: 
+nwp_history_minutes:
   ukv: 120
-nwp_forecast_minutes: 
+nwp_forecast_minutes:
   ukv: 480
 
 # ----------------------------------------------

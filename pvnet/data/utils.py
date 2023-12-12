@@ -1,9 +1,9 @@
 """Utils common between Wind and PV datamodules"""
 import numpy as np
 import torch
+from ocf_datapipes.batch import unstack_np_batch_into_examples
 from ocf_datapipes.utils.consts import BatchKey
 from torch.utils.data import IterDataPipe, functional_datapipe
-from ocf_datapipes.batch import unstack_np_batch_into_examples
 
 
 def copy_batch_to_device(batch, device):
