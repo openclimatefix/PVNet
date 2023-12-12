@@ -25,16 +25,16 @@ import warnings
 
 import hydra
 import torch
+from ocf_datapipes.batch import stack_np_examples_into_batch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.training.windnet import windnet_datapipe
-from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
-from pvnet.data.datamodule import batch_to_tensor
+from pvnet.data.utils import batch_to_tensor
 from pvnet.utils import print_config
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
@@ -107,9 +107,6 @@ def main(config: DictConfig):
 
     shutil.copyfile(config_dm.configuration, f"{config.batch_output_dir}/data_configuration.yaml")
 
-    os.mkdir(f"{config.batch_output_dir}/train")
-    os.mkdir(f"{config.batch_output_dir}/val")
-
     dataloader_kwargs = dict(
         shuffle=False,
         batch_size=None,  # batched in datapipe step
@@ -126,6 +123,7 @@ def main(config: DictConfig):
     )
 
     if config.num_val_batches > 0:
+        os.mkdir(f"{config.batch_output_dir}/val")
         print("----- Saving val batches -----")
 
         val_batch_pipe = _get_datapipe(
@@ -143,6 +141,7 @@ def main(config: DictConfig):
         )
 
     if config.num_train_batches > 0:
+        os.mkdir(f"{config.batch_output_dir}/train")
         print("----- Saving train batches -----")
 
         train_batch_pipe = _get_datapipe(

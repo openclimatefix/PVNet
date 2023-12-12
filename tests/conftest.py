@@ -15,6 +15,7 @@ from pvnet.data.datamodule import DataModule
 
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
+import pvnet.models.multimodal.site_encoders.encoders
 
 
 xr.set_options(keep_attrs=True)
@@ -28,7 +29,7 @@ def time_before_present(dt: timedelta):
 def nwp_data():
     # Load dataset which only contains coordinates, but no data
     ds = xr.open_zarr(
-        f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/nwp_shell.zarr"
+        f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_data/nwp_shell.zarr"
     )
 
     # Last init time was at least 2 hours ago and hour to 3-hour interval
@@ -65,7 +66,7 @@ def nwp_data():
 def sat_data():
     # Load dataset which only contains coordinates, but no data
     ds = xr.open_zarr(
-        f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/non_hrv_shell.zarr"
+        f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_data/non_hrv_shell.zarr"
     )
 
     # Change times so they lead up to present. Delayed by at most 1 hour
@@ -101,7 +102,7 @@ def sample_datamodule():
         val_period=[None, None],
         test_period=[None, None],
         block_nwp_and_sat=False,
-        batch_dir="tests/data/sample_batches",
+        batch_dir="tests/test_data/sample_batches",
     )
     return dm
 
@@ -168,15 +169,17 @@ def multimodal_model_kwargs(model_minutes_kwargs):
             conv3d_channels=32,
             image_size_pixels=24,
         ),
-        nwp_encoder=dict(
-            _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
-            _partial_=True,
-            in_channels=2,
-            out_features=128,
-            number_of_conv3d_layers=6,
-            conv3d_channels=32,
-            image_size_pixels=24,
-        ),
+        nwp_encoders_dict={
+            "ukv": dict(
+                _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
+                _partial_=True,
+                in_channels=2,
+                out_features=128,
+                number_of_conv3d_layers=6,
+                conv3d_channels=32,
+                image_size_pixels=24,
+            ),
+        },
         add_image_embedding_channel=True,
         pv_encoder=dict(
             _target_=pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork,
@@ -199,8 +202,8 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         include_sun=True,
         include_gsp_yield_history=True,
         sat_history_minutes=90,
-        nwp_history_minutes=120,
-        nwp_forecast_minutes=480,
+        nwp_history_minutes={"ukv": 120},
+        nwp_forecast_minutes={"ukv": 480},
         pv_history_minutes=180,
         min_sat_delay_minutes=30,
     )

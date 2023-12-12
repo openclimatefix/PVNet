@@ -16,3 +16,4 @@ jobs:
       sudo_apt_install: "libgeos++-dev libproj-dev proj-data proj-bin"
       #      brew_install: "proj geos librttopo"
       os_list: '["ubuntu-latest"]'
+      python-version: "['3.10', '3.11']"

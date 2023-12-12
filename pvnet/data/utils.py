@@ -1,6 +1,7 @@
 """Utils common between Wind and PV datamodules"""
 import numpy as np
 import torch
+from ocf_datapipes.batch import unstack_np_batch_into_examples
 from ocf_datapipes.utils.consts import BatchKey
 from torch.utils.data import IterDataPipe, functional_datapipe
 
@@ -24,22 +25,6 @@ def batch_to_tensor(batch):
     return batch
 
 
-def split_batches(batch, splitting_key=BatchKey.gsp):
-    """Splits a single batch of data."""
-
-    n_samples = batch[splitting_key].shape[0]
-    keys = list(batch.keys())
-    examples = [{} for _ in range(n_samples)]
-    for i in range(n_samples):
-        b = examples[i]
-        for k in keys:
-            if ("idx" in k.name) or ("channel_names" in k.name):
-                b[k] = batch[k]
-            else:
-                b[k] = batch[k][i]
-    return examples
-
-
 @functional_datapipe("split_batches")
 class BatchSplitter(IterDataPipe):
     """Pipeline step to split batches of data and yield single examples"""
@@ -52,5 +37,5 @@ class BatchSplitter(IterDataPipe):
     def __iter__(self):
         """Opens the NWP data"""
         for batch in self.source_datapipe:
-            for example in split_batches(batch, splitting_key=self.splitting_key):
+            for example in unstack_np_batch_into_examples(batch):
                 yield example
