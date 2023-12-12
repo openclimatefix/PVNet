@@ -1,4 +1,4 @@
-ocf_datapipes>=2.2.15
+ocf_datapipes>=2.3.0
 ocf_ml_metrics
 numpy
 pandas
@@ -6,7 +6,7 @@ matplotlib
 xarray
 ipykernel
 h5netcdf
-torch>=2.1.1
+torch>=2.0.0
 lightning>=2.0.1
 torchvision
 pytest
