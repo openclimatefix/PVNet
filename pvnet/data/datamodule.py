@@ -6,7 +6,7 @@ import torch
 from lightning.pytorch import LightningDataModule
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.utils.consts import BatchKey
-from ocf_datapipes.utils.utils import stack_np_examples_into_batch
+from ocf_datapipes.batch import stack_np_examples_into_batch, unstack_np_batch_into_examples
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes._decorator import functional_datapipe
 from torch.utils.data.datapipes.datapipe import IterDataPipe
@@ -32,21 +32,6 @@ def batch_to_tensor(batch):
     return batch
 
 
-def split_batches(batch):
-    """Splits a single batch of data."""
-    n_samples = batch[BatchKey.gsp].shape[0]
-    keys = list(batch.keys())
-    examples = [{} for _ in range(n_samples)]
-    for i in range(n_samples):
-        b = examples[i]
-        for k in keys:
-            if ("idx" in k.name) or ("channel_names" in k.name):
-                b[k] = batch[k]
-            else:
-                b[k] = batch[k][i]
-    return examples
-
-
 @functional_datapipe("split_batches")
 class BatchSplitter(IterDataPipe):
     """Pipeline step to split batches of data and yield single examples"""
@@ -58,7 +43,7 @@ class BatchSplitter(IterDataPipe):
     def __iter__(self):
         """Opens the NWP data"""
         for batch in self.source_datapipe:
-            for example in split_batches(batch):
+            for example in unstack_np_batch_into_examples(batch):
                 yield example
 
 
