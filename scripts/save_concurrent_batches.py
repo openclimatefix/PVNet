@@ -35,7 +35,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
-from pvnet.data.datamodule import batch_to_tensor
+from pvnet.data.utils import batch_to_tensor
 from pvnet.utils import GSPLocationLookup
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)

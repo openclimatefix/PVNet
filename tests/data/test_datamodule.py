@@ -1,4 +1,6 @@
 from pvnet.data.datamodule import DataModule
+from pvnet.data.wind_datamodule import WindDataModule
+import os
 
 
 def test_init():
@@ -13,8 +15,21 @@ def test_init():
         block_nwp_and_sat=False,
         batch_dir="tests/test_data/sample_batches",
     )
-
     
+
+def test_wind_init():
+    dm = WindDataModule(
+        configuration=f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_batches/data_configuration.yaml",
+        batch_size=2,
+        num_workers=0,
+        prefetch_factor=None,
+        train_period=[None, None],
+        val_period=[None, None],
+        test_period=[None, None],
+        batch_dir="tests/data/sample_batches",
+    )
+
+
 def test_iter():
 
     dm = DataModule(
