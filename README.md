@@ -103,7 +103,7 @@ input_data:
 
   nwp:
     ukv:
-      nwp_zarr_path: /path/to/nwp-data.zarr 
+      nwp_zarr_path: /path/to/nwp-data.zarr
       history_minutes: 60
       forecast_minutes: 120
       time_resolution_minutes: 60
@@ -125,7 +125,7 @@ input_data:
   pv:
     pv_files_groups:
       - label: pvoutput.org
-        pv_filename: /path/to/pv-data/pv.netcdf 
+        pv_filename: /path/to/pv-data/pv.netcdf
         pv_metadata_filename: /path/to/pv-data/metadata.csv
     history_minutes: 60
     forecast_minutes: 0 # PVNet assumes no future PV generation
