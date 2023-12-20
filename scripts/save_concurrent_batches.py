@@ -28,7 +28,7 @@ from ocf_datapipes.training.common import (
     open_and_return_datapipes,
 )
 from ocf_datapipes.training.pvnet import construct_loctime_pipelines, construct_sliced_data_pipeline
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader

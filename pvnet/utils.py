@@ -15,7 +15,8 @@ import xarray as xr
 import yaml
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
-from ocf_datapipes.utils.consts import BatchKey, Location
+from ocf_datapipes.utils import Location
+from ocf_datapipes.batch import BatchKey
 from ocf_datapipes.utils.geospatial import osgb_to_lon_lat
 from omegaconf import DictConfig, OmegaConf
 

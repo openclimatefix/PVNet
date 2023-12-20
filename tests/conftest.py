@@ -7,7 +7,7 @@ import xarray as xr
 import torch
 import hydra
 
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 from datetime import timedelta
 
 import pvnet
