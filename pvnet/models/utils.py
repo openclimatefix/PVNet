@@ -6,7 +6,7 @@ from typing import Optional
 
 import numpy as np
 import torch
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 
 logger = logging.getLogger(__name__)
 
