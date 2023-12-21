@@ -93,28 +93,28 @@ def sat_data():
 
     return ds
 
+
 @pytest.fixture()
 def sample_train_val_datamodule():
     # duplicate the sample batcnes for more training/val data
     n_duplicates = 10
-    
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         os.makedirs(f"{tmpdirname}/train")
         os.makedirs(f"{tmpdirname}/val")
 
         file_n = 0
-        
+
         for file in glob.glob("tests/test_data/sample_batches/train/*.pt"):
             batch = torch.load(file)
 
             for i in range(n_duplicates):
-
                 # Save fopr both train and val
                 torch.save(batch, f"{tmpdirname}/train/{file_n:06}.pt")
                 torch.save(batch, f"{tmpdirname}/val/{file_n:06}.pt")
 
                 file_n += 1
-                
+
         dm = DataModule(
             configuration=None,
             batch_size=2,
@@ -127,7 +127,6 @@ def sample_train_val_datamodule():
             batch_dir=f"{tmpdirname}",
         )
         yield dm
-
 
 
 @pytest.fixture()
