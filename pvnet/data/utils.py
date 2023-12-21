@@ -8,7 +8,7 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 def copy_batch_to_device(batch, device):
     """Moves a dict-batch of tensors to new device."""
     batch_copy = {}
-            
+
     for k, v in batch.items():
         if isinstance(v, dict):
             # Recursion to reach the nested NWP
