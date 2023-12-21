@@ -1,5 +1,5 @@
 import torch
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 from torch import nn
 
 from pvnet.models.multimodal.site_encoders.encoders import (

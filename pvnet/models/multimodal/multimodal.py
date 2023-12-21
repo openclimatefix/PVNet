@@ -4,7 +4,7 @@ from collections import OrderedDict
 from typing import Optional
 
 import torch
-from ocf_datapipes.utils.consts import BatchKey, NWPBatchKey
+from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torch import nn
 
 import pvnet
