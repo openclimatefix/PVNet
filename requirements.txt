@@ -1,5 +1,5 @@
 ocf_datapipes>=2.3.0
-ocf_ml_metrics
+ocf_ml_metrics>=0.0.11
 numpy
 pandas
 matplotlib
