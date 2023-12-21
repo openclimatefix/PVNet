@@ -1,4 +1,6 @@
 import os
+import glob
+import tempfile
 
 import pytest
 import pandas as pd
@@ -16,6 +18,7 @@ from pvnet.data.datamodule import DataModule
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
+from pvnet.models.multimodal.multimodal import Model
 
 
 xr.set_options(keep_attrs=True)
@@ -89,6 +92,42 @@ def sat_data():
     del ds.attrs["_data_attrs"]
 
     return ds
+
+@pytest.fixture()
+def sample_train_val_datamodule():
+    # duplicate the sample batcnes for more training/val data
+    n_duplicates = 10
+    
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        os.makedirs(f"{tmpdirname}/train")
+        os.makedirs(f"{tmpdirname}/val")
+
+        file_n = 0
+        
+        for file in glob.glob("tests/test_data/sample_batches/train/*.pt"):
+            batch = torch.load(file)
+
+            for i in range(n_duplicates):
+
+                # Save fopr both train and val
+                torch.save(batch, f"{tmpdirname}/train/{file_n:06}.pt")
+                torch.save(batch, f"{tmpdirname}/val/{file_n:06}.pt")
+
+                file_n += 1
+                
+        dm = DataModule(
+            configuration=None,
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            train_period=[None, None],
+            val_period=[None, None],
+            test_period=[None, None],
+            block_nwp_and_sat=False,
+            batch_dir=f"{tmpdirname}",
+        )
+        yield dm
+
 
 
 @pytest.fixture()
@@ -212,3 +251,15 @@ def multimodal_model_kwargs(model_minutes_kwargs):
 
     kwargs.update(model_minutes_kwargs)
     return kwargs
+
+
+@pytest.fixture()
+def multimodal_model(multimodal_model_kwargs):
+    model = Model(**multimodal_model_kwargs)
+    return model
+
+
+@pytest.fixture()
+def multimodal_quantile_model(multimodal_model_kwargs):
+    model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
+    return model
