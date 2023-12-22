@@ -1,5 +1,5 @@
 general:
-  description: Template including all settings
+  description: Template including all possible settings
   name: template
 
 input_data:
@@ -13,7 +13,6 @@ input_data:
     time_resolution_minutes: 30
     start_datetime: "2020-01-01T00:00:00"
     end_datetime: "2021-09-01T00:00:00"
-    metadata_only: false
 
   nwp:
     nwp_zarr_path: gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
@@ -70,21 +69,6 @@ input_data:
       - WV_073
     satellite_image_size_pixels_height: 24
     satellite_image_size_pixels_width: 24
-
-  hrvsatellite:
-    hrvsatellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_hrv.zarr
-    history_minutes: 60
-    forecast_minutes: 0
-    time_resolution_minutes: 5
-    hrvsatellite_channels:
-      - HRV
-    hrvsatellite_image_size_pixels_height: 128
-    hrvsatellite_image_size_pixels_width: 256
-
-  topographic:
-    topographic_filename: gs://solar-pv-nowcasting-data/Topographic/europe_dem_1km_osgb.tif
-    topographic_image_size_pixels_width: 300
-    topographic_image_size_pixels_height: 300
 
 output_data:
   filepath: "not-needed"

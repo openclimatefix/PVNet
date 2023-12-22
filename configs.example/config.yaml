@@ -2,6 +2,7 @@
 
 # specify here default training configuration
 defaults:
+  - _self_
   - trainer: default.yaml
   - model: multimodal.yaml
   - datamodule: ocf_datapipes.yaml

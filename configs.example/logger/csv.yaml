@@ -2,7 +2,8 @@
 
 csv:
   _target_: pytorch_lightning.loggers.csv_logs.CSVLogger
-  save_dir: "."
+  # local path to log training process
+  save_dir: "PLACEHOLDER"
   name: "csv/"
   version: null
   prefix: ""

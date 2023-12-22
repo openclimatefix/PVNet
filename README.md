@@ -4,7 +4,7 @@
 
 This project is used for training PVNet and running PVnet on live data.
 
-PVNet2 largely inherits the same architecture from
+PVNet2 is a multi-modal late-fusion model that largely inherits the same architecture from
 [PVNet1.0](https://github.com/openclimatefix/predict_pv_yield). The NWP and
 satellite data are sent through some neural network which encodes them down to
 1D intermediate representations. These are concatenated together with the GSP
@@ -13,6 +13,12 @@ GSP ID which has been put through an embedding layer. This 1D concatenated
 feature vector is put through an output network which outputs predictions of the
 future GSP yield. National forecasts are made by adding all the GSP forecasts
 together.
+
+
+## Experiments
+
+Some quite rough working notes on experiments training this model and running it in production are
+[here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing).
 
 ## Setup / Installation
 
@@ -37,7 +43,8 @@ configs directory:
 cp -r configs.example configs
 ```
 
-You will be making local amendments to these configs
+You will be making local amendments to these configs. See the README in
+`configs.example` for more info.
 
 ### Datasets
 
@@ -108,16 +115,16 @@ input_data:
       forecast_minutes: 120
       time_resolution_minutes: 60
       nwp_channels: # comment out channels as appropriate
-        - t # live = t2m
-        - dswrf
-        - dlwrf
-        - hcc
-        - MCC
-        - lcc
-        - vis
-        - r # live = r2
-        - prate # live ~= rprate
-        - si10 # 10-metre wind speed | live = unknown
+        - t         # 2-metre temperature
+        - dswrf     # downwards short-wave radiation flux
+        - dlwrf     # downwards long-wave radiation flux
+        - hcc       # high cloud cover
+        - mcc       # medium cloud cover
+        - lcc       # low cloud cover
+        - vis       # visability
+        - r         # relative humidity
+        - prate     # precipitation rate
+        - si10      # 10-metre wind speed | live = unknown
       nwp_image_size_pixels_height: 24
       nwp_image_size_pixels_width: 24
       nwp_provider: ukv
@@ -332,8 +339,3 @@ python run.py
 ## Testing
 
 You can use `python -m pytest tests` to run tests
-
-## Experiments
-
-Notes on these experiments are
-[here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing).

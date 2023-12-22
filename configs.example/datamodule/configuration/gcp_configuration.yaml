@@ -1,23 +1,29 @@
 general:
-  description: Config for producing batches on GCP
-  name: gcp_pvnet
+  description: Example data config for creating PVNet batches
+  name: example_pvnet
 
 input_data:
   default_history_minutes: 120
   default_forecast_minutes: 480
 
   gsp:
-    gsp_zarr_path: /mnt/disks/nwp_rechunk/pv_gsp_temp.zarr
+    # Path to the GSP data. This should be a zarr file
+    # e.g. gs://solar-pv-nowcasting-data/PV/GSP/v7/pv_gsp.zarr
+    gsp_zarr_path: PLACEHOLDER.zarr
     history_minutes: 120
     forecast_minutes: 480
     time_resolution_minutes: 30
-    metadata_only: false
 
   pv:
     pv_files_groups:
       - label: solar_sheffield_passiv
-        pv_filename: /mnt/disks/nwp_rechunk/passive/v1.1/passiv.netcdf
-        pv_metadata_filename: /mnt/disks/nwp_rechunk/passive/v0/system_metadata_OCF_ONLY.csv
+        # Path to the site-level PV data. This should be a netcdf
+        # e.g gs://solar-pv-nowcasting-data/PV/Passive/ocf_formatted/v0/passiv.netcdf
+        pv_filename: PLACEHOLDER.netcdf
+        # Path to the site-level PV metadata. This choudl be a csv
+        # e.g gs://solar-pv-nowcasting-data/PV/Passive/ocf_formatted/v0/system_metadata.csv
+        pv_metadata_filename: PLACEHOLDER.csv
+    # This is the list of pv_ml_ids to be sliced from the PV site level data
     pv_ml_ids:
       [
         154,
@@ -377,33 +383,46 @@ input_data:
   nwp:
     ukv:
       nwp_zarr_path:
-        - /mnt/disks/nwp_rechunk/UKV_intermediate_version_7.1.zarr
-        - /mnt/disks/nwp_rechunk/UKV_2021_NWP_missing_chunked.zarr
-        - /mnt/disks/nwp_rechunk/UKV_2022_NWP_chunked.zarr
-        - /mnt/disks/nwp_rechunk/UKV_2023_chunked.zarr
+        # Path(s) to UKV NWP data in zarr format
+        # e.g. gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
+        - PLACEHOLDER.zarr
       history_minutes: 120
       forecast_minutes: 480
       time_resolution_minutes: 60
       nwp_channels:
-        - t # live = t2m
-        - dswrf
-        #- lcc
-        #- mcc
-        #- hcc
-        #- dlwrf
+        - t # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
       nwp_image_size_pixels_height: 24
       nwp_image_size_pixels_width: 24
       nwp_provider: ukv
 
+    ecmwf:
+      # Path to ECMWF NWP data in zarr format
+      # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
+      nwp_zarr_path: PLACEHOLDER.zarr
+      history_minutes: 120
+      forecast_minutes: 480
+      time_resolution_minutes: 60
+      nwp_channels:
+        - t2m # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
+      nwp_image_size_pixels_height: 12 # roughtly equivalent to ukv 24 pixels
+      nwp_image_size_pixels_width: 12
+      nwp_provider: ecmwf
+
   satellite:
     satellite_zarr_path:
-      - /mnt/disks/nwp_rechunk/filled_sat/2017_nonhrv.zarr
-      - /mnt/disks/nwp_rechunk/filled_sat/2018_nonhrv.zarr
-      - /mnt/disks/nwp_rechunk/filled_sat/2019_nonhrv.zarr
-      - /mnt/disks/nwp_rechunk/filled_sat/2020_nonhrv.zarr
-      - /mnt/disks/nwp_rechunk/filled_sat/2021_nonhrv.zarr
-      - /mnt/disks/nwp_rechunk/filled_sat/2022_nonhrv.zarr
-      - /mnt/disks/nwp_rechunk/filled_sat/2023_nonhrv.zarr
+      # Path(s) to non-HRV satellite data in zarr format
+      # e.g. gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
+      - PLACEHOLDER.zarr
     history_minutes: 90
     forecast_minutes: 0
     live_delay_minutes: 30
