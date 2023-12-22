@@ -12,7 +12,7 @@ def copy_batch_to_device(batch, device):
     for k, v in batch.items():
         if isinstance(v, dict):
             # Recursion to reach the nested NWP
-            batch_copy[k] = copy_batch_to_device(v)
+            batch_copy[k] = copy_batch_to_device(v, device)
         elif isinstance(v, torch.Tensor):
             batch_copy[k] = v.to(device)
         else:
