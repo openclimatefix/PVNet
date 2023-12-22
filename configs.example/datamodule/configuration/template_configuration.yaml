@@ -70,7 +70,5 @@ input_data:
     satellite_image_size_pixels_height: 24
     satellite_image_size_pixels_width: 24
 
-
-
 output_data:
   filepath: "not-needed"

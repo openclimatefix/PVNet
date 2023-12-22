@@ -43,7 +43,7 @@ configs directory:
 cp -r configs.example configs
 ```
 
-You will be making local amendments to these configs. See the README in 
+You will be making local amendments to these configs. See the README in
 `configs.example` for more info.
 
 ### Datasets
@@ -339,5 +339,3 @@ python run.py
 ## Testing
 
 You can use `python -m pytest tests` to run tests
-
-

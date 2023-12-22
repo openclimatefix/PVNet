@@ -381,43 +381,42 @@ input_data:
     time_resolution_minutes: 5
 
   nwp:
-  
     ukv:
-        nwp_zarr_path: 
-          # Path(s) to UKV NWP data in zarr format
-          # e.g. gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
-          - PLACEHOLDER.zarr
-        history_minutes: 120
-        forecast_minutes: 480
-        time_resolution_minutes: 60
-        nwp_channels:
-          - t      # 2-metre temperature
-          - dswrf  # downwards short-wave radiation flux
-          - dlwrf  # downwards long-wave radiation flux
-          - hcc    # high cloud cover
-          - mcc    # medium cloud cover
-          - lcc    # low cloud cover
-        nwp_image_size_pixels_height: 24
-        nwp_image_size_pixels_width: 24
-        nwp_provider: ukv
-    
+      nwp_zarr_path:
+        # Path(s) to UKV NWP data in zarr format
+        # e.g. gs://solar-pv-nowcasting-data/NWP/UK_Met_Office/UKV_intermediate_version_7.zarr
+        - PLACEHOLDER.zarr
+      history_minutes: 120
+      forecast_minutes: 480
+      time_resolution_minutes: 60
+      nwp_channels:
+        - t # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
+      nwp_image_size_pixels_height: 24
+      nwp_image_size_pixels_width: 24
+      nwp_provider: ukv
+
     ecmwf:
-        # Path to ECMWF NWP data in zarr format
-        # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
-        nwp_zarr_path: PLACEHOLDER.zarr
-        history_minutes: 120
-        forecast_minutes: 480
-        time_resolution_minutes: 60
-        nwp_channels:
-          - t2m    # 2-metre temperature
-          - dswrf  # downwards short-wave radiation flux
-          - dlwrf  # downwards long-wave radiation flux
-          - hcc    # high cloud cover
-          - mcc    # medium cloud cover
-          - lcc    # low cloud cover
-        nwp_image_size_pixels_height: 12 # roughtly equivalent to ukv 24 pixels
-        nwp_image_size_pixels_width: 12 
-        nwp_provider: ecmwf
+      # Path to ECMWF NWP data in zarr format
+      # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
+      nwp_zarr_path: PLACEHOLDER.zarr
+      history_minutes: 120
+      forecast_minutes: 480
+      time_resolution_minutes: 60
+      nwp_channels:
+        - t2m # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
+      nwp_image_size_pixels_height: 12 # roughtly equivalent to ukv 24 pixels
+      nwp_image_size_pixels_width: 12
+      nwp_provider: ecmwf
 
   satellite:
     satellite_zarr_path:
