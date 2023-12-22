@@ -103,6 +103,8 @@ def train(config: DictConfig) -> Optional[float]:
         for callback in callbacks:
             log.info(f"{callback}")
             if isinstance(callback, ModelCheckpoint):
+                # Need to call the .experiment property to initialise the logger
+                wandb_logger.experiment
                 callback.dirpath = "/".join(
                     callback.dirpath.split("/")[:-1] + [wandb_logger.version]
                 )
