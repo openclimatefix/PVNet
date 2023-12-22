@@ -370,7 +370,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
 
-        common_metrics_each_step = common_metrics(predictions=y_hat.numpy(), target=y.numpy())
+        common_metrics_each_step = common_metrics(
+            predictions=y_hat.cpu().numpy(), 
+            target=y.cpu().numpy()
+        )
         mse_each_step = common_metrics_each_step["rmse"] ** 2
         mae_each_step = common_metrics_each_step["mae"]
 
