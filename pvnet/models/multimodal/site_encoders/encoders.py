@@ -339,9 +339,7 @@ class SingleWindAttentionNetwork(AbstractPVSitesEncoder):
         # wind ID embeddings are the same for each sample
         wind_id_embed = torch.tile(self.pv_id_embedding(self._wind_ids), (batch_size, 1, 1))
         # Each concated (wind sequence, wind ID embedding) is processed with encoder
-        x_seq_in = torch.cat((wind_site_seqs.swapaxes(1, 2), wind_id_embed), dim=2).flatten(
-            0, 1
-        )
+        x_seq_in = torch.cat((wind_site_seqs.swapaxes(1, 2), wind_id_embed), dim=2).flatten(0, 1)
         key = self._key_encoder(x_seq_in)
 
         # Reshape to [batch size, PV site, kdim]
