@@ -368,8 +368,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
-        print(y.shape)
-        print(y_hat.shape)
         losses = {}
 
         if self.use_quantile_regression:
@@ -437,7 +435,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     y_hat,
                     batch_idx,
                     quantiles=self.output_quantiles,
-                    key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor",
+                    key_to_plot="gsp" if self._target_key == BatchKey.gsp else "wind",
                 )
                 fig.savefig("latest_logged_train_batch.png")
 

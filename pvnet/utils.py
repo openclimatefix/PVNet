@@ -248,15 +248,15 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
-    y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.sensor
-    y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.sensor_id
-    t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.sensor_t0_idx
-    time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.sensor_time_utc
+    y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.wind
+    y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.wind_id
+    t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.wind_t0_idx
+    time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.wind_time_utc
     y = batch[y_key][:, 0, :].cpu().numpy()  # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()
     gsp_ids = batch[y_id_key][:, 0].cpu().numpy().squeeze()
     t0_idx = int(batch[t0_idx_key])
-    plotting_name = "GSP" if key_to_plot == "gsp" else "Sensor"
+    plotting_name = "GSP" if key_to_plot == "gsp" else "Wind"
 
     times_utc = batch[time_utc_key].cpu().numpy().squeeze().astype("datetime64[s]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
