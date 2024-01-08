@@ -97,9 +97,18 @@ class BatchAccumulator(DictListAccumulator):
     def __bool__(self):
         return self._batches != {}
 
-    #@staticmethod
+    # @staticmethod
     def _filter_batch_dict(self, d):
-        keep_keys = [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc] if self.key_to_keep == "gsp" else [BatchKey.sensor, BatchKey.sensor_id, BatchKey.sensor_t0_idx, BatchKey.sensor_time_utc]
+        keep_keys = (
+            [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
+            if self.key_to_keep == "gsp"
+            else [
+                BatchKey.sensor,
+                BatchKey.sensor_id,
+                BatchKey.sensor_t0_idx,
+                BatchKey.sensor_time_utc,
+            ]
+        )
         return {k: v for k, v in d.items() if k in keep_keys}
 
     def append(self, batch: dict[BatchKey, list[torch.Tensor]]):

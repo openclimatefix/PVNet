@@ -19,7 +19,6 @@ from huggingface_hub.hf_api import HfApi
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
 from ocf_datapipes.batch import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
-from ocf_ml_metrics.metrics.errors import common_metrics
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -271,7 +270,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len_30)
 
         self._accumulated_metrics = MetricAccumulator()
-        self._accumulated_batches = BatchAccumulator(key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor")
+        self._accumulated_batches = BatchAccumulator(
+            key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor"
+        )
         self._accumulated_y_hat = PredAccumulator()
 
     @property
@@ -377,8 +378,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
-        common_metrics_each_step = {"mae": torch.mean(torch.abs(y_hat - y), dim=0),
-                                    "rmse": torch.sqrt(torch.mean((y_hat - y) ** 2, dim=0))}
+        common_metrics_each_step = {
+            "mae": torch.mean(torch.abs(y_hat - y), dim=0),
+            "rmse": torch.sqrt(torch.mean((y_hat - y) ** 2, dim=0)),
+        }
         # common_metrics_each_step = common_metrics(predictions=y_hat.numpy(), target=y.numpy())
         mse_each_step = common_metrics_each_step["rmse"] ** 2
         mae_each_step = common_metrics_each_step["mae"]
@@ -425,7 +428,13 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
             if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
-                fig = plot_batch_forecasts(batch, y_hat, batch_idx, quantiles=self.output_quantiles, key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor")
+                fig = plot_batch_forecasts(
+                    batch,
+                    y_hat,
+                    batch_idx,
+                    quantiles=self.output_quantiles,
+                    key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor",
+                )
                 fig.savefig("latest_logged_train_batch.png")
 
     def training_step(self, batch, batch_idx):
@@ -467,7 +476,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Store these temporarily under self
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
-                self._val_batches = BatchAccumulator(key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor")
+                self._val_batches = BatchAccumulator(
+                    key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor"
+                )
 
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
@@ -476,7 +487,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 y_hat = self._val_y_hats.flush()
                 batch = self._val_batches.flush()
 
-                fig = plot_batch_forecasts(batch, y_hat, quantiles=self.output_quantiles, key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor")
+                fig = plot_batch_forecasts(
+                    batch,
+                    y_hat,
+                    quantiles=self.output_quantiles,
+                    key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor",
+                )
 
                 self.logger.experiment.log(
                     {

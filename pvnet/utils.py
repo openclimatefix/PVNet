@@ -247,13 +247,14 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
 
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
+
     y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.sensor
     y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.sensor_id
     t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.sensor_t0_idx
     time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.sensor_time_utc
-    y = batch[y_key][:, 0, :].cpu().numpy() # Select the one it is trained on
+    y = batch[y_key][:, 0, :].cpu().numpy()  # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()
-    gsp_ids = batch[y_id_key][:,0].cpu().numpy().squeeze()
+    gsp_ids = batch[y_id_key][:, 0].cpu().numpy().squeeze()
     t0_idx = int(batch[t0_idx_key])
     plotting_name = "GSP" if key_to_plot == "gsp" else "Sensor"
 
@@ -296,7 +297,6 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
 
     for ax in axes[-1, :]:
         ax.set_xlabel("Time (hour of day)")
-
 
     if batch_idx is not None:
         title = f"Normed {plotting_name} output : batch_idx={batch_idx}"

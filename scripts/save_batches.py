@@ -28,7 +28,6 @@ import warnings
 
 import hydra
 import torch
-from ocf_datapipes.batch import stack_np_examples_into_batch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
 from ocf_datapipes.training.windnet import windnet_datapipe
 from omegaconf import DictConfig, OmegaConf
@@ -37,7 +36,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
-from pvnet.data.utils import batch_to_tensor
 from pvnet.utils import print_config
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
