@@ -148,26 +148,25 @@ class WeightedLosses:
         # normalized the weights, so there mean is 1.
         # To calculate the loss, we times the weights by the differences between truth
         # and predictions and then take the mean across all forecast horizons and the batch
-        self.weights = weights / weights.sum() * len(weights)
+        self.weights = weights / weights.mean()
 
-        # move weights to gpu is needed
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.weights = self.weights.to(device)
 
     def get_mse_exp(self, output, target):
         """Loss function weighted MSE"""
 
+        weights = self.weights.to(target.device)
         # get the differences weighted by the forecast horizon weights
-        diff_with_weights = self.weights * ((output - target) ** 2)
+        diff_with_weights = weights * ((output - target) ** 2)
 
         # average across batches
         return torch.mean(diff_with_weights)
 
     def get_mae_exp(self, output, target):
         """Loss function weighted MAE"""
-
+        
+        weights = self.weights.to(target.device)
         # get the differences weighted by the forecast horizon weights
-        diff_with_weights = self.weights * torch.abs(output - target)
+        diff_with_weights = weights * torch.abs(output - target)
 
         # average across batches
         return torch.mean(diff_with_weights)
