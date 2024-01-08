@@ -246,11 +246,11 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         return x_out
 
 
-class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
+class SingleWindAttentionNetwork(AbstractPVSitesEncoder):
     """A simple attention-based model with a single multihead attention layer
 
-    For the attention layer the query is based on the target Sensor alone, the key is based on the
-    Sensor ID and the recent Sensor data, the value is based on the recent Sensor data.
+    For the attention layer the query is based on the target wind alone, the key is based on the
+    wind ID and the recent wind data, the value is based on the recent wind data.
 
     """
 
@@ -260,12 +260,12 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
         num_sites: int,
         out_features: int,
         kdim: int = 10,
-        sensor_id_embed_dim: int = 10,
+        wind_id_embed_dim: int = 10,
         num_heads: int = 2,
         n_kv_res_blocks: int = 2,
         kv_res_block_layers: int = 2,
-        use_sensor_id_in_value: bool = False,
-        sensor_id_dim: int = 123,
+        use_wind_id_in_value: bool = False,
+        wind_id_dim: int = 123,
     ):
         """A simple attention-based model with a single multihead attention layer
 
@@ -275,29 +275,29 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
             out_features: Number of output features. In this network this is also the embed and
                 value dimension in the multi-head attention layer.
             kdim: The dimensions used the keys.
-            sensor_id_embed_dim: Number of dimensiosn used in the Sensor ID embedding layer(s).
+            wind_id_embed_dim: Number of dimensiosn used in the wind ID embedding layer(s).
             num_heads: Number of parallel attention heads. Note that `out_features` will be split
                 across `num_heads` so `out_features` must be a multiple of `num_heads`.
             n_kv_res_blocks: Number of residual blocks to use in the key and value encoders.
             kv_res_block_layers: Number of fully-connected layers used in each residual block within
                 the key and value encoders.
-            use_sensor_id_in_value: Whether to use a PV ID embedding in network used to produce the
+            use_wind_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
 
         """
         super().__init__(sequence_length, num_sites, out_features)
         self.sequence_length = sequence_length
-        self.sensor_id_embedding = nn.Embedding(sensor_id_dim, out_features)
-        self.pv_id_embedding = nn.Embedding(num_sites, sensor_id_embed_dim)
-        self._sensor_ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
-        self.use_sensor_id_in_value = use_sensor_id_in_value
+        self.wind_id_embedding = nn.Embedding(wind_id_dim, out_features)
+        self.pv_id_embedding = nn.Embedding(num_sites, wind_id_embed_dim)
+        self._wind_ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
+        self.use_wind_id_in_value = use_wind_id_in_value
 
-        if use_sensor_id_in_value:
-            self.value_sensor_id_embedding = nn.Embedding(num_sites, sensor_id_embed_dim)
+        if use_wind_id_in_value:
+            self.value_wind_id_embedding = nn.Embedding(num_sites, wind_id_embed_dim)
 
         self._value_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length + int(use_sensor_id_in_value) * sensor_id_embed_dim,
+                in_features=sequence_length + int(use_wind_id_in_value) * wind_id_embed_dim,
                 out_features=out_features,
                 fc_hidden_features=sequence_length,
                 n_res_blocks=n_kv_res_blocks,
@@ -308,9 +308,9 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
         self._key_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length + sensor_id_embed_dim,
+                in_features=sequence_length + wind_id_embed_dim,
                 out_features=kdim,
-                fc_hidden_features=sensor_id_embed_dim + sequence_length,
+                fc_hidden_features=wind_id_embed_dim + sequence_length,
                 n_res_blocks=n_kv_res_blocks,
                 res_block_layers=kv_res_block_layers,
                 dropout_frac=0,
@@ -327,19 +327,19 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_query(self, x):
         # Select the first one
-        gsp_ids = x[BatchKey.sensor_id][:, 0].squeeze().int()
-        query = self.sensor_id_embedding(gsp_ids).unsqueeze(1)
+        gsp_ids = x[BatchKey.wind_id][:, 0].squeeze().int()
+        query = self.wind_id_embedding(gsp_ids).unsqueeze(1)
         return query
 
     def _encode_key(self, x):
         # Shape: [batch size, sequence length, PV site]
-        sensor_site_seqs = x[BatchKey.sensor][:, : self.sequence_length].float()
-        batch_size = sensor_site_seqs.shape[0]
+        wind_site_seqs = x[BatchKey.wind][:, : self.sequence_length].float()
+        batch_size = wind_site_seqs.shape[0]
 
-        # Sensor ID embeddings are the same for each sample
-        sensor_id_embed = torch.tile(self.pv_id_embedding(self._sensor_ids), (batch_size, 1, 1))
-        # Each concated (Sensor sequence, Sensor ID embedding) is processed with encoder
-        x_seq_in = torch.cat((sensor_site_seqs.swapaxes(1, 2), sensor_id_embed), dim=2).flatten(
+        # wind ID embeddings are the same for each sample
+        wind_id_embed = torch.tile(self.pv_id_embedding(self._wind_ids), (batch_size, 1, 1))
+        # Each concated (wind sequence, wind ID embedding) is processed with encoder
+        x_seq_in = torch.cat((wind_site_seqs.swapaxes(1, 2), wind_id_embed), dim=2).flatten(
             0, 1
         )
         key = self._key_encoder(x_seq_in)
@@ -350,21 +350,21 @@ class SingleSensorAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        sensor_site_seqs = x[BatchKey.sensor][:, : self.sequence_length].float()
-        batch_size = sensor_site_seqs.shape[0]
+        wind_site_seqs = x[BatchKey.wind][:, : self.sequence_length].float()
+        batch_size = wind_site_seqs.shape[0]
 
-        if self.use_sensor_id_in_value:
-            # Sensor ID embeddings are the same for each sample
-            sensor_id_embed = torch.tile(
-                self.value_sensor_id_embedding(self._sensor_ids), (batch_size, 1, 1)
+        if self.use_wind_id_in_value:
+            # wind ID embeddings are the same for each sample
+            wind_id_embed = torch.tile(
+                self.value_wind_id_embedding(self._wind_ids), (batch_size, 1, 1)
             )
-            # Each concated (Sensor sequence, Sensor ID embedding) is processed with encoder
-            x_seq_in = torch.cat((sensor_site_seqs.swapaxes(1, 2), sensor_id_embed), dim=2).flatten(
+            # Each concated (wind sequence, wind ID embedding) is processed with encoder
+            x_seq_in = torch.cat((wind_site_seqs.swapaxes(1, 2), wind_id_embed), dim=2).flatten(
                 0, 1
             )
         else:
             # Encode each PV sequence independently
-            x_seq_in = sensor_site_seqs.swapaxes(1, 2).flatten(0, 1)
+            x_seq_in = wind_site_seqs.swapaxes(1, 2).flatten(0, 1)
 
         value = self._value_encoder(x_seq_in)
 

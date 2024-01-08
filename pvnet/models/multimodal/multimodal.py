@@ -42,7 +42,7 @@ class Model(BaseModel):
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         pv_encoder: Optional[AbstractPVSitesEncoder] = None,
-        sensor_encoder: Optional[AbstractPVSitesEncoder] = None,  # TODO Change to SensorEncoder
+        wind_encoder: Optional[AbstractPVSitesEncoder] = None,  # TODO Change to SensorEncoder
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
@@ -106,7 +106,7 @@ class Model(BaseModel):
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
         self.include_gsp = include_gsp
-        self.include_sensor = sensor_encoder is not None
+        self.include_wind = wind_encoder is not None
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
 
@@ -115,7 +115,7 @@ class Model(BaseModel):
             forecast_minutes=forecast_minutes,
             optimizer=optimizer,
             output_quantiles=output_quantiles,
-            target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.sensor,
+            target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.wind,
         )
 
         # Number of features expected by the output_network
@@ -185,17 +185,17 @@ class Model(BaseModel):
             # Update num features
             fusion_input_features += self.pv_encoder.out_features
 
-        if self.include_sensor:
+        if self.include_wind:
             if sensor_history_minutes is None:
                 sensor_history_minutes = history_minutes
 
-            self.sensor_encoder = sensor_encoder(
+            self.wind_encoder = wind_encoder(
                 sequence_length=self.history_len_30  # sensor_history_minutes // 30 + 1,
                 # Sensors are currently resampled to 30min
             )
 
             # Update num features
-            fusion_input_features += self.sensor_encoder.out_features
+            fusion_input_features += self.wind_encoder.out_features
 
         if self.embedding_dim:
             self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
@@ -269,9 +269,9 @@ class Model(BaseModel):
 
         # *********************** Sensor Data ************************************
         # add sensor yield history
-        if self.include_sensor:
+        if self.include_wind:
             # sensor_history = x[BatchKey.sensor][:, : self.history_len_30].float()
-            modes["sensor"] = self.sensor_encoder(x)
+            modes["wind"] = self.wind_encoder(x)
 
         if self.include_sun:
             sun = torch.cat(

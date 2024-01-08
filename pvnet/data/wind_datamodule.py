@@ -78,7 +78,7 @@ class WindDataModule(LightningDataModule):
     def _get_datapipe(self, start_time, end_time):
         data_pipeline = windnet_netcdf_datapipe(
             self.configuration,
-            keys=["sensor", "nwp"],
+            keys=["wind", "nwp"],
         )
 
         data_pipeline = (
