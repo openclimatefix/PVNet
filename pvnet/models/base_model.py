@@ -267,8 +267,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # TODO Change, but make configurable, as India data is 15 minutely
         self.history_len_30 = history_minutes // 15
         self.forecast_len_30 = forecast_minutes // 15
-        #self.forecast_len_15 = forecast_minutes // 15
-        #self.history_len_15 = history_minutes // 15
+        # self.forecast_len_15 = forecast_minutes // 15
+        # self.history_len_15 = history_minutes // 15
 
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len_30)
 
