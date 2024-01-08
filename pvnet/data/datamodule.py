@@ -11,6 +11,8 @@ from torch.utils.data.datapipes.iter import FileLister
 from pvnet.data.utils import batch_to_tensor
 
 
+    
+    
 class DataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
 
@@ -23,7 +25,6 @@ class DataModule(LightningDataModule):
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        block_nwp_and_sat=False,
         batch_dir=None,
     ):
         """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
@@ -39,8 +40,6 @@ class DataModule(LightningDataModule):
             train_period: Date range filter for train dataloader.
             val_period: Date range filter for val dataloader.
             test_period: Date range filter for test dataloader.
-            block_nwp_and_sat: If True, the dataloader does not load the requested NWP and sat data.
-                It instead returns an zero-array of the required shape. Useful for pretraining.
             batch_dir: Path to the directory of pre-saved batches. Cannot be used together with
                 `configuration` or 'train/val/test_period'.
 
@@ -48,7 +47,6 @@ class DataModule(LightningDataModule):
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
-        self.block_nwp_and_sat = block_nwp_and_sat
         self.batch_dir = batch_dir
 
         if not ((batch_dir is not None) ^ (configuration is not None)):
@@ -69,7 +67,6 @@ class DataModule(LightningDataModule):
         ]
 
         self._common_dataloader_kwargs = dict(
-            shuffle=False,  # shuffled in datapipe step
             batch_size=None,  # batched in datapipe step
             sampler=None,
             batch_sampler=None,
@@ -88,8 +85,6 @@ class DataModule(LightningDataModule):
             self.configuration,
             start_time=start_time,
             end_time=end_time,
-            block_sat=self.block_nwp_and_sat,
-            block_nwp=self.block_nwp_and_sat,
         )
 
         data_pipeline = (
@@ -131,7 +126,7 @@ class DataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("train", shuffle=True)
         else:
             datapipe = self._get_datapipe(*self.train_period)
-        return DataLoader(datapipe, **self._common_dataloader_kwargs)
+        return DataLoader(datapipe, shuffle=True, **self._common_dataloader_kwargs)
 
     def val_dataloader(self):
         """Construct val dataloader"""
@@ -139,7 +134,7 @@ class DataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("val")
         else:
             datapipe = self._get_datapipe(*self.val_period)
-        return DataLoader(datapipe, **self._common_dataloader_kwargs)
+        return DataLoader(datapipe, shuffle=False, **self._common_dataloader_kwargs)
 
     def test_dataloader(self):
         """Construct test dataloader"""
@@ -147,4 +142,4 @@ class DataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("test")
         else:
             datapipe = self._get_datapipe(*self.test_period)
-        return DataLoader(datapipe, **self._common_dataloader_kwargs)
+        return DataLoader(datapipe, shuffle=False, **self._common_dataloader_kwargs)

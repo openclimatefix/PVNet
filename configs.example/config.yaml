@@ -15,7 +15,7 @@ defaults:
 renewable:
   "pv"
 
-  # enable color logging
+# enable color logging
 #  - override hydra/hydra_logging: colorlog
 #  - override hydra/job_logging: colorlog
 
