@@ -150,7 +150,6 @@ class WeightedLosses:
         # and predictions and then take the mean across all forecast horizons and the batch
         self.weights = weights / weights.mean()
 
-
     def get_mse_exp(self, output, target):
         """Loss function weighted MSE"""
 
@@ -163,7 +162,7 @@ class WeightedLosses:
 
     def get_mae_exp(self, output, target):
         """Loss function weighted MAE"""
-        
+
         weights = self.weights.to(target.device)
         # get the differences weighted by the forecast horizon weights
         diff_with_weights = weights * torch.abs(output - target)
