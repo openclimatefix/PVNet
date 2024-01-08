@@ -55,7 +55,7 @@ class Model(BaseModel):
         nwp_forecast_minutes: Optional[int] = None,
         nwp_history_minutes: Optional[int] = None,
         pv_history_minutes: Optional[int] = None,
-        sensor_history_minutes: Optional[int] = None,
+        wind_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
     ):
@@ -186,11 +186,11 @@ class Model(BaseModel):
             fusion_input_features += self.pv_encoder.out_features
 
         if self.include_wind:
-            if sensor_history_minutes is None:
-                sensor_history_minutes = history_minutes
+            if wind_history_minutes is None:
+                wind_history_minutes = history_minutes
 
             self.wind_encoder = wind_encoder(
-                sequence_length=self.history_len_30  # sensor_history_minutes // 30 + 1,
+                sequence_length=self.history_len_30  # wind_history_minutes // 30 + 1,
                 # Sensors are currently resampled to 30min
             )
 
