@@ -145,13 +145,7 @@ class Model(BaseModel):
             # Param checks
             assert nwp_forecast_minutes is not None
             assert nwp_history_minutes is not None
-            nwp_forecast_minutes_dict = {}
-            nwp_history_minutes_dict = {}
-            for nwp_source in nwp_encoders_dict.keys():
-                nwp_history_minutes_dict[nwp_source] = nwp_history_minutes
-                nwp_forecast_minutes_dict[nwp_source] = nwp_forecast_minutes
-            nwp_forecast_minutes = nwp_forecast_minutes_dict
-            nwp_history_minutes = nwp_history_minutes_dict
+
             # For each NWP encoder the forecast and history minutes must be set
             assert set(nwp_encoders_dict.keys()) == set(nwp_forecast_minutes.keys())
             assert set(nwp_encoders_dict.keys()) == set(nwp_history_minutes.keys())
