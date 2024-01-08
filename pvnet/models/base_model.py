@@ -368,7 +368,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
-
+        print(y.shape)
+        print(y_hat.shape)
         losses = {}
 
         if self.use_quantile_regression:
