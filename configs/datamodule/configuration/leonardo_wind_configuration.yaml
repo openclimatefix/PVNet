@@ -5,7 +5,7 @@ general:
 input_data:
   default_forecast_minutes: 480
   default_history_minutes: 60
-  data_source_which_defines_geospatial_locations: "sensor"
+  data_source_which_defines_geospatial_locations: "wind"
   nwp:
     nwp_zarr_path: "/mnt/storage_b/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/NWP/ECMWF/nw-india/zarr/2022*.zarr.zip"
     history_minutes: 60
@@ -31,9 +31,10 @@ input_data:
     x_dim_name: "longitude"
     y_dim_name: "latitude"
     nwp_provider: "ecmwf"
-  sensor:
-    sensor_filename: "/mnt/storage_ssd_4tb/ASOS/asos_india_new_all_nw_india.nc"
-    sensor_variables:
-      - wind_speed_knots
-    x_dim_name: "longitude"
-    y_dim_name: "latitude"
+  wind:
+    wind_files_groups:
+      - label: india
+        wind_filename: /mnt/storage_ssd_4tb/india_wind_data.nc
+        wind_metadata_filename: /mnt/storage_ssd_4tb/india_wind_metadata.csv
+    get_center: true
+    n_wind_systems_per_example: 1

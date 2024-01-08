@@ -1,9 +1,10 @@
 """ Data module for pytorch lightning """
 import glob
+from datetime import datetime
 
 from lightning.pytorch import LightningDataModule
+from ocf_datapipes.batch import stack_np_examples_into_batch, BatchKey
 from ocf_datapipes.training.windnet import windnet_netcdf_datapipe
-from ocf_datapipes.utils.consts import BatchKey
 from ocf_datapipes.utils.utils import stack_np_examples_into_batch
 from torch.utils.data import DataLoader
 
@@ -92,7 +93,7 @@ class WindDataModule(LightningDataModule):
         filenames = list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc"))
         data_pipeline = windnet_netcdf_datapipe(
             config_filename=self.configuration,
-            keys=["sensor", "nwp"],
+            keys=["wind", "nwp"],
             filenames=filenames,
         )
         data_pipeline = (

@@ -1,0 +1,33 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=test.yaml
+
+defaults:
+  - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
+  - override /model: test.yaml
+  - override /datamodule: ocf_datapipes.yaml
+  - override /callbacks: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+seed: 518
+
+trainer:
+  min_epochs: 0
+  max_epochs: 2
+  reload_dataloaders_every_n_epochs: 0
+  limit_train_batches: 2000
+  limit_val_batches: 100
+  limit_test_batches: 100
+  val_check_interval: 100
+  num_sanity_val_steps: 8
+  accumulate_grad_batches: 4
+  #fast_dev_run: 3
+
+datamodule:
+  num_workers: 10
+  prefetch_factor: 2
+  batch_size: 8
+#validate_only: '1'  # by putting this key in the config file, the model does not get trained.

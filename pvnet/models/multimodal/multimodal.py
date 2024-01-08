@@ -4,7 +4,7 @@ from collections import OrderedDict
 from typing import Optional
 
 import torch
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torch import nn
 
 import pvnet
@@ -39,7 +39,7 @@ class Model(BaseModel):
         self,
         output_network: AbstractLinearNetwork,
         output_quantiles: Optional[list[float]] = None,
-        nwp_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
+        nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         pv_encoder: Optional[AbstractPVSitesEncoder] = None,
         sensor_encoder: Optional[AbstractPVSitesEncoder] = None,  # TODO Change to SensorEncoder
@@ -73,8 +73,8 @@ class Model(BaseModel):
                 features to produce the forecast.
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
-            nwp_encoder: A partially instatiated pytorch Module class used to encode the NWP data
-                from 4D into an 1D feature vector.
+            nwp_encoders_dict: A dictionary of partially instatiated pytorch Module class used to
+                encode the NWP data from 4D into an 1D feature vector from different sources.
             sat_encoder: A partially instatiated pytorch Module class used to encode the satellite
                 data from 4D into an 1D feature vector.
             pv_encoder: A partially instatiated pytorch Module class used to encode the site-level
@@ -99,9 +99,10 @@ class Model(BaseModel):
                 `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
         """
+
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = sat_encoder is not None
-        self.include_nwp = nwp_encoder is not None
+        self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
         self.include_gsp = include_gsp
@@ -122,10 +123,9 @@ class Model(BaseModel):
         fusion_input_features = 0
 
         if self.include_sat:
-            # We limit the history to have a delay of 15 mins in satellite data
-
-            if sat_history_minutes is None:
-                sat_history_minutes = history_minutes
+            # Param checks
+            assert sat_history_minutes is not None
+            assert nwp_forecast_minutes is not None
 
             self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
 
@@ -142,29 +142,41 @@ class Model(BaseModel):
             fusion_input_features += self.sat_encoder.out_features
 
         if self.include_nwp:
-            if nwp_history_minutes is None:
-                nwp_history_minutes = history_minutes
-            if nwp_forecast_minutes is None:
-                nwp_forecast_minutes = forecast_minutes
-            nwp_sequence_len = (
-                10  # TODO Fix = nwp_history_minutes // 60 + nwp_forecast_minutes // 60 + 1
-            )
+            # Param checks
+            assert nwp_forecast_minutes is not None
+            assert nwp_history_minutes is not None
+            # For each NWP encoder the forecast and history minutes must be set
+            assert set(nwp_encoders_dict.keys()) == set(nwp_forecast_minutes.keys())
+            assert set(nwp_encoders_dict.keys()) == set(nwp_history_minutes.keys())
 
-            self.nwp_encoder = nwp_encoder(
-                sequence_length=nwp_sequence_len,
-                in_channels=nwp_encoder.keywords["in_channels"] + add_image_embedding_channel,
-            )
+            self.nwp_encoders_dict = torch.nn.ModuleDict()
             if add_image_embedding_channel:
-                self.nwp_embed = ImageEmbedding(
-                    318, nwp_sequence_len, self.nwp_encoder.image_size_pixels
+                self.nwp_embed_dict = torch.nn.ModuleDict()
+
+            for nwp_source in nwp_encoders_dict.keys():
+                nwp_sequence_len = (
+                    nwp_history_minutes[nwp_source] // 60
+                    + nwp_forecast_minutes[nwp_source] // 60
+                    + 1
                 )
 
-            # Update num features
-            fusion_input_features += self.nwp_encoder.out_features
+                self.nwp_encoders_dict[nwp_source] = nwp_encoders_dict[nwp_source](
+                    sequence_length=nwp_sequence_len,
+                    in_channels=(
+                        nwp_encoders_dict[nwp_source].keywords["in_channels"]
+                        + add_image_embedding_channel
+                    ),
+                )
+                if add_image_embedding_channel:
+                    self.nwp_embed_dict[nwp_source] = ImageEmbedding(
+                        318, nwp_sequence_len, self.nwp_encoders_dict[nwp_source].image_size_pixels
+                    )
+
+                # Update num features
+                fusion_input_features += self.nwp_encoders_dict[nwp_source].out_features
 
         if self.include_pv:
-            if pv_history_minutes is None:
-                pv_history_minutes = history_minutes
+            assert pv_history_minutes is not None
 
             self.pv_encoder = pv_encoder(
                 sequence_length=pv_history_minutes // 5 + 1,
@@ -227,13 +239,15 @@ class Model(BaseModel):
 
         # *********************** NWP Data ************************************
         if self.include_nwp:
-            # shape: batch_size, seq_len, n_chans, height, width
-            nwp_data = x[BatchKey.nwp].float()
-            nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
-            if self.add_image_embedding_channel:
-                id = x[BatchKey.sensor_id][:, 0].int()
-                nwp_data = self.nwp_embed(nwp_data, id)
-            modes["nwp"] = self.nwp_encoder(nwp_data)
+            # Loop through potentially many NMPs
+            for nwp_source in self.nwp_encoders_dict:
+                # shape: batch_size, seq_len, n_chans, height, width
+                nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
+                nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
+                if self.add_image_embedding_channel:
+                    id = x[BatchKey.gsp_id][:, 0].int()
+                    nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
+                modes[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source](nwp_data)
 
         # *********************** PV Data *************************************
         # Add site-level PV yield

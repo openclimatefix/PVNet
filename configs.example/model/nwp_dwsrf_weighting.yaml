@@ -1,0 +1,21 @@
+_target_: pvnet.models.multimodal.nwp_weighting.Model
+
+#--------------------------------------------
+# Network settings
+#--------------------------------------------
+
+# Foreast and time settings
+forecast_minutes: 480
+history_minutes: 120
+
+nwp_history_minutes: 120
+nwp_forecast_minutes: 480
+
+nwp_image_size_pixels: 24
+dwsrf_channel: 1
+
+# ----------------------------------------------
+
+optimizer:
+  _target_: pvnet.optimizers.AdamW
+  lr: 0.0005

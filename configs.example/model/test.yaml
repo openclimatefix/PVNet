@@ -1,0 +1,4 @@
+_target_: pvnet.models.baseline.single_value.Model
+
+history_minutes: 120
+forecast_minutes: 360

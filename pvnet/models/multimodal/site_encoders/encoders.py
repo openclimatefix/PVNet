@@ -3,7 +3,7 @@
 """
 
 import torch
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 from torch import nn
 
 from pvnet.models.multimodal.linear_networks.networks import ResFCNet2

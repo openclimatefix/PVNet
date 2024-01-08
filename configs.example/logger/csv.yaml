@@ -1,0 +1,9 @@
+# csv logger built in lightning
+
+csv:
+  _target_: pytorch_lightning.loggers.csv_logs.CSVLogger
+  # local path to log training process
+  save_dir: "PLACEHOLDER"
+  name: "csv/"
+  version: null
+  prefix: ""

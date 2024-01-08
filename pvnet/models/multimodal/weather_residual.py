@@ -4,7 +4,7 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 from torch import nn
 
 import pvnet

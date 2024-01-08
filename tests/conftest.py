@@ -1,4 +1,6 @@
 import os
+import glob
+import tempfile
 
 import pytest
 import pandas as pd
@@ -7,7 +9,7 @@ import xarray as xr
 import torch
 import hydra
 
-from ocf_datapipes.utils.consts import BatchKey
+from ocf_datapipes.batch import BatchKey
 from datetime import timedelta
 
 import pvnet
@@ -15,6 +17,8 @@ from pvnet.data.datamodule import DataModule
 
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
+import pvnet.models.multimodal.site_encoders.encoders
+from pvnet.models.multimodal.multimodal import Model
 
 
 xr.set_options(keep_attrs=True)
@@ -28,7 +32,7 @@ def time_before_present(dt: timedelta):
 def nwp_data():
     # Load dataset which only contains coordinates, but no data
     ds = xr.open_zarr(
-        f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/nwp_shell.zarr"
+        f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_data/nwp_shell.zarr"
     )
 
     # Last init time was at least 2 hours ago and hour to 3-hour interval
@@ -65,7 +69,7 @@ def nwp_data():
 def sat_data():
     # Load dataset which only contains coordinates, but no data
     ds = xr.open_zarr(
-        f"{os.path.dirname(os.path.abspath(__file__))}/data/sample_data/non_hrv_shell.zarr"
+        f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_data/non_hrv_shell.zarr"
     )
 
     # Change times so they lead up to present. Delayed by at most 1 hour
@@ -91,6 +95,41 @@ def sat_data():
 
 
 @pytest.fixture()
+def sample_train_val_datamodule():
+    # duplicate the sample batcnes for more training/val data
+    n_duplicates = 10
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        os.makedirs(f"{tmpdirname}/train")
+        os.makedirs(f"{tmpdirname}/val")
+
+        file_n = 0
+
+        for file in glob.glob("tests/test_data/sample_batches/train/*.pt"):
+            batch = torch.load(file)
+
+            for i in range(n_duplicates):
+                # Save fopr both train and val
+                torch.save(batch, f"{tmpdirname}/train/{file_n:06}.pt")
+                torch.save(batch, f"{tmpdirname}/val/{file_n:06}.pt")
+
+                file_n += 1
+
+        dm = DataModule(
+            configuration=None,
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            train_period=[None, None],
+            val_period=[None, None],
+            test_period=[None, None],
+            block_nwp_and_sat=False,
+            batch_dir=f"{tmpdirname}",
+        )
+        yield dm
+
+
+@pytest.fixture()
 def sample_datamodule():
     dm = DataModule(
         configuration=None,
@@ -101,7 +140,7 @@ def sample_datamodule():
         val_period=[None, None],
         test_period=[None, None],
         block_nwp_and_sat=False,
-        batch_dir="tests/data/sample_batches",
+        batch_dir="tests/test_data/sample_batches",
     )
     return dm
 
@@ -168,15 +207,17 @@ def multimodal_model_kwargs(model_minutes_kwargs):
             conv3d_channels=32,
             image_size_pixels=24,
         ),
-        nwp_encoder=dict(
-            _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
-            _partial_=True,
-            in_channels=2,
-            out_features=128,
-            number_of_conv3d_layers=6,
-            conv3d_channels=32,
-            image_size_pixels=24,
-        ),
+        nwp_encoders_dict={
+            "ukv": dict(
+                _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
+                _partial_=True,
+                in_channels=2,
+                out_features=128,
+                number_of_conv3d_layers=6,
+                conv3d_channels=32,
+                image_size_pixels=24,
+            ),
+        },
         add_image_embedding_channel=True,
         pv_encoder=dict(
             _target_=pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork,
@@ -199,8 +240,8 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         include_sun=True,
         include_gsp_yield_history=True,
         sat_history_minutes=90,
-        nwp_history_minutes=120,
-        nwp_forecast_minutes=480,
+        nwp_history_minutes={"ukv": 120},
+        nwp_forecast_minutes={"ukv": 480},
         pv_history_minutes=180,
         min_sat_delay_minutes=30,
     )
@@ -209,3 +250,15 @@ def multimodal_model_kwargs(model_minutes_kwargs):
 
     kwargs.update(model_minutes_kwargs)
     return kwargs
+
+
+@pytest.fixture()
+def multimodal_model(multimodal_model_kwargs):
+    model = Model(**multimodal_model_kwargs)
+    return model
+
+
+@pytest.fixture()
+def multimodal_quantile_model(multimodal_model_kwargs):
+    model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
+    return model

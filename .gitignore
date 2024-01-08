@@ -1,7 +1,9 @@
 # Custom
 config_tree.txt
+configs/
 lightning_logs/
 logs/
+output/
 checkpoints*
 csv/
 notebooks/

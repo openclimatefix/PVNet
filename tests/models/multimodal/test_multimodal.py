@@ -1,18 +1,5 @@
-from pvnet.models.multimodal.multimodal import Model
 from torch.optim import SGD
 import pytest
-
-
-@pytest.fixture()
-def multimodal_model(multimodal_model_kwargs):
-    model = Model(**multimodal_model_kwargs)
-    return model
-
-
-@pytest.fixture()
-def multimodal_quantile_model(multimodal_model_kwargs):
-    model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
-    return model
 
 
 def test_model_forward(multimodal_model, sample_batch):
