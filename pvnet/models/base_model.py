@@ -429,15 +429,15 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
-            if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
-                fig = plot_batch_forecasts(
-                    batch,
-                    y_hat,
-                    batch_idx,
-                    quantiles=self.output_quantiles,
-                    key_to_plot="gsp" if self._target_key == BatchKey.gsp else "wind",
-                )
-                fig.savefig("latest_logged_train_batch.png")
+            #if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
+            #    fig = plot_batch_forecasts(
+            #        batch,
+            #        y_hat,
+            #        batch_idx,
+            #        quantiles=self.output_quantiles,
+            #        key_to_plot="gsp" if self._target_key == BatchKey.gsp else "wind",
+            #    )
+            #    fig.savefig("latest_logged_train_batch.png")
 
     def training_step(self, batch, batch_idx):
         """Run training step"""
