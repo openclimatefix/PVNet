@@ -155,8 +155,6 @@ class Model(BaseModel):
                 self.nwp_embed_dict = torch.nn.ModuleDict()
 
             for nwp_source in nwp_encoders_dict.keys():
-                print(nwp_source)
-                print(nwp_history_minutes)
                 nwp_sequence_len = (
                     nwp_history_minutes[nwp_source] // 60
                     + nwp_forecast_minutes[nwp_source] // 60
