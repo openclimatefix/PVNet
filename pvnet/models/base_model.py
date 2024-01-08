@@ -425,11 +425,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             )
 
             # Number of accumulated grad batches
-            grad_batch_num = (batch_idx + 1) / self.trainer.accumulate_grad_batches
+            (batch_idx + 1) / self.trainer.accumulate_grad_batches
 
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
-            #if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
+            # if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
             #    fig = plot_batch_forecasts(
             #        batch,
             #        y_hat,
