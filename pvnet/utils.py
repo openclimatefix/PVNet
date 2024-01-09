@@ -257,7 +257,7 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
     y_hat = y_hat.cpu().numpy()
 
     gsp_ids = batch[y_id_key].cpu().numpy().squeeze()
-    t0_idx = batch[t0_idx_key]
+    batch[t0_idx_key]
 
     times_utc = batch[time_utc_key].cpu().numpy().squeeze().astype("datetime64[s]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
