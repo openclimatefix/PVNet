@@ -139,7 +139,12 @@ def train(config: DictConfig) -> Optional[float]:
 
     if should_pretrain:
         # Pre-train the model
-        datamodule.block_nwp_and_sat = True
+        raise NotImplementedError("Pre-training is not yet supported")
+        # The parameter `block_nwp_and_sat` has been removed from datapipes 
+        # If pretraining is re-supported in the future it is likely any pre-training logic should
+        # go here or perhaps in the callbacks
+        #datamodule.block_nwp_and_sat = True
+        
         trainer.fit(model=model, datamodule=datamodule)
 
     _callbacks_to_phase(callbacks, "main")
