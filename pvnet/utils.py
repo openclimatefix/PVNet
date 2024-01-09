@@ -248,10 +248,10 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
-    y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.wind
-    y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.wind_id
-    t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.wind_t0_idx
-    time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.wind_time_utc
+    y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.pv
+    y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.pv_id
+    t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.pv_t0_idx
+    time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.pv_time_utc
     plotting_name = key_to_plot.upper()
     y = batch[y_key].cpu().numpy()
     y_hat = y_hat.cpu().numpy()
