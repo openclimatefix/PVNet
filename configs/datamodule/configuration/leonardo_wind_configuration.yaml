@@ -3,7 +3,7 @@ general:
   name: windnet_india
 
 input_data:
-  default_forecast_minutes: 1440
+  default_forecast_minutes: 2880
   default_history_minutes: 60
   data_source_which_defines_geospatial_locations: "wind"
   nwp:
@@ -12,7 +12,7 @@ input_data:
       # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
       nwp_zarr_path: "/mnt/storage_b/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/NWP/ECMWF/nw-india/zarr/2022*.zarr.zip"
       history_minutes: 60
-      forecast_minutes: 1440
+      forecast_minutes: 2880
       time_resolution_minutes: 60
       nwp_channels:
         - hcc
