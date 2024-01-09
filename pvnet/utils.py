@@ -252,12 +252,11 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None):
     y_hat = y_hat.cpu().numpy()
 
     gsp_ids = batch[BatchKey.gsp_id].cpu().numpy().squeeze()
-    t0_idx = batch[BatchKey.gsp_t0_idx]
+    batch[BatchKey.gsp_t0_idx]
 
     times_utc = batch[BatchKey.gsp_time_utc].cpu().numpy().squeeze().astype("datetime64[s]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
 
-    len(times_utc[0]) - t0_idx - 1
     batch_size = y.shape[0]
 
     fig, axes = plt.subplots(4, 4, figsize=(8, 8))

@@ -27,7 +27,7 @@ class PredAccumulator:
 
     def append(self, y_hat: torch.Tensor):
         """Append a sub-batch of predictions"""
-        self._y_hats += [y_hat]
+        self._y_hats.append(y_hat)
 
     def flush(self) -> torch.Tensor:
         """Return all appended predictions as single tensor and remove from accumulated store."""
@@ -42,7 +42,7 @@ class DictListAccumulator:
     @staticmethod
     def _dict_list_append(d1, d2):
         for k, v in d2.items():
-            d1[k] += [v]
+            d1[k].append(v)
 
     @staticmethod
     def _dict_init_list(d):
