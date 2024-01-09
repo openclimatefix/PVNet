@@ -26,7 +26,7 @@ from pvnet.models.utils import (
     WeightedLosses,
 )
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.utils import construct_ocf_ml_metrics_batch_df
+from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
 
 DATA_CONFIG_NAME = "data_config.yaml"
 
@@ -428,15 +428,16 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
-            # if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
-            #    fig = plot_batch_forecasts(
-            #        batch,
-            #        y_hat,
-            #        batch_idx,
-            #        quantiles=self.output_quantiles,
-            #        key_to_plot="gsp" if self._target_key == BatchKey.gsp else "wind",
-            #    )
-            #    fig.savefig("latest_logged_train_batch.png")
+            grad_batch_num = batch_idx // self.trainer.accumulate_grad_batches
+            if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
+               fig = plot_batch_forecasts(
+                   batch,
+                   y_hat,
+                   batch_idx,
+                   quantiles=self.output_quantiles,
+                   key_to_plot="gsp" if self._target_key == BatchKey.gsp else "wind",
+               )
+               fig.savefig("latest_logged_train_batch.png")
 
     def training_step(self, batch, batch_idx):
         """Run training step"""
@@ -484,24 +485,24 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
             # if batch had accumulated
-            # if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:
-            # y_hat = self._val_y_hats.flush()
-            # batch = self._val_batches.flush()
+            if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:
+                y_hat = self._val_y_hats.flush()
+                batch = self._val_batches.flush()
 
-            # fig = plot_batch_forecasts(
-            #    batch,
-            #    y_hat,
-            #    quantiles=self.output_quantiles,
-            #    key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor",
-            # )
+                fig = plot_batch_forecasts(
+                   batch,
+                   y_hat,
+                   quantiles=self.output_quantiles,
+                   key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor",
+                )
 
-            # self.logger.experiment.log(
-            #    {
-            #        f"val_forecast_samples/batch_idx_{accum_batch_num}": wandb.Image(fig),
-            #    }
-            # )
-            # del self._val_y_hats
-            # del self._val_batches
+                self.logger.experiment.log(
+                   {
+                       f"val_forecast_samples/batch_idx_{accum_batch_num}": wandb.Image(fig),
+                   }
+                )
+                del self._val_y_hats
+                del self._val_batches
 
         return logged_losses
 
