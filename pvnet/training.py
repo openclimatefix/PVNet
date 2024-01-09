@@ -149,7 +149,6 @@ def train(config: DictConfig) -> Optional[float]:
 
     _callbacks_to_phase(callbacks, "main")
 
-    datamodule.block_nwp_and_sat = False
     trainer.should_stop = False
 
     # Train the model completely
