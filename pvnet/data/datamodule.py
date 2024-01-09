@@ -11,8 +11,6 @@ from torch.utils.data.datapipes.iter import FileLister
 from pvnet.data.utils import batch_to_tensor
 
 
-    
-    
 class DataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
 

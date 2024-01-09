@@ -12,8 +12,7 @@ defaults:
   - hparams_search: null
   - hydra: default.yaml
 
-renewable:
-  "pv"
+renewable: "pv"
 
 # enable color logging
 #  - override hydra/hydra_logging: colorlog
