@@ -12,7 +12,6 @@ def test_init():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        block_nwp_and_sat=False,
         batch_dir="tests/test_data/sample_batches",
     )
 
@@ -39,7 +38,6 @@ def test_iter():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        block_nwp_and_sat=False,
         batch_dir="tests/test_data/sample_batches",
     )
 
@@ -55,7 +53,6 @@ def test_iter_multiprocessing():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        block_nwp_and_sat=False,
         batch_dir="tests/test_data/sample_batches",
     )
 

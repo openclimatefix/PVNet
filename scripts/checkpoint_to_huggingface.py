@@ -53,9 +53,9 @@ def push_to_huggingface(
         # Only one epoch (best) saved per model
         files = glob.glob(f"{checkpoint_dir_path}/epoch*.ckpt")
         assert len(files) == 1
-        checkpoint = torch.load(files[0])
+        checkpoint = torch.load(files[0], map_location="cpu")
     else:
-        checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt")
+        checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt", map_location="cpu")
 
     model.load_state_dict(state_dict=checkpoint["state_dict"])
 
