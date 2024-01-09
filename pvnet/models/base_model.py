@@ -244,6 +244,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             optimizer (AbstractOptimizer): Optimizer
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
+            target_key: The key of the target variable in the batch
         """
         super().__init__()
 
