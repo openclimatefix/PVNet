@@ -21,16 +21,16 @@ input_data:
       forecast_minutes: 120
       time_resolution_minutes: 60
       nwp_channels: # comment out channels as appropriate
-        - t         # 2-metre temperature
-        - dswrf     # downwards short-wave radiation flux
-        - dlwrf     # downwards long-wave radiation flux
-        - hcc       # high cloud cover
-        - mcc       # medium cloud cover
-        - lcc       # low cloud cover
-        - vis       # visability
-        - r         # relative humidity
-        - prate     # precipitation rate
-        - si10      # 10-metre wind speed | live = unknown
+        - t # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
+        - vis # visability
+        - r # relative humidity
+        - prate # precipitation rate
+        - si10 # 10-metre wind speed | live = unknown
       nwp_image_size_pixels_height: 24
       nwp_image_size_pixels_width: 24
       nwp_provider: ukv
@@ -42,7 +42,7 @@ input_data:
       - label: solar_sheffield_passiv
         pv_filename: gs://solar-pv-nowcasting-data/PV/Passive/ocf_formatted/v0/passiv.netcdf
         pv_metadata_filename: gs://solar-pv-nowcasting-data/PV/Passive/ocf_formatted/v0/system_metadata_OCF_ONLY.csv
-       # This is the list of pv_ml_ids to be sliced from the PV site level data
+        # This is the list of pv_ml_ids to be sliced from the PV site level data
     pv_ml_ids:
       [
         154,
@@ -409,7 +409,7 @@ input_data:
   satellite:
     satellite_zarr_path:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr"
-      - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr"    
+      - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr"
     history_minutes: 60
     forecast_minutes: 0
     live_delay_minutes: 30

@@ -95,7 +95,7 @@ conda create -n ocf_datapipes python=3.10
 Then go inside the ocf_datapipes repo to add packages
 
 ```bash
-pip install -r requirements.txt requirements-dev.txt 
+pip install -r requirements.txt requirements-dev.txt
 ```
 
 Then exit this environment, and enter back into the pvnet conda environment and install ocf_datapies in editable mode (-e). This means the package is directly linked to the source code in the ocf_datapies repo.
@@ -144,7 +144,7 @@ This should be given the whole path to the config on your local machine, such as
 
 Where `FULL-PATH-TO-REPO` represent the whole path to the PVNet repo on your local machine.
 
-### Running the batch creation script 
+### Running the batch creation script
 
 Run the save_batches.py script to create batches with the following example arguments as:
 
@@ -167,7 +167,7 @@ For files stored in multiple locations they can be added as list. For example fr
 ```
 satellite:
     satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
-    
+
 ```
 
 To satellite data hosted by Google:
@@ -178,7 +178,7 @@ satellite:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr"
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr"
 ```
-Datapipes is currently set up to use 12 channels from the satellite data which is the YEAR_nonhrv.zarr rather than YEAR_hrv.zarr. 
+Datapipes is currently set up to use 12 channels from the satellite data which is the YEAR_nonhrv.zarr rather than YEAR_hrv.zarr.
 
 
 ### Training PVNet
