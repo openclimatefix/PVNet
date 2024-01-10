@@ -28,6 +28,12 @@ cd PVNet
 pip install -r requirements.txt
 ```
 
+The commit history is extensive. To save download time, use a depth of 1:
+```bash
+git clone --depth 1 https://github.com/openclimatefix/PVNet.git
+```
+This means only the latest commit and its associated files will be downloaded.
+
 ### Additional development dependencies
 
 ```bash
