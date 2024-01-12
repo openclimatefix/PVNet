@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import yaml
+import wandb
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
