@@ -388,8 +388,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         mse_each_step = common_metrics_each_step["rmse"] ** 2
         mae_each_step = common_metrics_each_step["mae"]
 
-        losses.update({f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)})
-        losses.update({f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_step)})
+        losses.update({f"MSE_horizon/step_{i:03}": m for i, m in enumerate(mse_each_step)})
+        losses.update({f"MAE_horizon/step_{i:03}": m for i, m in enumerate(mae_each_step)})
+
         return losses
 
     def _calculate_test_losses(self, y, y_hat):
@@ -466,6 +467,23 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         losses.update(self._calculate_val_losses(y, y_hat))
 
         logged_losses = {f"{k}/val": v for k, v in losses.items()}
+        # Get the losses in the format of {VAL>_horizon/step_000: 0.1, VAL>_horizon/step_001: 0.2}
+        # for each step in the forecast horizon
+        # This is needed for the custom plot
+        # And needs to be in order of step
+        x_values = [int(k.split("_")[-1]) for k in logged_losses.keys() if "MAE_horizon/step" in k]
+        y_values = []
+        for x in x_values:
+            y_values.append(logged_losses[f"MAE_horizon/step_{x:03}/val"])
+        per_step_losses = [[x, y] for (x, y) in zip(x_values, y_values)]
+        table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
+        wandb.log(
+            {
+                "mae_vs_timestep": wandb.plot.line(
+                    table, "timestep", "MAE", title="MAE vs Timestep"
+                )
+            }
+        )
 
         self.log_dict(
             logged_losses,
