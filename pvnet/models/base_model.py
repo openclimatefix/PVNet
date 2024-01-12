@@ -443,6 +443,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def training_step(self, batch, batch_idx):
         """Run training step"""
+        # Make all -1 values 0.0
+        batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
@@ -459,6 +461,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
+        # Make all -1 values 0.0
+        batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         # Sensor seems to be in batch, station, time order
         y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
@@ -527,6 +531,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def test_step(self, batch, batch_idx):
         """Run test step"""
+        # Make all -1 values 0.0
+        batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
