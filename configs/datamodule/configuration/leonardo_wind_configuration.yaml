@@ -29,8 +29,8 @@ input_data:
         - v10
         - v100
         - v200
-      nwp_image_size_pixels_height: 16 # roughtly equivalent to ukv 24 pixels
-      nwp_image_size_pixels_width: 16
+      nwp_image_size_pixels_height: 168 # roughtly equivalent to ukv 24 pixels
+      nwp_image_size_pixels_width: 168
       x_dim_name: "longitude"
       y_dim_name: "latitude"
       nwp_provider: "ecmwf"
