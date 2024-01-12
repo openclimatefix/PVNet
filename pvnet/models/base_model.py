@@ -471,7 +471,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # for each step in the forecast horizon
         # This is needed for the custom plot
         # And needs to be in order of step
-        x_values = [int(k.split("_")[-1]) for k in logged_losses.keys() if "MAE_horizon/step" in k]
+        x_values = [int(k.split("_")[-1].split("/")[0]) for k in logged_losses.keys() if "MAE_horizon/step" in k]
         y_values = []
         for x in x_values:
             y_values.append(logged_losses[f"MAE_horizon/step_{x:03}/val"])
