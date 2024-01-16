@@ -15,6 +15,7 @@ from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearN
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
 
+from torchvision.transforms.functional import center_crop
 
 class Model(BaseModel):
     """Neural network which combines information from different sources
@@ -208,6 +209,9 @@ class Model(BaseModel):
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
+            
+            sat_data = center_crop(sat_data, output_size=self.sat_encoder.image_size_pixels) 
+            
             if self.add_image_embedding_channel:
                 id = x[BatchKey.gsp_id][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
