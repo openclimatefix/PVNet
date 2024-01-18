@@ -156,7 +156,7 @@ In this function the datamodule argument looks for a config under `PVNet/configs
 
 Its important that the dates set for the training, validation and testing in the datamodule (`streamed_batches.yaml`) config are within the ranges of the dates set for the input features in the configuration (`gcp_configuration.yaml`).
 
-If downloading data from gcp bucket or satellite data make sure to authenticate gcloud:
+If downloading private data from a gcp bucket make sure to authenticate gcloud (the public satellite data does not need authentication):
 
 ```
 gcloud auth login
@@ -167,7 +167,6 @@ For files stored in multiple locations they can be added as list. For example fr
 ```
 satellite:
     satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
-
 ```
 
 To satellite data hosted by Google:
@@ -178,7 +177,7 @@ satellite:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr"
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr"
 ```
-Datapipes is currently set up to use 12 channels from the satellite data which is the YEAR_nonhrv.zarr rather than YEAR_hrv.zarr.
+Datapipes is currently set up to use 11 channels from the satellite data, the 12th of which is HRV and is not included in these.
 
 
 ### Training PVNet
