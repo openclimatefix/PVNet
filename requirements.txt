@@ -23,3 +23,5 @@ hydra-core
 python-dotenv
 hydra-optuna-sweeper
 rich
+# gcsfs is only needed when getting data from Google Cloud Storage
+gcsfs
