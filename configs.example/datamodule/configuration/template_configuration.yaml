@@ -43,14 +43,7 @@ input_data:
         pv_filename: gs://solar-pv-nowcasting-data/PV/Passive/ocf_formatted/v0/passiv.netcdf
         pv_metadata_filename: gs://solar-pv-nowcasting-data/PV/Passive/ocf_formatted/v0/system_metadata_OCF_ONLY.csv
         # This is the list of pv_ml_ids to be sliced from the PV site level data
-    pv_ml_ids:
-      [
-        156,
-        158,
-        159,
-        160,
-        162,
-      ]
+    pv_ml_ids: [156, 158, 159, 160, 162]
     history_minutes: 60
     forecast_minutes: 120
     time_resolution_minutes: 5
