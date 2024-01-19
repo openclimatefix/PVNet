@@ -58,6 +58,7 @@ class Model(BaseModel):
         wind_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
+            interval_minutes: int = 30,
     ):
         """Neural network which combines information from different sources.
 
@@ -99,6 +100,7 @@ class Model(BaseModel):
                 `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
+            interval_minutes: The interval between each sample of the target data
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -111,13 +113,15 @@ class Model(BaseModel):
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
         self.target_key_name = target_key
+        self.interval_minutes = interval_minutes
 
         super().__init__(
             history_minutes=history_minutes,
             forecast_minutes=forecast_minutes,
             optimizer=optimizer,
             output_quantiles=output_quantiles,
-            target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.wind,
+            target_key=target_key,
+            interval_minutes=interval_minutes
         )
 
         # Number of features expected by the output_network
@@ -278,8 +282,12 @@ class Model(BaseModel):
         # *********************** Sensor Data ************************************
         # add sensor yield history
         if self.include_wind:
-            # sensor_history = x[BatchKey.sensor][:, : self.history_len_30].float()
-            modes["wind"] = self.wind_encoder(x)
+            if self.target_key_name != "wind":
+                modes["wind"] = self.wind_encoder(x)
+            else:
+                # Target is wind, so only take the history
+                wind_history = x[BatchKey.wind][:, : self.history_len_30].float()
+                modes["wind"] = self.wind_encoder(wind_history)
 
         if self.include_sun:
             sun = torch.cat(

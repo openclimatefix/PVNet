@@ -240,6 +240,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         optimizer: AbstractOptimizer,
         output_quantiles: Optional[list[float]] = None,
         target_key: str = "gsp",
+        interval_minutes: int = 30,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -266,9 +267,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.output_quantiles = output_quantiles
 
         # Number of timestemps for 30 minutely data
-        # TODO Change, but make configurable, as India data is 15 minutely
-        self.history_len_30 = history_minutes // 15
-        self.forecast_len_30 = forecast_minutes // 15
+        self.history_len_30 = history_minutes // interval_minutes
+        self.forecast_len_30 = forecast_minutes // interval_minutes
         # self.forecast_len_15 = forecast_minutes // 15
         # self.history_len_15 = history_minutes // 15
 
@@ -276,7 +276,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator(
-            key_to_keep=self._target_key
+            key_to_keep=self._target_key_name
         )
         self._accumulated_y_hat = PredAccumulator()
 
