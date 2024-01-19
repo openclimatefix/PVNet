@@ -99,9 +99,12 @@ class BatchAccumulator(DictListAccumulator):
 
     # @staticmethod
     def _filter_batch_dict(self, d):
-        keep_keys = (
-            [BatchKey[self.key_to_keep], BatchKey[f"{self.key_to_keep}_id"], BatchKey[f"{self.key_to_keep}_t0_idx"], BatchKey[f"{self.key_to_keep}_time_utc"]]
-        )
+        keep_keys = [
+            BatchKey[self.key_to_keep],
+            BatchKey[f"{self.key_to_keep}_id"],
+            BatchKey[f"{self.key_to_keep}_t0_idx"],
+            BatchKey[f"{self.key_to_keep}_time_utc"],
+        ]
         return {k: v for k, v in d.items() if k in keep_keys}
 
     def append(self, batch: dict[BatchKey, list[torch.Tensor]]):
