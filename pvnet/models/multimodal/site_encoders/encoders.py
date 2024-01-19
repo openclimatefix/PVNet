@@ -390,3 +390,148 @@ class SingleWindAttentionNetwork(AbstractPVSitesEncoder):
         x_out = attn_output.squeeze()
 
         return x_out
+
+class SinglePVAttentionNetwork(AbstractPVSitesEncoder):
+    """A simple attention-based model with a single multihead attention layer
+
+    For the attention layer the query is based on the target wind alone, the key is based on the
+    wind ID and the recent wind data, the value is based on the recent wind data.
+
+    """
+
+    def __init__(
+        self,
+        sequence_length: int,
+        num_sites: int,
+        out_features: int,
+        kdim: int = 10,
+        pv_id_embed_dim: int = 10,
+        num_heads: int = 2,
+        n_kv_res_blocks: int = 2,
+        kv_res_block_layers: int = 2,
+        use_pv_id_in_value: bool = False,
+        pv_id_dim: int = 123,
+    ):
+        """A simple attention-based model with a single multihead attention layer
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            num_sites: Number of PV sites in the input data.
+            out_features: Number of output features. In this network this is also the embed and
+                value dimension in the multi-head attention layer.
+            kdim: The dimensions used the keys.
+            pv_id_embed_dim: Number of dimensiosn used in the wind ID embedding layer(s).
+            num_heads: Number of parallel attention heads. Note that `out_features` will be split
+                across `num_heads` so `out_features` must be a multiple of `num_heads`.
+            n_kv_res_blocks: Number of residual blocks to use in the key and value encoders.
+            kv_res_block_layers: Number of fully-connected layers used in each residual block within
+                the key and value encoders.
+            use_pv_id_in_value: Whether to use a PV ID embedding in network used to produce the
+                value for the attention layer.
+
+        """
+        super().__init__(sequence_length, num_sites, out_features)
+        self.sequence_length = sequence_length
+        self.wind_id_embedding = nn.Embedding(pv_id_dim, out_features)
+        self.pv_id_embedding = nn.Embedding(num_sites, pv_id_embed_dim)
+        self._wind_ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
+        self.use_wind_id_in_value = use_pv_id_in_value
+
+        if use_pv_id_in_value:
+            self.value_wind_id_embedding = nn.Embedding(num_sites, pv_id_embed_dim)
+
+        self._value_encoder = nn.Sequential(
+            ResFCNet2(
+                in_features=sequence_length + int(use_pv_id_in_value) * pv_id_embed_dim,
+                out_features=out_features,
+                fc_hidden_features=sequence_length,
+                n_res_blocks=n_kv_res_blocks,
+                res_block_layers=kv_res_block_layers,
+                dropout_frac=0,
+            ),
+        )
+
+        self._key_encoder = nn.Sequential(
+            ResFCNet2(
+                in_features=sequence_length + pv_id_embed_dim,
+                out_features=kdim,
+                fc_hidden_features=pv_id_embed_dim + sequence_length,
+                n_res_blocks=n_kv_res_blocks,
+                res_block_layers=kv_res_block_layers,
+                dropout_frac=0,
+            ),
+        )
+
+        self.multihead_attn = nn.MultiheadAttention(
+            embed_dim=out_features,
+            kdim=kdim,
+            vdim=out_features,
+            num_heads=num_heads,
+            batch_first=True,
+        )
+
+    def _encode_query(self, x):
+        # Select the first one
+        gsp_ids = x[BatchKey.wind_id][:, 0].squeeze().int()
+        query = self.wind_id_embedding(gsp_ids).unsqueeze(1)
+        return query
+
+    def _encode_key(self, x):
+        # Shape: [batch size, sequence length, PV site]
+        wind_site_seqs = x[BatchKey.wind][:, : self.sequence_length].float()
+        batch_size = wind_site_seqs.shape[0]
+
+        # wind ID embeddings are the same for each sample
+        wind_id_embed = torch.tile(self.pv_id_embedding(self._wind_ids), (batch_size, 1, 1))
+        # Each concated (wind sequence, wind ID embedding) is processed with encoder
+        x_seq_in = torch.cat((wind_site_seqs.swapaxes(1, 2), wind_id_embed), dim=2).flatten(0, 1)
+        key = self._key_encoder(x_seq_in)
+
+        # Reshape to [batch size, PV site, kdim]
+        key = key.unflatten(0, (batch_size, self.num_sites))
+        return key
+
+    def _encode_value(self, x):
+        # Shape: [batch size, sequence length, PV site]
+        wind_site_seqs = x[BatchKey.wind][:, : self.sequence_length].float()
+        batch_size = wind_site_seqs.shape[0]
+
+        if self.use_wind_id_in_value:
+            # wind ID embeddings are the same for each sample
+            wind_id_embed = torch.tile(
+                self.value_wind_id_embedding(self._wind_ids), (batch_size, 1, 1)
+            )
+            # Each concated (wind sequence, wind ID embedding) is processed with encoder
+            x_seq_in = torch.cat((wind_site_seqs.swapaxes(1, 2), wind_id_embed), dim=2).flatten(
+                0, 1
+            )
+        else:
+            # Encode each PV sequence independently
+            x_seq_in = wind_site_seqs.swapaxes(1, 2).flatten(0, 1)
+
+        value = self._value_encoder(x_seq_in)
+
+        # Reshape to [batch size, PV site, vdim]
+        value = value.unflatten(0, (batch_size, self.num_sites))
+        return value
+
+    def _attention_forward(self, x, average_attn_weights=True):
+        query = self._encode_query(x)
+        key = self._encode_key(x)
+        value = self._encode_value(x)
+
+        attn_output, attn_weights = self.multihead_attn(
+            query, key, value, average_attn_weights=average_attn_weights
+        )
+
+        return attn_output, attn_weights
+
+    def forward(self, x):
+        """Run model forward"""
+        # Do slicing here to only get history
+        attn_output, attn_output_weights = self._attention_forward(x)
+
+        # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]
+        x_out = attn_output.squeeze()
+
+        return x_out

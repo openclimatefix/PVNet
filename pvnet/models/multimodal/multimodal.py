@@ -197,8 +197,7 @@ class Model(BaseModel):
                 wind_history_minutes = history_minutes
 
             self.wind_encoder = wind_encoder(
-                sequence_length=self.history_len_30  # wind_history_minutes // 30 + 1,
-                # Sensors are currently resampled to 30min
+                sequence_length=self.history_len_30
             )
 
             # Update num features
