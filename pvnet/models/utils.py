@@ -100,14 +100,7 @@ class BatchAccumulator(DictListAccumulator):
     # @staticmethod
     def _filter_batch_dict(self, d):
         keep_keys = (
-            [BatchKey.gsp, BatchKey.gsp_id, BatchKey.gsp_t0_idx, BatchKey.gsp_time_utc]
-            if self.key_to_keep == "gsp"
-            else [
-                BatchKey.wind,
-                BatchKey.wind_id,
-                BatchKey.wind_t0_idx,
-                BatchKey.wind_time_utc,
-            ]
+            [BatchKey[self.key_to_keep], BatchKey[f"{self.key_to_keep}_id"], BatchKey[f"{self.key_to_keep}_t0_idx"], BatchKey[f"{self.key_to_keep}_time_utc"]]
         )
         return {k: v for k, v in d.items() if k in keep_keys}
 
@@ -122,7 +115,7 @@ class BatchAccumulator(DictListAccumulator):
         """Concatenate all accumulated batches, return, and clear self"""
         batch = {}
         for k, v in self._batches.items():
-            if k == BatchKey.gsp_t0_idx or k == BatchKey.wind_t0_idx:
+            if k == BatchKey.gsp_t0_idx or k == BatchKey.wind_t0_idx or k == BatchKey.pv_t0_idx:
                 batch[k] = v[0]
             else:
                 batch[k] = torch.cat(v, dim=0)

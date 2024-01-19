@@ -239,7 +239,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         forecast_minutes: int,
         optimizer: AbstractOptimizer,
         output_quantiles: Optional[list[float]] = None,
-        target_key: BatchKey = BatchKey.gsp,
+        target_key: str = "gsp",
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -254,7 +254,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         super().__init__()
 
         self._optimizer = optimizer
-        self._target_key = target_key
+        self._target_key_name = target_key
+        self._target_key = BatchKey[f"{self._target_key}"]
 
         # Model must have lr to allow tuning
         # This setting is only used when lr is tuned with callback
@@ -275,7 +276,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator(
-            key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor"
+            key_to_keep=self._target_key
         )
         self._accumulated_y_hat = PredAccumulator()
 
@@ -438,7 +439,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                    y_hat,
                    batch_idx,
                    quantiles=self.output_quantiles,
-                   key_to_plot="gsp" if self._target_key == BatchKey.gsp else "wind",
+                   key_to_plot=self._target_key_name,
                )
                fig.savefig("latest_logged_train_batch.png")
 
@@ -503,7 +504,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
                 self._val_batches = BatchAccumulator(
-                    key_to_keep="gsp" if self._target_key == BatchKey.gsp else "sensor"
+                    key_to_keep=self._target_key_name
                 )
 
             self._val_y_hats.append(y_hat)
@@ -517,7 +518,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                    batch,
                    y_hat,
                    quantiles=self.output_quantiles,
-                   key_to_plot="gsp" if self._target_key == BatchKey.gsp else "sensor",
+                   key_to_plot=self._target_key_name,
                 )
 
                 self.logger.experiment.log(
