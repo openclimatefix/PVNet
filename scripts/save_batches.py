@@ -29,8 +29,8 @@ import warnings
 import hydra
 import torch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
-from ocf_datapipes.training.windnet import windnet_datapipe
 from ocf_datapipes.training.pvnet_site import pvnet_site_datapipe
+from ocf_datapipes.training.windnet import windnet_datapipe
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
