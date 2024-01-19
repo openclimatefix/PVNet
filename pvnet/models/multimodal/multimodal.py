@@ -58,7 +58,7 @@ class Model(BaseModel):
         wind_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
-            interval_minutes: int = 30,
+        interval_minutes: int = 30,
     ):
         """Neural network which combines information from different sources.
 
@@ -121,7 +121,7 @@ class Model(BaseModel):
             optimizer=optimizer,
             output_quantiles=output_quantiles,
             target_key=target_key,
-            interval_minutes=interval_minutes
+            interval_minutes=interval_minutes,
         )
 
         # Number of features expected by the output_network
