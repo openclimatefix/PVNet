@@ -4,7 +4,7 @@
 defaults:
   - _self_
   - trainer: default.yaml
-  - model: wind_multimodal.yaml
+  - model: multimodal.yaml
   - datamodule: ocf_datapipes.yaml
   - callbacks: default.yaml # set this to null if you don't want to use callbacks
   - logger: wandb.yaml # set logger here or use command line (e.g. `python run.py logger=wandb`)
@@ -12,13 +12,9 @@ defaults:
   - hparams_search: null
   - hydra: default.yaml
 
-renewable: "wind"
-batch_output_dir: "/mnt/storage_ssd_4tb/windnet_batches"
-num_val_batches: 3200
-num_train_batches: 64000
-num_test_batches:
-  100
-  # enable color logging
+renewable: "pv"
+
+# enable color logging
 #  - override hydra/hydra_logging: colorlog
 #  - override hydra/job_logging: colorlog
 

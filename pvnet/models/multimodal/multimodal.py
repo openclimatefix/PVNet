@@ -98,6 +98,7 @@ class Model(BaseModel):
             pv_history_minutes: Length of recent site-level PV data data used as input. Defaults to
                 `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
+            target_key: The key of the target variable in the batch.
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -109,6 +110,7 @@ class Model(BaseModel):
         self.include_wind = wind_encoder is not None
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
+        self.target_key_name = target_key
 
         super().__init__(
             history_minutes=history_minutes,
@@ -253,7 +255,12 @@ class Model(BaseModel):
         # *********************** PV Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            modes["pv"] = self.pv_encoder(x)
+            if self.target_key_name != "pv":
+                modes["pv"] = self.pv_encoder(x)
+            else:
+                # Target is PV, so only take the history
+                pv_history = x[BatchKey.pv][:, : self.history_len_30].float()
+                modes["pv"] = self.pv_encoder(pv_history)
 
         # *********************** GSP Data ************************************
         # add gsp yield history

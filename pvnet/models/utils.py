@@ -29,7 +29,7 @@ class PredAccumulator:
 
     def append(self, y_hat: torch.Tensor):
         """Append a sub-batch of predictions"""
-        self._y_hats += [y_hat]
+        self._y_hats.append(y_hat)
 
     def flush(self) -> torch.Tensor:
         """Return all appended predictions as single tensor and remove from accumulated store."""
@@ -44,7 +44,7 @@ class DictListAccumulator:
     @staticmethod
     def _dict_list_append(d1, d2):
         for k, v in d2.items():
-            d1[k] += [v]
+            d1[k].append(v)
 
     @staticmethod
     def _dict_init_list(d):
@@ -160,17 +160,14 @@ class WeightedLosses:
         # normalized the weights, so there mean is 1.
         # To calculate the loss, we times the weights by the differences between truth
         # and predictions and then take the mean across all forecast horizons and the batch
-        self.weights = weights / weights.sum() * len(weights)
-
-        # move weights to gpu is needed
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.weights = self.weights.to(device)
+        self.weights = weights / weights.mean()
 
     def get_mse_exp(self, output, target):
         """Loss function weighted MSE"""
 
+        weights = self.weights.to(target.device)
         # get the differences weighted by the forecast horizon weights
-        diff_with_weights = self.weights * ((output - target) ** 2)
+        diff_with_weights = weights * ((output - target) ** 2)
 
         # average across batches
         return torch.mean(diff_with_weights)
@@ -178,8 +175,9 @@ class WeightedLosses:
     def get_mae_exp(self, output, target):
         """Loss function weighted MAE"""
 
+        weights = self.weights.to(target.device)
         # get the differences weighted by the forecast horizon weights
-        diff_with_weights = self.weights * torch.abs(output - target)
+        diff_with_weights = weights * torch.abs(output - target)
 
         # average across batches
         return torch.mean(diff_with_weights)

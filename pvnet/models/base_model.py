@@ -19,6 +19,7 @@ from huggingface_hub.hf_api import HfApi
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
 from ocf_datapipes.batch import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
+from ocf_ml_metrics.metrics.errors import common_metrics
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -248,7 +249,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             optimizer (AbstractOptimizer): Optimizer
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
-            target_key: BatchKey of the target variable
+            target_key: The key of the target variable in the batch
         """
         super().__init__()
 
@@ -368,6 +369,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_val_losses(self, y, y_hat):
         """Calculate additional validation losses"""
+
         losses = {}
 
         if self.use_quantile_regression:
@@ -426,11 +428,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             )
 
             # Number of accumulated grad batches
-            (batch_idx + 1) / self.trainer.accumulate_grad_batches
+            grad_batch_num = (batch_idx + 1) / self.trainer.accumulate_grad_batches
 
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
-            grad_batch_num = batch_idx // self.trainer.accumulate_grad_batches
             if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
                fig = plot_batch_forecasts(
                    batch,

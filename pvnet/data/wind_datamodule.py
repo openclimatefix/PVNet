@@ -60,7 +60,6 @@ class WindDataModule(LightningDataModule):
         # ]
 
         self._common_dataloader_kwargs = dict(
-            shuffle=False,  # shuffled in datapipe step
             batch_size=None,  # batched in datapipe step
             sampler=None,
             batch_sampler=None,
@@ -129,7 +128,7 @@ class WindDataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("train", shuffle=True)
         else:
             datapipe = self._get_datapipe(*self.train_period)
-        return DataLoader(datapipe, **self._common_dataloader_kwargs)
+        return DataLoader(datapipe, shuffle=True, **self._common_dataloader_kwargs)
 
     def val_dataloader(self):
         """Construct val dataloader"""
@@ -137,7 +136,7 @@ class WindDataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("val")
         else:
             datapipe = self._get_datapipe(*self.val_period)
-        return DataLoader(datapipe, **self._common_dataloader_kwargs)
+        return DataLoader(datapipe, shuffle=False, **self._common_dataloader_kwargs)
 
     def test_dataloader(self):
         """Construct test dataloader"""
@@ -145,4 +144,4 @@ class WindDataModule(LightningDataModule):
             datapipe = self._get_premade_batches_datapipe("test")
         else:
             datapipe = self._get_datapipe(*self.test_period)
-        return DataLoader(datapipe, **self._common_dataloader_kwargs)
+        return DataLoader(datapipe, shuffle=False, **self._common_dataloader_kwargs)

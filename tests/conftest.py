@@ -123,7 +123,6 @@ def sample_train_val_datamodule():
             train_period=[None, None],
             val_period=[None, None],
             test_period=[None, None],
-            block_nwp_and_sat=False,
             batch_dir=f"{tmpdirname}",
         )
         yield dm
@@ -139,7 +138,6 @@ def sample_datamodule():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        block_nwp_and_sat=False,
         batch_dir="tests/test_data/sample_batches",
     )
     return dm
