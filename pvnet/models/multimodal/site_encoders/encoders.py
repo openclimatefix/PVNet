@@ -391,6 +391,7 @@ class SingleWindAttentionNetwork(AbstractPVSitesEncoder):
 
         return x_out
 
+
 class SinglePVAttentionNetwork(AbstractPVSitesEncoder):
     """A simple attention-based model with a single multihead attention layer
 

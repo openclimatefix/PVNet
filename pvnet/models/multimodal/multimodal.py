@@ -196,9 +196,7 @@ class Model(BaseModel):
             if wind_history_minutes is None:
                 wind_history_minutes = history_minutes
 
-            self.wind_encoder = wind_encoder(
-                sequence_length=self.history_len_30
-            )
+            self.wind_encoder = wind_encoder(sequence_length=self.history_len_30)
 
             # Update num features
             fusion_input_features += self.wind_encoder.out_features
