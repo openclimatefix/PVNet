@@ -233,6 +233,11 @@ class Model(BaseModel):
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
+                nwp_data = center_crop(
+                    nwp_data, 
+                    output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
+                ) 
+                nwp_data = nwp_data[:,:,:self.sequence_length]
                 if self.add_image_embedding_channel:
                     id = x[BatchKey.gsp_id][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)

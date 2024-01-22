@@ -30,6 +30,7 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
         super().__init__()
         self.out_features = out_features
         self.image_size_pixels = image_size_pixels
+        self.sequence_length = sequence_length
 
     @abstractmethod
     def forward(self):
