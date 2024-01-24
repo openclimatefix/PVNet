@@ -260,8 +260,8 @@ class Model(BaseModel):
                 modes["pv"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
-                pv_history = x[BatchKey.pv][:, : self.history_len_30].float()
-                modes["pv"] = self.pv_encoder(pv_history)
+                x[BatchKey.pv] = x[BatchKey.pv][:, : self.history_len_30]
+                modes["pv"] = self.pv_encoder(x)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
@@ -282,9 +282,10 @@ class Model(BaseModel):
             if self.target_key_name != "wind":
                 modes["wind"] = self.wind_encoder(x)
             else:
-                # Target is wind, so only take the history
-                wind_history = x[BatchKey.wind][:, : self.history_len_30].float()
-                modes["wind"] = self.wind_encoder(wind_history)
+                # Have to be its own Batch format
+                x[BatchKey.wind] = x[BatchKey.wind][:, : self.history_len_30]
+                # This needs to be a Batch as input
+                modes["wind"] = self.wind_encoder(x)
 
         if self.include_sun:
             sun = torch.cat(
