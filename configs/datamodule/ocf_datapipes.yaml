@@ -1,5 +1,5 @@
 _target_: pvnet.data.wind_datamodule.WindDataModule
-configuration: "/home/jacob/PVNet/configs/datamodule/configuration/leonardo_wind_configuration.yaml"
+configuration: "/home/jacob/PVNet/configs/datamodule/configuration/leonardo_pv_configuration.yaml"
 num_workers: 1
 prefetch_factor: 2
 batch_size: 8

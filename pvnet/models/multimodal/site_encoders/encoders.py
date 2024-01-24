@@ -473,13 +473,13 @@ class SinglePVAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_query(self, x):
         # Select the first one
-        gsp_ids = x[BatchKey.wind_id][:, 0].squeeze().int()
+        gsp_ids = x[BatchKey.pv_id][:, 0].squeeze().int()
         query = self.wind_id_embedding(gsp_ids).unsqueeze(1)
         return query
 
     def _encode_key(self, x):
         # Shape: [batch size, sequence length, PV site]
-        wind_site_seqs = x[BatchKey.wind][:, : self.sequence_length].float()
+        wind_site_seqs = x[BatchKey.pv][:, : self.sequence_length].float()
         batch_size = wind_site_seqs.shape[0]
 
         # wind ID embeddings are the same for each sample
@@ -494,7 +494,7 @@ class SinglePVAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        wind_site_seqs = x[BatchKey.wind][:, : self.sequence_length].float()
+        wind_site_seqs = x[BatchKey.pv][:, : self.sequence_length].float()
         batch_size = wind_site_seqs.shape[0]
 
         if self.use_wind_id_in_value:
