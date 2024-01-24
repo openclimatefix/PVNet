@@ -466,6 +466,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         # Sensor seems to be in batch, station, time order
+        print(f"y_hat shape: {y_hat.shape}")
+        print(f"batch shape: {batch[self._target_key].shape}")
+        print(f"Shape after slice: {batch[self._target_key][:, -self.forecast_len_30 :, 0]}")
+        exit()
         y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
