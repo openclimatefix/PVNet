@@ -464,6 +464,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """Run validation step"""
         # Make all -1 values 0.0
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
+        print(f"batch shape: {batch[self._target_key].shape}")
+        print(f"Shape after slice: {batch[self._target_key][:, -self.forecast_len_30 :, 0]}")
         y_hat = self(batch)
         # Sensor seems to be in batch, station, time order
         print(f"y_hat shape: {y_hat.shape}")
