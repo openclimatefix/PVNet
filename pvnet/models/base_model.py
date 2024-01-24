@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import hydra
+import matplotlib.pyplot as plt
 import lightning.pytorch as pl
 import pandas as pd
 import torch
@@ -439,6 +440,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     key_to_plot=self._target_key_name,
                 )
                 fig.savefig("latest_logged_train_batch.png")
+                plt.close(fig)
 
     def training_step(self, batch, batch_idx):
         """Run training step"""
@@ -488,11 +490,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             {"mae_vs_timestep": wandb.plot.line(table, "timestep", "MAE", title="MAE vs Timestep")}
         )
 
-        self.log_dict(
-            logged_losses,
-            on_step=False,
-            on_epoch=True,
-        )
+        #self.log_dict(
+        #    logged_losses,
+        #    on_step=False,
+        #    on_epoch=True,
+        #)
 
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
 
@@ -518,9 +520,40 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
                 self.logger.experiment.log(
                     {
-                        f"val_forecast_samples/batch_idx_{accum_batch_num}": wandb.Image(fig),
+                        f"val_forecast_samples/batch_idx_{accum_batch_num}_all": wandb.Image(fig),
                     }
                 )
+                plt.close(fig)
+
+                # Plot 1:30 to 3 hours ahead
+                fig = plot_batch_forecasts(
+                    batch,
+                    y_hat,
+                    quantiles=self.output_quantiles,
+                    key_to_plot=self._target_key_name,
+                    timesteps_to_plot=[6,12] # 1:30 to 3 hours ahead
+                )
+                self.logger.experiment.log(
+                    {
+                        f"val_forecast_samples/batch_idx_{accum_batch_num}_1.5_to_3hr": wandb.Image(fig),
+                    }
+                )
+                plt.close(fig)
+
+                # Plot 15 to 39 hours ahead
+                fig = plot_batch_forecasts(
+                    batch,
+                    y_hat,
+                    quantiles=self.output_quantiles,
+                    key_to_plot=self._target_key_name,
+                    timesteps_to_plot=[60, 156]  # 15 to 39 hours ahead
+                )
+                self.logger.experiment.log(
+                    {
+                        f"val_forecast_samples/batch_idx_{accum_batch_num}_15_to_39hr": wandb.Image(fig),
+                    }
+                )
+                plt.close(fig)
                 del self._val_y_hats
                 del self._val_batches
 
