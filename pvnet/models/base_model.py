@@ -256,7 +256,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self._optimizer = optimizer
         self._target_key_name = target_key
-        self._target_key = BatchKey[f"{self._target_key}"]
+        self._target_key = BatchKey[f"{target_key}"]
 
         # Model must have lr to allow tuning
         # This setting is only used when lr is tuned with callback
