@@ -3,8 +3,8 @@ import logging
 import os
 import warnings
 from collections.abc import Sequence
-
 from typing import Optional
+
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -243,7 +243,14 @@ def finish(
             wandb.finish()
 
 
-def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_plot: str = "gsp", timesteps_to_plot: Optional[list[int]] = None):
+def plot_batch_forecasts(
+    batch,
+    y_hat,
+    batch_idx=None,
+    quantiles=None,
+    key_to_plot: str = "gsp",
+    timesteps_to_plot: Optional[list[int]] = None,
+):
     """Plot a batch of data and the forecast from that batch"""
 
     def _get_numpy(key):
@@ -251,7 +258,7 @@ def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_pl
 
     y_key = BatchKey[f"{key_to_plot}"]
     y_id_key = BatchKey[f"{key_to_plot}_id"]
-    t0_idx_key = BatchKey[f"{key_to_plot}_t0_idx"]
+    BatchKey[f"{key_to_plot}_t0_idx"]
     time_utc_key = BatchKey[f"{key_to_plot}_time_utc"]
     y = batch[y_key][:, :, 0].cpu().numpy()  # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()

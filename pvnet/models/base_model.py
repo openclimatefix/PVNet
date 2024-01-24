@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import hydra
-import matplotlib.pyplot as plt
 import lightning.pytorch as pl
+import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -490,11 +490,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             {"mae_vs_timestep": wandb.plot.line(table, "timestep", "MAE", title="MAE vs Timestep")}
         )
 
-        #self.log_dict(
+        # self.log_dict(
         #    logged_losses,
         #    on_step=False,
         #    on_epoch=True,
-        #)
+        # )
 
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
 
@@ -531,11 +531,13 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     y_hat,
                     quantiles=self.output_quantiles,
                     key_to_plot=self._target_key_name,
-                    timesteps_to_plot=[6,12] # 1:30 to 3 hours ahead
+                    timesteps_to_plot=[6, 12],  # 1:30 to 3 hours ahead
                 )
                 self.logger.experiment.log(
                     {
-                        f"val_forecast_samples/batch_idx_{accum_batch_num}_1.5_to_3hr": wandb.Image(fig),
+                        f"val_forecast_samples/batch_idx_{accum_batch_num}_1.5_to_3hr": wandb.Image(
+                            fig
+                        ),
                     }
                 )
                 plt.close(fig)
@@ -546,11 +548,13 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     y_hat,
                     quantiles=self.output_quantiles,
                     key_to_plot=self._target_key_name,
-                    timesteps_to_plot=[60, 156]  # 15 to 39 hours ahead
+                    timesteps_to_plot=[60, 156],  # 15 to 39 hours ahead
                 )
                 self.logger.experiment.log(
                     {
-                        f"val_forecast_samples/batch_idx_{accum_batch_num}_15_to_39hr": wandb.Image(fig),
+                        f"val_forecast_samples/batch_idx_{accum_batch_num}_15_to_39hr": wandb.Image(
+                            fig
+                        ),
                     }
                 )
                 plt.close(fig)
