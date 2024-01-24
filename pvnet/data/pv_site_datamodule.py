@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from pvnet.data.utils import batch_to_tensor
 
 
-class WindDataModule(LightningDataModule):
+class PVSiteDataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
 
     def __init__(
