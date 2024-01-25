@@ -491,9 +491,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         )
 
         self.log_dict(
-           logged_losses,
-           on_step=False,
-           on_epoch=True,
+            logged_losses,
+            on_step=False,
+            on_epoch=True,
         )
 
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
