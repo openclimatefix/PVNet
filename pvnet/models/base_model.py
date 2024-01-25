@@ -490,11 +490,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             {"mae_vs_timestep": wandb.plot.line(table, "timestep", "MAE", title="MAE vs Timestep")}
         )
 
-        # self.log_dict(
-        #    logged_losses,
-        #    on_step=False,
-        #    on_epoch=True,
-        # )
+        self.log_dict(
+           logged_losses,
+           on_step=False,
+           on_epoch=True,
+        )
 
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
 
