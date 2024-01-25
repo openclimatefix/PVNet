@@ -274,7 +274,12 @@ class Model(BaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey.wind_id][:, 0].int()
+            if self.target_key_name == "wind":
+                id = x[BatchKey.wind_id][:, 0].int()
+            elif self.target_key_name == "pv":
+                id = x[BatchKey.pv_id][:, 0].int()
+            else:
+                id = x[BatchKey.gsp_id][:, 0].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
