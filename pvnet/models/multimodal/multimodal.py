@@ -186,7 +186,7 @@ class Model(BaseModel):
             assert pv_history_minutes is not None
 
             self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // 5 + 1,
+                sequence_length=pv_history_minutes // 15 + 1,
             )
 
             # Update num features
