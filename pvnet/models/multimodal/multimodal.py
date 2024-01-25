@@ -297,7 +297,7 @@ class Model(BaseModel):
 
         if self.include_sun:
             sun = torch.cat(
-                (x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1
+                (x[BatchKey.pv_solar_azimuth], x[BatchKey.pv_solar_elevation]), dim=1
             ).float()
             sun = self.sun_fc1(sun)
             modes["sun"] = sun
