@@ -38,6 +38,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
         # Check that the output shape of the convolutional layers will be at least 1x1
         cnn_spatial_output_size = image_size_pixels - 2 * number_of_conv3d_layers
+        cnn_sequence_length = sequence_length - 2 * number_of_conv3d_layers
         if not (cnn_spatial_output_size >= 1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
@@ -51,7 +52,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
                 in_channels=in_channels,
                 out_channels=conv3d_channels,
                 kernel_size=(3, 3, 3),
-                padding=(1, 0, 0),
+                padding=(0, 0, 0),
             ),
             nn.ELU(),
         ]
@@ -61,7 +62,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
                     in_channels=conv3d_channels,
                     out_channels=conv3d_channels,
                     kernel_size=(3, 3, 3),
-                    padding=(1, 0, 0),
+                    padding=(0, 0, 0),
                 ),
                 nn.ELU(),
             ]
@@ -69,7 +70,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         self.conv_layers = nn.Sequential(*conv_layers)
 
         # Calculate the size of the output of the 3D convolutional layers
-        cnn_output_size = conv3d_channels * cnn_spatial_output_size**2 * sequence_length
+        cnn_output_size = conv3d_channels * cnn_spatial_output_size**2 * cnn_sequence_length
 
         self.final_block = nn.Sequential(
             nn.Linear(in_features=cnn_output_size, out_features=fc_features),
