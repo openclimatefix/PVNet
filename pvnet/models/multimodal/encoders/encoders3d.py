@@ -38,7 +38,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
         # Check that the output shape of the convolutional layers will be at least 1x1
         cnn_spatial_output_size = image_size_pixels - 2 * number_of_conv3d_layers
-        cnn_sequence_length = sequence_length #- 6 * number_of_conv3d_layers
+        cnn_sequence_length = sequence_length  # - 6 * number_of_conv3d_layers
         if not (cnn_spatial_output_size >= 1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
