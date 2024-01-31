@@ -89,7 +89,6 @@ class WindDataModule(LightningDataModule):
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
         filenames = list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc"))
         data_pipeline = windnet_netcdf_datapipe(
-            config_filename=self.configuration,
             keys=["wind", "nwp"],
             filenames=filenames,
         )
@@ -103,14 +102,14 @@ class WindDataModule(LightningDataModule):
                 data_pipeline.shuffle(buffer_size=100)
                 .sharding_filter()
                 # Split the batches and reshuffle them to be combined into new batches
-                .split_batches(splitting_key=BatchKey.sensor)
+                .split_batches(splitting_key=BatchKey.wind)
                 .shuffle(buffer_size=100 * self.batch_size)
             )
         else:
             data_pipeline = (
                 data_pipeline.sharding_filter()
                 # Split the batches so we can use any batch-size
-                .split_batches(splitting_key=BatchKey.sensor)
+                .split_batches(splitting_key=BatchKey.wind)
             )
 
         data_pipeline = (
