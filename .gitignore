@@ -140,3 +140,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+!/configs/datamodule/configuration/leonardo_wind_configuration.yaml
