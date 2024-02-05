@@ -23,6 +23,7 @@ import sys
 # Tired of seeing these warnings
 import warnings
 
+import dask
 import hydra
 import torch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
@@ -35,7 +36,6 @@ from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
 from pvnet.utils import print_config
-import dask
 
 dask.config.set(scheduler="single-threaded")
 
