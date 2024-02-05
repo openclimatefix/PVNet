@@ -3,8 +3,8 @@ import glob
 
 from ocf_datapipes.batch import BatchKey, stack_np_examples_into_batch
 from ocf_datapipes.training.windnet import windnet_netcdf_datapipe
-from pvnet.data.base import BaseDataModule
 
+from pvnet.data.base import BaseDataModule
 from pvnet.data.utils import batch_to_tensor
 
 
@@ -33,8 +33,13 @@ class WindDataModule(BaseDataModule):
                 'train/val/test_period'.
 
         """
-        super().__init__(configuration=configuration, batch_size=batch_size, num_workers=num_workers,
-                         prefetch_factor=prefetch_factor, batch_dir=batch_dir)
+        super().__init__(
+            configuration=configuration,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            prefetch_factor=prefetch_factor,
+            batch_dir=batch_dir,
+        )
 
     def _get_datapipe(self, start_time, end_time):
         data_pipeline = windnet_netcdf_datapipe(
