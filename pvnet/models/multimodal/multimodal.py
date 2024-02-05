@@ -207,7 +207,9 @@ class Model(BaseModel):
             if wind_history_minutes is None:
                 wind_history_minutes = history_minutes
 
-            self.wind_encoder = wind_encoder(sequence_length=wind_history_minutes // interval_minutes)
+            self.wind_encoder = wind_encoder(
+                sequence_length=wind_history_minutes // interval_minutes
+            )
 
             # Update num features
             fusion_input_features += self.wind_encoder.out_features
@@ -216,7 +218,9 @@ class Model(BaseModel):
             if sensor_history_minutes is None:
                 sensor_history_minutes = history_minutes
 
-            self.sensor_encoder = sensor_encoder(sequence_length=sensor_history_minutes // sensor_interval_minutes)
+            self.sensor_encoder = sensor_encoder(
+                sequence_length=sensor_history_minutes // sensor_interval_minutes
+            )
 
             # Update num features
             fusion_input_features += self.sensor_encoder.out_features
