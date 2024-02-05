@@ -47,7 +47,6 @@ class Model(BaseModel):
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
-        include_gsp: bool = True,
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -108,7 +107,6 @@ class Model(BaseModel):
             interval_minutes: The interval between each sample of the target data
             wind_encoder: Encoder for wind data
             wind_history_minutes: Length of recent wind data used as input.
-            include_gsp: Whether to include GSP data in the model
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
@@ -119,7 +117,6 @@ class Model(BaseModel):
         self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
-        self.include_gsp = include_gsp
         self.include_wind = wind_encoder is not None
         self.include_sensor = sensor_encoder is not None
         self.embedding_dim = embedding_dim
@@ -210,7 +207,7 @@ class Model(BaseModel):
             if wind_history_minutes is None:
                 wind_history_minutes = history_minutes
 
-            self.wind_encoder = wind_encoder(sequence_length=self.history_len_30)
+            self.wind_encoder = wind_encoder(sequence_length=wind_history_minutes // interval_minutes)
 
             # Update num features
             fusion_input_features += self.wind_encoder.out_features
@@ -219,7 +216,7 @@ class Model(BaseModel):
             if sensor_history_minutes is None:
                 sensor_history_minutes = history_minutes
 
-            self.sensor_encoder = sensor_encoder(sequence_length=self.history_len_30)
+            self.sensor_encoder = sensor_encoder(sequence_length=sensor_history_minutes // sensor_interval_minutes)
 
             # Update num features
             fusion_input_features += self.sensor_encoder.out_features
