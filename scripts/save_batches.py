@@ -34,6 +34,8 @@ from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
+from ocf_datapipes.batch import stack_np_examples_into_batch
+from pvnet.data.utils import batch_to_tensor
 
 from pvnet.utils import print_config
 
@@ -73,10 +75,10 @@ def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str 
         start_time=start_time,
         end_time=end_time,
     )
-
-    # data_pipeline = (
-    #    data_pipeline.batch(batch_size).map(stack_np_examples_into_batch).map(batch_to_tensor)
-    # )
+    if renewable == "pv":
+        data_pipeline = (
+           data_pipeline.batch(batch_size).map(stack_np_examples_into_batch).map(batch_to_tensor)
+        )
     return data_pipeline
 
 
@@ -116,13 +118,13 @@ def main(config: DictConfig):
         batch_size=None,  # batched in datapipe step
         sampler=None,
         batch_sampler=None,
-        num_workers=0,  # config_dm.num_workers,
+        num_workers=config_dm.num_workers,
         collate_fn=None,
         pin_memory=False,
         drop_last=False,
         timeout=0,
         worker_init_fn=None,
-        prefetch_factor=None,  # config_dm.prefetch_factor,
+        prefetch_factor=config_dm.prefetch_factor,
         persistent_workers=False,
     )
 
