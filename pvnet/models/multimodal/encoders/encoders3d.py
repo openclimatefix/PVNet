@@ -2,6 +2,7 @@
 """
 import torch
 from torch import nn
+from typing import Union, List
 from torchvision.transforms import CenterCrop
 
 from pvnet.models.multimodal.encoders.basic_blocks import (
@@ -22,6 +23,9 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         number_of_conv3d_layers: int = 4,
         conv3d_channels: int = 32,
         fc_features: int = 128,
+        spatial_kernel_size: int = 3,
+        temporal_kernel_size: int = 3,
+        padding: Union[int, List[int]] = (1,0,0),
     ):
         """This is the original encoding module used in PVNet, with a few minor tweaks.
 
@@ -33,12 +37,16 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             number_of_conv3d_layers: Number of convolution 3d layers that are used.
             conv3d_channels: Number of channels used in each conv3d layer.
             fc_features: number of output nodes out of the hidden fully connected layer.
+            spatial_kernel_size: The spatial size of the kernel used in the conv3d layers.
+            temporal_kernel_size: The temporal size of the kernel used in the conv3d layers.
+            padding: The padding used in the conv3d layers. If an int, the same padding is used in all dimensions
         """
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
-
+        if isinstance(padding, int):
+            padding = (padding, padding, padding)
         # Check that the output shape of the convolutional layers will be at least 1x1
-        cnn_spatial_output_size = image_size_pixels - 2 * number_of_conv3d_layers
-        cnn_sequence_length = sequence_length  # - 6 * number_of_conv3d_layers
+        cnn_spatial_output_size = image_size_pixels - (spatial_kernel_size-1) * number_of_conv3d_layers
+        cnn_sequence_length = ((sequence_length - temporal_kernel_size + 2*padding[0]) + 1) * number_of_conv3d_layers
         if not (cnn_spatial_output_size >= 1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
@@ -51,8 +59,8 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             nn.Conv3d(
                 in_channels=in_channels,
                 out_channels=conv3d_channels,
-                kernel_size=(3, 3, 3),
-                padding=(1, 0, 0),
+                kernel_size=(temporal_kernel_size, spatial_kernel_size, spatial_kernel_size),
+                padding=padding,
             ),
             nn.ELU(),
         ]
@@ -61,8 +69,8 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
                 nn.Conv3d(
                     in_channels=conv3d_channels,
                     out_channels=conv3d_channels,
-                    kernel_size=(3, 3, 3),
-                    padding=(1, 0, 0),
+                    kernel_size=(temporal_kernel_size, spatial_kernel_size, spatial_kernel_size),
+                    padding=padding,
                 ),
                 nn.ELU(),
             ]
