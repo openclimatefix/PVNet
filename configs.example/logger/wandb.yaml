@@ -2,9 +2,11 @@
 
 wandb:
   _target_: lightning.pytorch.loggers.wandb.WandbLogger
-  project: "windnet2.1"
+  # wandb project to log to
+  project: "PLACEHOLDER"
   name: "${model_name}"
-  save_dir: "/mnt/storage_ssd_4tb/windnet_batches/"
+  # location to store the wandb local logs
+  save_dir: "PLACEHOLDER"
   offline: False # set True to store all logs only locally
   id: null # pass correct id to resume experiment!
   # entity: ""  # set to name of your wandb team or just remove it
