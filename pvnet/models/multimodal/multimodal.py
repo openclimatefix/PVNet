@@ -101,6 +101,9 @@ class Model(BaseModel):
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
             interval_minutes: The interval between each sample of the target data
+            wind_encoder: Encoder for wind data
+            wind_history_minutes: Length of recent wind data used as input.
+            include_gsp: Whether to include GSP data in the model
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history

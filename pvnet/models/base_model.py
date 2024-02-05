@@ -251,6 +251,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
             target_key: The key of the target variable in the batch
+            interval_minutes: The interval in minutes between each timestep in the data
         """
         super().__init__()
 

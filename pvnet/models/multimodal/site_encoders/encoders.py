@@ -283,6 +283,7 @@ class SingleWindAttentionNetwork(AbstractPVSitesEncoder):
                 the key and value encoders.
             use_wind_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
+            wind_id_dim: The number of unique wind IDs.
 
         """
         super().__init__(sequence_length, num_sites, out_features)
@@ -429,6 +430,7 @@ class SinglePVAttentionNetwork(AbstractPVSitesEncoder):
                 the key and value encoders.
             use_pv_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
+            pv_id_dim: The number of unique PV IDs.
 
         """
         super().__init__(sequence_length, num_sites, out_features)
