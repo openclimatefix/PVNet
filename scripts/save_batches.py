@@ -20,9 +20,6 @@ import os
 import shutil
 import sys
 
-import dask
-
-dask.config.set(scheduler="single-threaded")
 # Tired of seeing these warnings
 import warnings
 
@@ -38,6 +35,9 @@ from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
 from pvnet.utils import print_config
+import dask
+
+dask.config.set(scheduler="single-threaded")
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
