@@ -16,6 +16,7 @@ point in NW-India.
 
 ### Results
 
+Overall MAE is 4.9% on the validation set, and forecasts look overall good.
 
 
 ## WindNet
@@ -31,6 +32,8 @@ The forecast is every 15 minutes for 48 hours for Wind generation.
 The input NWP data is hourly, and 32x32 pixels (corresponding to around 320kmx320km) around a central
 point in NW-India.
 
-[WandB Link](https://wandb.ai/openclimatefix/pvnet_india2.1/runs/56tdj4a3)
+[WandB Link](https://wandb.ai/openclimatefix/pvnet_india2.1/runs/otdx7axx)
 
 ### Results
+
+MAE is around 10% overall, although it doesn't seem to do very well on the ramps up and down.
