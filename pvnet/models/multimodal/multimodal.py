@@ -145,7 +145,9 @@ class Model(BaseModel):
             assert sat_history_minutes is not None
             assert nwp_forecast_minutes is not None
 
-            self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // sat_interval_minutes + 1
+            self.sat_sequence_len = (
+                sat_history_minutes - min_sat_delay_minutes
+            ) // sat_interval_minutes + 1
 
             self.sat_encoder = sat_encoder(
                 sequence_length=self.sat_sequence_len,
