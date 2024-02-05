@@ -19,14 +19,14 @@ nwp_encoder:
 # Sensor encoder settings
 #--------------------------------------------
 
-sensor_encoder:
-  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleSensorAttentionNetwork
+wind_encoder:
+  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleWindAttentionNetwork
   _partial_: True
   num_sites: 19
   out_features: 40
   num_heads: 4
   kdim: 40
-  sensor_id_embed_dim: 20
+  wind_id_embed_dim: 20
 
 #--------------------------------------------
 # Tabular network settings
