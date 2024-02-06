@@ -47,11 +47,10 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             padding = (padding, padding, padding)
         # Check that the output shape of the convolutional layers will be at least 1x1
         cnn_spatial_output_size = (
-            image_size_pixels - (spatial_kernel_size - 1) * number_of_conv3d_layers
+            image_size_pixels - ((spatial_kernel_size - 2 * padding[1]) - 1) * number_of_conv3d_layers
         )
-        cnn_sequence_length = (
-            sequence_length - (temporal_kernel_size + 2 * padding[0]) + 1
-        ) * number_of_conv3d_layers
+        # size of 3, goes down by 2 each layer, but a padding of 2 means it doesn't
+        cnn_sequence_length = sequence_length - ((temporal_kernel_size - 2 * padding[0]) - 1) * number_of_conv3d_layers
         if not (cnn_spatial_output_size >= 1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
