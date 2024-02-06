@@ -109,8 +109,8 @@ class SimpleLearnedAggregator(AbstractPVSitesEncoder):
 class SingleAttentionNetwork(AbstractPVSitesEncoder):
     """A simple attention-based model with a single multihead attention layer
 
-    For the attention layer the query is based on the target wind alone, the key is based on the
-    wind ID and the recent wind data, the value is based on the recent wind data.
+    For the attention layer the query is based on the target alone, the key is based on the
+    input ID and the recent input data, the value is based on the recent input data.
 
     """
 
