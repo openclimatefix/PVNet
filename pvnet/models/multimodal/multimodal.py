@@ -103,8 +103,8 @@ class Model(BaseModel):
                 `forecast_minutes` if not provided.
             nwp_history_minutes: Period of historical NWP forecast used as input. Defaults to
                 `history_minutes` if not provided.
-            pv_history_minutes: Length of recent site-level PV data data used as input. Defaults to
-                `history_minutes` if not provided.
+            pv_history_minutes: Length of recent site-level PV data data used as
+            input. Defaults to `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
             interval_minutes: The interval between each sample of the target data
@@ -115,7 +115,8 @@ class Model(BaseModel):
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
             image_embedding_dim: The number of dimensions to use for the image embedding
-            timestep_intervals_to_plot: Intervals, in timesteps, to plot in addition to the full forecast
+            timestep_intervals_to_plot: Intervals, in timesteps, to plot in
+            addition to the full forecast
             sensor_encoder: Encoder for sensor data
             sensor_history_minutes: Length of recent sensor data used as input.
         """

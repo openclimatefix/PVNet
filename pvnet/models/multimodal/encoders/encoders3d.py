@@ -40,7 +40,8 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             fc_features: number of output nodes out of the hidden fully connected layer.
             spatial_kernel_size: The spatial size of the kernel used in the conv3d layers.
             temporal_kernel_size: The temporal size of the kernel used in the conv3d layers.
-            padding: The padding used in the conv3d layers. If an int, the same padding is used in all dimensions
+            padding: The padding used in the conv3d layers. If an int, the same padding
+                is used in all dimensions
         """
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
         if isinstance(padding, int):
