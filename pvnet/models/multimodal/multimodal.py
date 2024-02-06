@@ -63,6 +63,7 @@ class Model(BaseModel):
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
+        image_embedding_dim: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
         """Neural network which combines information from different sources.
@@ -111,6 +112,7 @@ class Model(BaseModel):
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
+            image_embedding_dim: The number of dimensions to use for the image embedding
             timestep_intervals_to_plot: Intervals, in timesteps, to plot in addition to the full forecast
         """
 
@@ -155,7 +157,7 @@ class Model(BaseModel):
             )
             if add_image_embedding_channel:
                 self.sat_embed = ImageEmbedding(
-                    318, self.sat_sequence_len, self.sat_encoder.image_size_pixels
+                    image_embedding_dim, self.sat_sequence_len, self.sat_encoder.image_size_pixels
                 )
 
             # Update num features
@@ -190,7 +192,7 @@ class Model(BaseModel):
                 )
                 if add_image_embedding_channel:
                     self.nwp_embed_dict[nwp_source] = ImageEmbedding(
-                        318, nwp_sequence_len, self.nwp_encoders_dict[nwp_source].image_size_pixels
+                        image_embedding_dim, nwp_sequence_len, self.nwp_encoders_dict[nwp_source].image_size_pixels
                     )
 
                 # Update num features
@@ -229,7 +231,7 @@ class Model(BaseModel):
             fusion_input_features += self.sensor_encoder.out_features
 
         if self.embedding_dim:
-            self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
+            self.embed = nn.Embedding(num_embeddings=image_embedding_dim, embedding_dim=embedding_dim)
 
             # Update num features
             fusion_input_features += embedding_dim
