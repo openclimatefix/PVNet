@@ -306,7 +306,7 @@ class Model(BaseModel):
                 # Target is PV, so only take the history
                 # Copy batch
                 x_tmp = x.copy()
-                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len+1]
+                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len + 1]
                 modes["pv"] = self.pv_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
@@ -329,7 +329,7 @@ class Model(BaseModel):
             else:
                 # Have to be its own Batch format
                 x_tmp = x.copy()
-                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len+1]
+                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len + 1]
                 # This needs to be a Batch as input
                 modes["wind"] = self.wind_encoder(x_tmp)
 
@@ -339,7 +339,7 @@ class Model(BaseModel):
                 modes["sensor"] = self.sensor_encoder(x)
             else:
                 x_tmp = x.copy()
-                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len+1]
+                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len + 1]
                 # This needs to be a Batch as input
                 modes["sensor"] = self.sensor_encoder(x_tmp)
 
