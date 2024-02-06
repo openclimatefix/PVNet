@@ -33,7 +33,7 @@ and Dec 2022- Nov 2023 for validation. This is only with ECMWF data, and Wind ge
 The forecast is every 15 minutes for 48 hours for Wind generation.
 
 The input NWP data is hourly, and 32x32 pixels (corresponding to around 320kmx320km) around a central
-point in NW-India.
+point in NW-India. Note: The majority of the wind generation is likely not covered in the 320kmx320km area.
 
 
 [WandB Link](https://wandb.ai/openclimatefix/pvnet_india2.1/runs/otdx7axx)
