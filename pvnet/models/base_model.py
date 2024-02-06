@@ -389,7 +389,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
-        # common_metrics_each_step = common_metrics(predictions=y_hat.numpy(), target=y.numpy())
         mse_each_step = torch.mean((y_hat - y) ** 2, dim=0)
         mae_each_step = torch.mean(torch.abs(y_hat - y), dim=0)
 
