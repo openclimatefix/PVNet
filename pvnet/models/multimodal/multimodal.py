@@ -244,9 +244,7 @@ class Model(BaseModel):
             fusion_input_features += self.sensor_encoder.out_features
 
         if self.embedding_dim:
-            self.embed = nn.Embedding(
-                num_embeddings=num_embeddings, embedding_dim=embedding_dim
-            )
+            self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
 
             # Update num features
             fusion_input_features += embedding_dim
