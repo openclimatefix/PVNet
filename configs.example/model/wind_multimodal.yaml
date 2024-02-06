@@ -20,13 +20,13 @@ nwp_encoders_dict:
 #--------------------------------------------
 
 wind_encoder:
-  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleWindAttentionNetwork
+  _target_: pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork
   _partial_: True
   num_sites: 19
   out_features: 40
   num_heads: 4
   kdim: 40
-  wind_id_embed_dim: 20
+  id_embed_dim: 20
 
 #--------------------------------------------
 # Tabular network settings

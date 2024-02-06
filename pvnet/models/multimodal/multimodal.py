@@ -264,7 +264,7 @@ class Model(BaseModel):
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
             if self.add_image_embedding_channel:
-                id = x[BatchKey.gsp_id][:, 0].int()
+                id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -276,7 +276,7 @@ class Model(BaseModel):
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey.gsp_id][:, 0].int()
+                    id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
                 modes[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source](nwp_data)
 
@@ -301,12 +301,7 @@ class Model(BaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            if self.target_key_name == "wind":
-                id = x[BatchKey.wind_id][:, 0].int()
-            elif self.target_key_name == "pv":
-                id = x[BatchKey.pv_id][:, 0].int()
-            else:
-                id = x[BatchKey.gsp_id][:, 0].int()
+            id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
@@ -323,7 +318,7 @@ class Model(BaseModel):
 
         # *********************** Sensor Data ************************************
         if self.include_sensor:
-            if self.target_key_name != "wind":
+            if self.target_key_name != "sensor":
                 modes["sensor"] = self.sensor_encoder(x)
             else:
                 x_tmp = x.copy()
