@@ -192,7 +192,9 @@ class Model(BaseModel):
                 )
                 if add_image_embedding_channel:
                     self.nwp_embed_dict[nwp_source] = ImageEmbedding(
-                        image_embedding_dim, nwp_sequence_len, self.nwp_encoders_dict[nwp_source].image_size_pixels
+                        image_embedding_dim,
+                        nwp_sequence_len,
+                        self.nwp_encoders_dict[nwp_source].image_size_pixels,
                     )
 
                 # Update num features
@@ -231,7 +233,9 @@ class Model(BaseModel):
             fusion_input_features += self.sensor_encoder.out_features
 
         if self.embedding_dim:
-            self.embed = nn.Embedding(num_embeddings=image_embedding_dim, embedding_dim=embedding_dim)
+            self.embed = nn.Embedding(
+                num_embeddings=image_embedding_dim, embedding_dim=embedding_dim
+            )
 
             # Update num features
             fusion_input_features += embedding_dim
