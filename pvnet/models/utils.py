@@ -119,7 +119,7 @@ class BatchAccumulator(DictListAccumulator):
         batch = {}
         for k, v in self._batches.items():
             print(k)
-            if k == f"{self.key_to_keep}_t0_idx":
+            if k == BatchKey[f"{self.key_to_keep}_t0_idx"]:
                 batch[k] = v[0]
             else:
                 batch[k] = torch.cat(v, dim=0)
