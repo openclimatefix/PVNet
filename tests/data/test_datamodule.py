@@ -1,6 +1,6 @@
 from pvnet.data.datamodule import DataModule
 from pvnet.data.wind_datamodule import WindDataModule
-from pvnet.data.pv_site_datamodule import PvSiteDataModule
+from pvnet.data.pv_site_datamodule import PVSiteDataModule
 import os
 
 
@@ -30,7 +30,7 @@ def test_wind_init():
     )
 
 def test_pv_site_init():
-    dm = PvSiteDataModule(
+    dm = PVSiteDataModule(
         configuration=f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_batches/data_configuration.yaml",
         batch_size=2,
         num_workers=0,
