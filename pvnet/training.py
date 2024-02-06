@@ -105,7 +105,7 @@ def train(config: DictConfig) -> Optional[float]:
             if isinstance(callback, ModelCheckpoint):
                 # Need to call the .experiment property to initialise the logger
                 wandb_logger.experiment
-                callback.dirpath = "/".join(callback.dirpath.split("/")[:-1])
+                callback.dirpath = "/".join(callback.dirpath.split("/")[:-1]) + [wandb_logger.version]
                 # Also save model config here - this makes for easy model push to huggingface
                 os.makedirs(callback.dirpath, exist_ok=True)
                 OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
