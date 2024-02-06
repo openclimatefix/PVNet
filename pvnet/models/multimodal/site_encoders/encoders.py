@@ -109,8 +109,8 @@ class SimpleLearnedAggregator(AbstractPVSitesEncoder):
 class SingleAttentionNetwork(AbstractPVSitesEncoder):
     """A simple attention-based model with a single multihead attention layer
 
-    For the attention layer the query is based on the target GSP alone, the key is based on the PV
-    ID and the recent PV data, the value is based on the recent PV data.
+    For the attention layer the query is based on the target alone, the key is based on the
+    input ID and the recent input data, the value is based on the recent input data.
 
     """
 
@@ -120,11 +120,14 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         num_sites: int,
         out_features: int,
         kdim: int = 10,
-        pv_id_embed_dim: int = 10,
+        id_embed_dim: int = 10,
         num_heads: int = 2,
         n_kv_res_blocks: int = 2,
         kv_res_block_layers: int = 2,
-        use_pv_id_in_value: bool = False,
+        use_id_in_value: bool = False,
+        target_id_dim: int = 318,
+        target_key_to_use: str = "gsp",
+        input_key_to_use: str = "pv",
     ):
         """A simple attention-based model with a single multihead attention layer
 
@@ -134,29 +137,34 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             out_features: Number of output features. In this network this is also the embed and
                 value dimension in the multi-head attention layer.
             kdim: The dimensions used the keys.
-            pv_id_embed_dim: Number of dimensiosn used in the PD ID embedding layer(s).
+            id_embed_dim: Number of dimensiosn used in the wind ID embedding layer(s).
             num_heads: Number of parallel attention heads. Note that `out_features` will be split
                 across `num_heads` so `out_features` must be a multiple of `num_heads`.
             n_kv_res_blocks: Number of residual blocks to use in the key and value encoders.
             kv_res_block_layers: Number of fully-connected layers used in each residual block within
                 the key and value encoders.
-            use_pv_id_in_value: Whether to use a PV ID embedding in network used to produce the
+            use_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
+            target_id_dim: The number of unique IDs.
+            target_key_to_use: The key to use for the target in the attention layer.
+            input_key_to_use: The key to use for the input in the attention layer.
 
         """
         super().__init__(sequence_length, num_sites, out_features)
+        self.sequence_length = sequence_length
+        self.target_id_embedding = nn.Embedding(target_id_dim, out_features)
+        self.site_id_embedding = nn.Embedding(num_sites, id_embed_dim)
+        self._ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
+        self.use_id_in_value = use_id_in_value
+        self.target_key_to_use = target_key_to_use
+        self.input_key_to_use = input_key_to_use
 
-        self.gsp_id_embedding = nn.Embedding(318, out_features)
-        self.pv_id_embedding = nn.Embedding(num_sites, pv_id_embed_dim)
-        self._pv_ids = nn.parameter.Parameter(torch.arange(num_sites), requires_grad=False)
-        self.use_pv_id_in_value = use_pv_id_in_value
-
-        if use_pv_id_in_value:
-            self.value_pv_id_embedding = nn.Embedding(num_sites, pv_id_embed_dim)
+        if use_id_in_value:
+            self.value_id_embedding = nn.Embedding(num_sites, id_embed_dim)
 
         self._value_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length + int(use_pv_id_in_value) * pv_id_embed_dim,
+                in_features=sequence_length + int(use_id_in_value) * id_embed_dim,
                 out_features=out_features,
                 fc_hidden_features=sequence_length,
                 n_res_blocks=n_kv_res_blocks,
@@ -167,9 +175,9 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
         self._key_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length + pv_id_embed_dim,
+                in_features=sequence_length + id_embed_dim,
                 out_features=kdim,
-                fc_hidden_features=pv_id_embed_dim + sequence_length,
+                fc_hidden_features=id_embed_dim + sequence_length,
                 n_res_blocks=n_kv_res_blocks,
                 res_block_layers=kv_res_block_layers,
                 dropout_frac=0,
@@ -185,20 +193,25 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         )
 
     def _encode_query(self, x):
-        gsp_ids = x[BatchKey.gsp_id].squeeze().int()
-        query = self.gsp_id_embedding(gsp_ids).unsqueeze(1)
+        # Select the first one
+        if self.target_key_to_use == "gsp":
+            # GSP seems to have a different structure
+            ids = x[BatchKey[f"{self.target_key_to_use}_id"]]
+        else:
+            ids = x[BatchKey[f"{self.input_key_to_use}_id"]][:, 0]
+        ids = ids.squeeze().int()
+        query = self.target_id_embedding(ids).unsqueeze(1)
         return query
 
     def _encode_key(self, x):
         # Shape: [batch size, sequence length, PV site]
-        pv_site_seqs = x[BatchKey.pv].float()
-        batch_size = pv_site_seqs.shape[0]
+        site_seqs = x[BatchKey[f"{self.input_key_to_use}"]][:, : self.sequence_length].float()
+        batch_size = site_seqs.shape[0]
 
-        # PV ID embeddings are the same for each sample
-        pv_id_embed = torch.tile(self.pv_id_embedding(self._pv_ids), (batch_size, 1, 1))
-
-        # Each concated (PV sequence, PV ID embedding) is processed with encoder
-        x_seq_in = torch.cat((pv_site_seqs.swapaxes(1, 2), pv_id_embed), dim=2).flatten(0, 1)
+        # wind ID embeddings are the same for each sample
+        site_id_embed = torch.tile(self.site_id_embedding(self._ids), (batch_size, 1, 1))
+        # Each concated (wind sequence, wind ID embedding) is processed with encoder
+        x_seq_in = torch.cat((site_seqs.swapaxes(1, 2), site_id_embed), dim=2).flatten(0, 1)
         key = self._key_encoder(x_seq_in)
 
         # Reshape to [batch size, PV site, kdim]
@@ -207,17 +220,17 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        pv_site_seqs = x[BatchKey.pv].float()
-        batch_size = pv_site_seqs.shape[0]
+        site_seqs = x[BatchKey[f"{self.input_key_to_use}"]][:, : self.sequence_length].float()
+        batch_size = site_seqs.shape[0]
 
-        if self.use_pv_id_in_value:
-            # PV ID embeddings are the same for each sample
-            pv_id_embed = torch.tile(self.value_pv_id_embedding(self._pv_ids), (batch_size, 1, 1))
-            # Each concated (PV sequence, PV ID embedding) is processed with encoder
-            x_seq_in = torch.cat((pv_site_seqs.swapaxes(1, 2), pv_id_embed), dim=2).flatten(0, 1)
+        if self.use_id_in_value:
+            # wind ID embeddings are the same for each sample
+            site_id_embed = torch.tile(self.value_id_embedding(self._ids), (batch_size, 1, 1))
+            # Each concated (wind sequence, wind ID embedding) is processed with encoder
+            x_seq_in = torch.cat((site_seqs.swapaxes(1, 2), site_id_embed), dim=2).flatten(0, 1)
         else:
             # Encode each PV sequence independently
-            x_seq_in = pv_site_seqs.swapaxes(1, 2).flatten(0, 1)
+            x_seq_in = site_seqs.swapaxes(1, 2).flatten(0, 1)
 
         value = self._value_encoder(x_seq_in)
 
@@ -238,6 +251,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
     def forward(self, x):
         """Run model forward"""
+        # Do slicing here to only get history
         attn_output, attn_output_weights = self._attention_forward(x)
 
         # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]

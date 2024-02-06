@@ -27,6 +27,7 @@ import hydra
 import torch
 from ocf_datapipes.batch import stack_np_examples_into_batch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
+from ocf_datapipes.training.pvnet_site import pvnet_site_datapipe
 from ocf_datapipes.training.windnet import windnet_datapipe
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
@@ -54,7 +55,7 @@ class _save_batch_func_factory:
         if self.output_format == "torch":
             torch.save(batch, f"{self.batch_dir}/{i:06}.pt")
         elif self.output_format == "netcdf":
-            batch.to_netcdf(f"{self.batch_dir}/{i:06}.nc", mode="w")
+            batch.to_netcdf(f"{self.batch_dir}/{i:06}.nc", mode="w", engine="h5netcdf")
 
 
 def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str = "pv"):
@@ -62,6 +63,8 @@ def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str 
         data_pipeline_fn = pvnet_datapipe
     elif renewable == "wind":
         data_pipeline_fn = windnet_datapipe
+    elif renewable == "pv_india":
+        data_pipeline_fn = pvnet_site_datapipe
     else:
         raise ValueError(f"Unknown renewable: {renewable}")
     data_pipeline = data_pipeline_fn(
@@ -69,10 +72,10 @@ def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str 
         start_time=start_time,
         end_time=end_time,
     )
-
-    data_pipeline = (
-        data_pipeline.batch(batch_size).map(stack_np_examples_into_batch).map(batch_to_tensor)
-    )
+    if renewable == "pv":
+        data_pipeline = (
+            data_pipeline.batch(batch_size).map(stack_np_examples_into_batch).map(batch_to_tensor)
+        )
     return data_pipeline
 
 
@@ -130,6 +133,7 @@ def main(config: DictConfig):
             config_dm.configuration,
             *config_dm.val_period,
             config_dm.batch_size,
+            renewable=config.renewable,
         )
 
         _save_batches_with_dataloader(
@@ -148,6 +152,7 @@ def main(config: DictConfig):
             config_dm.configuration,
             *config_dm.train_period,
             config_dm.batch_size,
+            renewable=config.renewable,
         )
 
         _save_batches_with_dataloader(

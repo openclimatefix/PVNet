@@ -224,7 +224,7 @@ def multimodal_model_kwargs(model_minutes_kwargs):
             out_features=40,
             num_heads=4,
             kdim=40,
-            pv_id_embed_dim=20,
+            id_embed_dim=20,
         ),
         output_network=dict(
             _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,

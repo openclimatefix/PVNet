@@ -42,6 +42,8 @@ class Model(BaseModel):
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         pv_encoder: Optional[AbstractPVSitesEncoder] = None,
+        wind_encoder: Optional[AbstractPVSitesEncoder] = None,
+        sensor_encoder: Optional[AbstractPVSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
@@ -53,8 +55,17 @@ class Model(BaseModel):
         nwp_forecast_minutes: Optional[int] = None,
         nwp_history_minutes: Optional[int] = None,
         pv_history_minutes: Optional[int] = None,
+        wind_history_minutes: Optional[int] = None,
+        sensor_history_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
+        interval_minutes: int = 30,
+        pv_interval_minutes: int = 5,
+        sat_interval_minutes: int = 5,
+        sensor_interval_minutes: int = 30,
+        wind_interval_minutes: int = 15,
+        num_embeddings: Optional[int] = 318,
+        timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
         """Neural network which combines information from different sources.
 
@@ -92,10 +103,22 @@ class Model(BaseModel):
                 `forecast_minutes` if not provided.
             nwp_history_minutes: Period of historical NWP forecast used as input. Defaults to
                 `history_minutes` if not provided.
-            pv_history_minutes: Length of recent site-level PV data data used as input. Defaults to
-                `history_minutes` if not provided.
+            pv_history_minutes: Length of recent site-level PV data data used as
+            input. Defaults to `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
+            interval_minutes: The interval between each sample of the target data
+            wind_interval_minutes: The interval between each sample of the wind data
+            wind_encoder: Encoder for wind data
+            wind_history_minutes: Length of recent wind data used as input.
+            pv_interval_minutes: The interval between each sample of the PV data
+            sat_interval_minutes: The interval between each sample of the satellite data
+            sensor_interval_minutes: The interval between each sample of the sensor data
+            num_embeddings: The number of dimensions to use for the image embedding
+            timestep_intervals_to_plot: Intervals, in timesteps, to plot in
+            addition to the full forecast
+            sensor_encoder: Encoder for sensor data
+            sensor_history_minutes: Length of recent sensor data used as input.
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -103,16 +126,21 @@ class Model(BaseModel):
         self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
+        self.include_wind = wind_encoder is not None
+        self.include_sensor = sensor_encoder is not None
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
         self.target_key_name = target_key
+        self.interval_minutes = interval_minutes
 
         super().__init__(
             history_minutes=history_minutes,
             forecast_minutes=forecast_minutes,
             optimizer=optimizer,
             output_quantiles=output_quantiles,
-            target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.pv,
+            target_key=target_key,
+            interval_minutes=interval_minutes,
+            timestep_intervals_to_plot=timestep_intervals_to_plot,
         )
 
         # Number of features expected by the output_network
@@ -124,7 +152,9 @@ class Model(BaseModel):
             assert sat_history_minutes is not None
             assert nwp_forecast_minutes is not None
 
-            self.sat_sequence_len = (sat_history_minutes - min_sat_delay_minutes) // 5 + 1
+            self.sat_sequence_len = (
+                sat_history_minutes - min_sat_delay_minutes
+            ) // sat_interval_minutes + 1
 
             self.sat_encoder = sat_encoder(
                 sequence_length=self.sat_sequence_len,
@@ -132,7 +162,7 @@ class Model(BaseModel):
             )
             if add_image_embedding_channel:
                 self.sat_embed = ImageEmbedding(
-                    318, self.sat_sequence_len, self.sat_encoder.image_size_pixels
+                    num_embeddings, self.sat_sequence_len, self.sat_encoder.image_size_pixels
                 )
 
             # Update num features
@@ -142,6 +172,7 @@ class Model(BaseModel):
             # Param checks
             assert nwp_forecast_minutes is not None
             assert nwp_history_minutes is not None
+
             # For each NWP encoder the forecast and history minutes must be set
             assert set(nwp_encoders_dict.keys()) == set(nwp_forecast_minutes.keys())
             assert set(nwp_encoders_dict.keys()) == set(nwp_history_minutes.keys())
@@ -166,7 +197,9 @@ class Model(BaseModel):
                 )
                 if add_image_embedding_channel:
                     self.nwp_embed_dict[nwp_source] = ImageEmbedding(
-                        318, nwp_sequence_len, self.nwp_encoders_dict[nwp_source].image_size_pixels
+                        num_embeddings,
+                        nwp_sequence_len,
+                        self.nwp_encoders_dict[nwp_source].image_size_pixels,
                     )
 
                 # Update num features
@@ -176,14 +209,42 @@ class Model(BaseModel):
             assert pv_history_minutes is not None
 
             self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // 5 + 1,
+                sequence_length=pv_history_minutes // pv_interval_minutes + 1,
+                target_key_to_use=self.target_key_name,
+                input_key_to_use="pv",
             )
 
             # Update num features
             fusion_input_features += self.pv_encoder.out_features
 
+        if self.include_wind:
+            if wind_history_minutes is None:
+                wind_history_minutes = history_minutes
+
+            self.wind_encoder = wind_encoder(
+                sequence_length=wind_history_minutes // wind_interval_minutes + 1,
+                target_key_to_use=self.target_key_name,
+                input_key_to_use="wind",
+            )
+
+            # Update num features
+            fusion_input_features += self.wind_encoder.out_features
+
+        if self.include_sensor:
+            if sensor_history_minutes is None:
+                sensor_history_minutes = history_minutes
+
+            self.sensor_encoder = sensor_encoder(
+                sequence_length=sensor_history_minutes // sensor_interval_minutes + 1,
+                target_key_to_use=self.target_key_name,
+                input_key_to_use="sensor",
+            )
+
+            # Update num features
+            fusion_input_features += self.sensor_encoder.out_features
+
         if self.embedding_dim:
-            self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
+            self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
 
             # Update num features
             fusion_input_features += embedding_dim
@@ -191,7 +252,7 @@ class Model(BaseModel):
         if self.include_sun:
             # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1),
+                in_features=2 * (self.forecast_len + self.history_len + 1),
                 out_features=16,
             )
 
@@ -200,7 +261,7 @@ class Model(BaseModel):
 
         if include_gsp_yield_history:
             # Update num features
-            fusion_input_features += self.history_len_30
+            fusion_input_features += self.history_len
 
         self.output_network = output_network(
             in_features=fusion_input_features,
@@ -218,7 +279,7 @@ class Model(BaseModel):
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
             if self.add_image_embedding_channel:
-                id = x[BatchKey.gsp_id][:, 0].int()
+                id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -230,7 +291,7 @@ class Model(BaseModel):
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey.gsp_id][:, 0].int()
+                    id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
                 modes[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source](nwp_data)
 
@@ -241,21 +302,44 @@ class Model(BaseModel):
                 modes["pv"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
-                pv_history = x[BatchKey.pv][:, : self.history_len_30].float()
-                modes["pv"] = self.pv_encoder(pv_history)
+                # Copy batch
+                x_tmp = x.copy()
+                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len + 1]
+                modes["pv"] = self.pv_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len_30].float()
+            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             modes["gsp"] = gsp_history
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey.gsp_id][:, 0].int()
+            id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
+
+        # *********************** Wind Data ************************************
+        if self.include_wind:
+            if self.target_key_name != "wind":
+                modes["wind"] = self.wind_encoder(x)
+            else:
+                # Have to be its own Batch format
+                x_tmp = x.copy()
+                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len + 1]
+                # This needs to be a Batch as input
+                modes["wind"] = self.wind_encoder(x_tmp)
+
+        # *********************** Sensor Data ************************************
+        if self.include_sensor:
+            if self.target_key_name != "sensor":
+                modes["sensor"] = self.sensor_encoder(x)
+            else:
+                x_tmp = x.copy()
+                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len + 1]
+                # This needs to be a Batch as input
+                modes["sensor"] = self.sensor_encoder(x_tmp)
 
         if self.include_sun:
             sun = torch.cat(
@@ -268,6 +352,6 @@ class Model(BaseModel):
 
         if self.use_quantile_regression:
             # Shape: batch_size, seq_length * num_quantiles
-            out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))
+            out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
 
         return out
