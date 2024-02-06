@@ -489,7 +489,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         if isinstance(self.logger, pl.loggers.WandbLogger):
             table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
             wandb.log(
-                {"mae_vs_timestep": wandb.plot.line(table, "timestep", "MAE", title="MAE vs Timestep")}
+                {
+                    "mae_vs_timestep": wandb.plot.line(
+                        table, "timestep", "MAE", title="MAE vs Timestep"
+                    )
+                }
             )
 
         self.log_dict(

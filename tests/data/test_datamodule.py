@@ -29,6 +29,7 @@ def test_wind_init():
         batch_dir="tests/data/sample_batches",
     )
 
+
 def test_pv_site_init():
     dm = PvSiteDataModule(
         configuration=f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_batches/data_configuration.yaml",
