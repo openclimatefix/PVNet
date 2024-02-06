@@ -485,10 +485,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         for x in x_values:
             y_values.append(logged_losses[f"MAE_horizon/step_{x:03}/val"])
         per_step_losses = [[x, y] for (x, y) in zip(x_values, y_values)]
-        table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
-        wandb.log(
-            {"mae_vs_timestep": wandb.plot.line(table, "timestep", "MAE", title="MAE vs Timestep")}
-        )
+        # Check if WandBLogger is being used
+        if isinstance(self.logger, pl.loggers.WandbLogger):
+            table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
+            wandb.log(
+                {"mae_vs_timestep": wandb.plot.line(table, "timestep", "MAE", title="MAE vs Timestep")}
+            )
 
         self.log_dict(
             logged_losses,
