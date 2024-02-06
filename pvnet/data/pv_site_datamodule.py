@@ -17,6 +17,9 @@ class PVSiteDataModule(BaseDataModule):
         batch_size=16,
         num_workers=0,
         prefetch_factor=None,
+        train_period=[None, None],
+        val_period=[None, None],
+        test_period=[None, None],
         batch_dir=None,
     ):
         """Datamodule for training pvnet stie and using pvnet site pipeline in `ocf_datapipes`.
@@ -38,6 +41,9 @@ class PVSiteDataModule(BaseDataModule):
             batch_size=batch_size,
             num_workers=num_workers,
             prefetch_factor=prefetch_factor,
+            train_period=train_period,
+            val_period=val_period,
+            test_period=test_period,
             batch_dir=batch_dir,
         )
 
