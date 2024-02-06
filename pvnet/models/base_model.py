@@ -241,6 +241,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         output_quantiles: Optional[list[float]] = None,
         target_key: str = "gsp",
         interval_minutes: int = 30,
+        timestep_intervals_to_plot: Optional[list[int]] = None
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -258,6 +259,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._optimizer = optimizer
         self._target_key_name = target_key
         self._target_key = BatchKey[f"{target_key}"]
+        if timestep_intervals_to_plot is not None:
+            for interval in timestep_intervals_to_plot:
+                assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(f"timestep_intervals_to_plot must be a list of tuples or lists of length 2, but got {timestep_intervals_to_plot=}")
+        self.time_step_intervals_to_plot = timestep_intervals_to_plot
 
         # Model must have lr to allow tuning
         # This setting is only used when lr is tuned with callback
@@ -268,12 +273,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.output_quantiles = output_quantiles
 
         # Number of timestemps for 30 minutely data
-        self.history_len_30 = history_minutes // interval_minutes
-        self.forecast_len_30 = forecast_minutes // interval_minutes
+        self.history_len = history_minutes // interval_minutes
+        self.forecast_len = forecast_minutes // interval_minutes
         # self.forecast_len_15 = forecast_minutes // 15
         # self.history_len_15 = history_minutes // 15
 
-        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len_30)
+        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key_name)
@@ -288,9 +293,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def num_output_features(self):
         """Number of ouput features he model chould predict for"""
         if self.use_quantile_regression:
-            out_features = self.forecast_len_30 * len(self.output_quantiles)
+            out_features = self.forecast_len * len(self.output_quantiles)
         else:
-            out_features = self.forecast_len_30
+            out_features = self.forecast_len
         return out_features
 
     def _quantiles_to_prediction(self, y_quantiles):
@@ -448,7 +453,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Make all -1 values 0.0
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len:, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -467,7 +472,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         # Sensor seems to be in batch, station, time order
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len:, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))
@@ -526,39 +531,24 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 )
                 plt.close(fig)
 
-                # Plot 1:30 to 3 hours ahead
-                fig = plot_batch_forecasts(
-                    batch,
-                    y_hat,
-                    quantiles=self.output_quantiles,
-                    key_to_plot=self._target_key_name,
-                    timesteps_to_plot=[6, 12],  # 1:30 to 3 hours ahead
-                )
-                self.logger.experiment.log(
-                    {
-                        f"val_forecast_samples/batch_idx_{accum_batch_num}_1.5_to_3hr": wandb.Image(
-                            fig
-                        ),
-                    }
-                )
-                plt.close(fig)
+                if self.time_step_intervals_to_plot is not None:
+                    for interval in self.time_step_intervals_to_plot:
+                        fig = plot_batch_forecasts(
+                            batch,
+                            y_hat,
+                            quantiles=self.output_quantiles,
+                            key_to_plot=self._target_key_name,
+                            timesteps_to_plot=interval,
+                        )
+                        self.logger.experiment.log(
+                            {
+                                f"val_forecast_samples/batch_idx_{accum_batch_num}_timestep_{interval}": wandb.Image(
+                                    fig
+                                ),
+                            }
+                        )
+                        plt.close(fig)
 
-                # Plot 15 to 39 hours ahead
-                fig = plot_batch_forecasts(
-                    batch,
-                    y_hat,
-                    quantiles=self.output_quantiles,
-                    key_to_plot=self._target_key_name,
-                    timesteps_to_plot=[60, 156],  # 15 to 39 hours ahead
-                )
-                self.logger.experiment.log(
-                    {
-                        f"val_forecast_samples/batch_idx_{accum_batch_num}_15_to_39hr": wandb.Image(
-                            fig
-                        ),
-                    }
-                )
-                plt.close(fig)
                 del self._val_y_hats
                 del self._val_batches
 
@@ -569,7 +559,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Make all -1 values 0.0
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len:, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))

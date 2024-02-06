@@ -63,6 +63,7 @@ class Model(BaseModel):
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
+        timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
         """Neural network which combines information from different sources.
 
@@ -110,6 +111,7 @@ class Model(BaseModel):
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
+            timestep_intervals_to_plot: Intervals, in timesteps, to plot in addition to the full forecast
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -131,6 +133,7 @@ class Model(BaseModel):
             output_quantiles=output_quantiles,
             target_key=target_key,
             interval_minutes=interval_minutes,
+            timestep_intervals_to_plot=timestep_intervals_to_plot
         )
 
         # Number of features expected by the output_network
@@ -234,7 +237,7 @@ class Model(BaseModel):
         if self.include_sun:
             # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1),
+                in_features=2 * (self.forecast_len + self.history_len + 1),
                 out_features=16,
             )
 
@@ -243,7 +246,7 @@ class Model(BaseModel):
 
         if include_gsp_yield_history:
             # Update num features
-            fusion_input_features += self.history_len_30
+            fusion_input_features += self.history_len
 
         self.output_network = output_network(
             in_features=fusion_input_features,
@@ -286,13 +289,13 @@ class Model(BaseModel):
                 # Target is PV, so only take the history
                 # Copy batch
                 x_tmp = x.copy()
-                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len_30]
+                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len]
                 modes["pv"] = self.pv_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len_30].float()
+            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             modes["gsp"] = gsp_history
 
@@ -314,7 +317,7 @@ class Model(BaseModel):
             else:
                 # Have to be its own Batch format
                 x_tmp = x.copy()
-                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len_30]
+                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len]
                 # This needs to be a Batch as input
                 modes["wind"] = self.wind_encoder(x_tmp)
 
@@ -324,7 +327,7 @@ class Model(BaseModel):
                 modes["sensor"] = self.sensor_encoder(x)
             else:
                 x_tmp = x.copy()
-                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len_30]
+                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len]
                 # This needs to be a Batch as input
                 modes["sensor"] = self.sensor_encoder(x_tmp)
 
@@ -339,6 +342,6 @@ class Model(BaseModel):
 
         if self.use_quantile_regression:
             # Shape: batch_size, seq_length * num_quantiles
-            out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))
+            out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
 
         return out

@@ -63,7 +63,7 @@ class Model(BaseModel):
         self.interpolate = nn.Sequential(
             nn.Linear(
                 in_features=nwp_sequence_len,
-                out_features=self.forecast_len_30,
+                out_features=self.forecast_len,
             ),
             nn.LeakyReLU(negative_slope=0.01),
         )
