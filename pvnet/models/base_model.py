@@ -537,9 +537,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                         self.logger.experiment.log(
                             {
                                 f"val_forecast_samples/batch_idx_{accum_batch_num}_"
-                                f"timestep_{interval}": wandb.Image(
-                                    fig
-                                ),
+                                f"timestep_{interval}": wandb.Image(fig),
                             }
                         )
                         plt.close(fig)
