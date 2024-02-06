@@ -241,7 +241,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         output_quantiles: Optional[list[float]] = None,
         target_key: str = "gsp",
         interval_minutes: int = 30,
-        timestep_intervals_to_plot: Optional[list[int]] = None
+        timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -261,7 +261,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._target_key = BatchKey[f"{target_key}"]
         if timestep_intervals_to_plot is not None:
             for interval in timestep_intervals_to_plot:
-                assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(f"timestep_intervals_to_plot must be a list of tuples or lists of length 2, but got {timestep_intervals_to_plot=}")
+                assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(
+                    f"timestep_intervals_to_plot must be a list of tuples or lists of length 2, but got {timestep_intervals_to_plot=}"
+                )
         self.time_step_intervals_to_plot = timestep_intervals_to_plot
 
         # Model must have lr to allow tuning
@@ -453,7 +455,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Make all -1 values 0.0
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len:, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -472,7 +474,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         # Sensor seems to be in batch, station, time order
-        y = batch[self._target_key][:, -self.forecast_len:, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))
@@ -559,7 +561,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Make all -1 values 0.0
         batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len:, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))

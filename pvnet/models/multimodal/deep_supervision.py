@@ -266,7 +266,7 @@ class Model(BaseModel):
     def training_step(self, batch, batch_idx):
         """Training step"""
         y_hats = self.multi_mode_forward(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len:, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hats["all"])
         losses = {f"{k}/train": v for k, v in losses.items()}

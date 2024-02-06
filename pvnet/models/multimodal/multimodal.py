@@ -133,7 +133,7 @@ class Model(BaseModel):
             output_quantiles=output_quantiles,
             target_key=target_key,
             interval_minutes=interval_minutes,
-            timestep_intervals_to_plot=timestep_intervals_to_plot
+            timestep_intervals_to_plot=timestep_intervals_to_plot,
         )
 
         # Number of features expected by the output_network
