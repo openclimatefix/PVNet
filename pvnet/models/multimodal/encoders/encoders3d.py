@@ -50,7 +50,6 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             image_size_pixels
             - ((spatial_kernel_size - 2 * padding[1]) - 1) * number_of_conv3d_layers
         )
-        # size of 3, goes down by 2 each layer, but a padding of 2 means it doesn't
         cnn_sequence_length = (
             sequence_length
             - ((temporal_kernel_size - 2 * padding[0]) - 1) * number_of_conv3d_layers
@@ -87,9 +86,6 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
         # Calculate the size of the output of the 3D convolutional layers
         cnn_output_size = conv3d_channels * cnn_spatial_output_size**2 * cnn_sequence_length
-        print(
-            f"CNN sequence length: {cnn_sequence_length} and spatial output size: {cnn_spatial_output_size} for total output size: {cnn_output_size}"
-        )
 
         self.final_block = nn.Sequential(
             nn.Linear(in_features=cnn_output_size, out_features=fc_features),
@@ -101,9 +97,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
     def forward(self, x):
         """Run model forward"""
         out = self.conv_layers(x)
-        print(out.shape)
         out = out.reshape(x.shape[0], -1)
-        print(out.shape)
 
         # Fully connected layers
         out = self.final_block(out)
