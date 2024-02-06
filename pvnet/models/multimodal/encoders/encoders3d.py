@@ -50,7 +50,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             image_size_pixels - (spatial_kernel_size - 1) * number_of_conv3d_layers
         )
         cnn_sequence_length = (
-            (sequence_length - temporal_kernel_size + 2 * padding[0]) + 1
+            sequence_length - (temporal_kernel_size + 2 * padding[0]) + 1
         ) * number_of_conv3d_layers
         if not (cnn_spatial_output_size >= 1):
             raise ValueError(
