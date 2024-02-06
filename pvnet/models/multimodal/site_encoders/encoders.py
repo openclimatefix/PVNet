@@ -146,6 +146,8 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             use_id_in_value: Whether to use a PV ID embedding in network used to produce the
                 value for the attention layer.
             target_id_dim: The number of unique IDs.
+            target_key_to_use: The key to use for the target in the attention layer.
+            input_key_to_use: The key to use for the input in the attention layer.
 
         """
         super().__init__(sequence_length, num_sites, out_features)
