@@ -63,6 +63,7 @@ class Model(BaseModel):
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
+        wind_interval_minutes: int = 15,
         image_embedding_dim: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
@@ -107,6 +108,7 @@ class Model(BaseModel):
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
             interval_minutes: The interval between each sample of the target data
+            wind_interval_minutes: The interval between each sample of the wind data
             wind_encoder: Encoder for wind data
             wind_history_minutes: Length of recent wind data used as input.
             pv_interval_minutes: The interval between each sample of the PV data
@@ -204,7 +206,7 @@ class Model(BaseModel):
             assert pv_history_minutes is not None
 
             self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // pv_interval_minutes,
+                sequence_length=pv_history_minutes // pv_interval_minutes + 1,
             )
 
             # Update num features
@@ -215,7 +217,7 @@ class Model(BaseModel):
                 wind_history_minutes = history_minutes
 
             self.wind_encoder = wind_encoder(
-                sequence_length=wind_history_minutes // interval_minutes
+                sequence_length=wind_history_minutes // wind_interval_minutes + 1
             )
 
             # Update num features
@@ -226,7 +228,7 @@ class Model(BaseModel):
                 sensor_history_minutes = history_minutes
 
             self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes
+                sequence_length=sensor_history_minutes // sensor_interval_minutes + 1
             )
 
             # Update num features
