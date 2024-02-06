@@ -64,7 +64,7 @@ class Model(BaseModel):
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
         wind_interval_minutes: int = 15,
-        image_embedding_dim: Optional[int] = 318,
+        num_embeddings: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
         """Neural network which combines information from different sources.
@@ -114,7 +114,7 @@ class Model(BaseModel):
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
-            image_embedding_dim: The number of dimensions to use for the image embedding
+            num_embeddings: The number of dimensions to use for the image embedding
             timestep_intervals_to_plot: Intervals, in timesteps, to plot in
             addition to the full forecast
             sensor_encoder: Encoder for sensor data
@@ -162,7 +162,7 @@ class Model(BaseModel):
             )
             if add_image_embedding_channel:
                 self.sat_embed = ImageEmbedding(
-                    image_embedding_dim, self.sat_sequence_len, self.sat_encoder.image_size_pixels
+                    num_embeddings, self.sat_sequence_len, self.sat_encoder.image_size_pixels
                 )
 
             # Update num features
@@ -197,7 +197,7 @@ class Model(BaseModel):
                 )
                 if add_image_embedding_channel:
                     self.nwp_embed_dict[nwp_source] = ImageEmbedding(
-                        image_embedding_dim,
+                        num_embeddings,
                         nwp_sequence_len,
                         self.nwp_encoders_dict[nwp_source].image_size_pixels,
                     )
@@ -245,7 +245,7 @@ class Model(BaseModel):
 
         if self.embedding_dim:
             self.embed = nn.Embedding(
-                num_embeddings=image_embedding_dim, embedding_dim=embedding_dim
+                num_embeddings=num_embeddings, embedding_dim=embedding_dim
             )
 
             # Update num features
