@@ -84,7 +84,9 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
 
         # Calculate the size of the output of the 3D convolutional layers
         cnn_output_size = conv3d_channels * cnn_spatial_output_size**2 * cnn_sequence_length
-        print(f"CNN sequence length: {cnn_sequence_length} and spatial output size: {cnn_spatial_output_size} for total output size: {cnn_output_size}")
+        print(
+            f"CNN sequence length: {cnn_sequence_length} and spatial output size: {cnn_spatial_output_size} for total output size: {cnn_output_size}"
+        )
 
         self.final_block = nn.Sequential(
             nn.Linear(in_features=cnn_output_size, out_features=fc_features),
