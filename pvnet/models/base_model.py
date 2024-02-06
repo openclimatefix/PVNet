@@ -263,7 +263,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         if timestep_intervals_to_plot is not None:
             for interval in timestep_intervals_to_plot:
                 assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(
-                    f"timestep_intervals_to_plot must be a list of tuples or lists of length 2, but got {timestep_intervals_to_plot=}"
+                    f"timestep_intervals_to_plot must be a list of tuples or lists of length 2, "
+                    f"but got {timestep_intervals_to_plot=}"
                 )
         self.time_step_intervals_to_plot = timestep_intervals_to_plot
 
@@ -535,7 +536,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                         )
                         self.logger.experiment.log(
                             {
-                                f"val_forecast_samples/batch_idx_{accum_batch_num}_timestep_{interval}": wandb.Image(
+                                f"val_forecast_samples/batch_idx_{accum_batch_num}_"
+                                f"timestep_{interval}": wandb.Image(
                                     fig
                                 ),
                             }
