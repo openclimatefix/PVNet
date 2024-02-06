@@ -118,7 +118,6 @@ class BatchAccumulator(DictListAccumulator):
         """Concatenate all accumulated batches, return, and clear self"""
         batch = {}
         for k, v in self._batches.items():
-            print(k)
             if k == BatchKey[f"{self.key_to_keep}_t0_idx"]:
                 batch[k] = v[0]
             else:
