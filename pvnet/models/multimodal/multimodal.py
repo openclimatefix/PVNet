@@ -207,6 +207,8 @@ class Model(BaseModel):
 
             self.pv_encoder = pv_encoder(
                 sequence_length=pv_history_minutes // pv_interval_minutes + 1,
+                target_key_to_use=self.target_key_name,
+                input_key_to_use="pv",
             )
 
             # Update num features
@@ -217,7 +219,9 @@ class Model(BaseModel):
                 wind_history_minutes = history_minutes
 
             self.wind_encoder = wind_encoder(
-                sequence_length=wind_history_minutes // wind_interval_minutes + 1
+                sequence_length=wind_history_minutes // wind_interval_minutes + 1,
+                target_key_to_use = self.target_key_name,
+                input_key_to_use = "wind",
             )
 
             # Update num features
@@ -228,7 +232,9 @@ class Model(BaseModel):
                 sensor_history_minutes = history_minutes
 
             self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes + 1
+                sequence_length=sensor_history_minutes // sensor_interval_minutes + 1,
+                target_key_to_use=self.target_key_name,
+                input_key_to_use="sensor",
             )
 
             # Update num features
