@@ -253,6 +253,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 None the output is a single value.
             target_key: The key of the target variable in the batch
             interval_minutes: The interval in minutes between each timestep in the data
+            timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
         """
         super().__init__()
 

@@ -116,6 +116,8 @@ class Model(BaseModel):
             sensor_interval_minutes: The interval between each sample of the sensor data
             image_embedding_dim: The number of dimensions to use for the image embedding
             timestep_intervals_to_plot: Intervals, in timesteps, to plot in addition to the full forecast
+            sensor_encoder: Encoder for sensor data
+            sensor_history_minutes: Length of recent sensor data used as input.
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history

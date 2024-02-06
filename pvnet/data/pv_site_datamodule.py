@@ -31,6 +31,9 @@ class PVSiteDataModule(BaseDataModule):
             configuration: Path to datapipe configuration file.
             batch_size: Batch size.
             num_workers: Number of workers to use in multiprocess batch loading.
+            train_period: Date range filter for train dataloader.
+            val_period: Date range filter for val dataloader.
+            test_period: Date range filter for test dataloader.
             prefetch_factor: Number of data will be prefetched at the end of each worker process.
             batch_dir: Path to the directory of pre-saved batches. Cannot be used together with
                 'train/val/test_period'.
