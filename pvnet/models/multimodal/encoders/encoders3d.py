@@ -1,8 +1,9 @@
 """Encoder modules for the satellite/NWP data based on 3D concolutions.
 """
+from typing import List, Union
+
 import torch
 from torch import nn
-from typing import Union, List
 from torchvision.transforms import CenterCrop
 
 from pvnet.models.multimodal.encoders.basic_blocks import (
@@ -25,7 +26,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         fc_features: int = 128,
         spatial_kernel_size: int = 3,
         temporal_kernel_size: int = 3,
-        padding: Union[int, List[int]] = (1,0,0),
+        padding: Union[int, List[int]] = (1, 0, 0),
     ):
         """This is the original encoding module used in PVNet, with a few minor tweaks.
 
@@ -45,8 +46,12 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         if isinstance(padding, int):
             padding = (padding, padding, padding)
         # Check that the output shape of the convolutional layers will be at least 1x1
-        cnn_spatial_output_size = image_size_pixels - (spatial_kernel_size-1) * number_of_conv3d_layers
-        cnn_sequence_length = ((sequence_length - temporal_kernel_size + 2*padding[0]) + 1) * number_of_conv3d_layers
+        cnn_spatial_output_size = (
+            image_size_pixels - (spatial_kernel_size - 1) * number_of_conv3d_layers
+        )
+        cnn_sequence_length = (
+            (sequence_length - temporal_kernel_size + 2 * padding[0]) + 1
+        ) * number_of_conv3d_layers
         if not (cnn_spatial_output_size >= 1):
             raise ValueError(
                 f"cannot use this many conv3d layers ({number_of_conv3d_layers}) with this input "
