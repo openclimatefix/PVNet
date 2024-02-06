@@ -220,8 +220,8 @@ class Model(BaseModel):
 
             self.wind_encoder = wind_encoder(
                 sequence_length=wind_history_minutes // wind_interval_minutes,
-                target_key_to_use = self.target_key_name,
-                input_key_to_use = "wind",
+                target_key_to_use=self.target_key_name,
+                input_key_to_use="wind",
             )
 
             # Update num features
