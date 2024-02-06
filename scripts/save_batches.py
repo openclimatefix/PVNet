@@ -38,7 +38,6 @@ from tqdm import tqdm
 from pvnet.data.utils import batch_to_tensor
 from pvnet.utils import print_config
 
-
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
 logger = logging.getLogger(__name__)
