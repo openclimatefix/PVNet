@@ -23,7 +23,6 @@ import sys
 # Tired of seeing these warnings
 import warnings
 
-import dask
 import hydra
 import torch
 from ocf_datapipes.batch import stack_np_examples_into_batch
@@ -39,7 +38,6 @@ from tqdm import tqdm
 from pvnet.data.utils import batch_to_tensor
 from pvnet.utils import print_config
 
-dask.config.set(scheduler="single-threaded")
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 

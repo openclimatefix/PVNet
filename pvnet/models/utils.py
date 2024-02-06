@@ -118,7 +118,7 @@ class BatchAccumulator(DictListAccumulator):
         """Concatenate all accumulated batches, return, and clear self"""
         batch = {}
         for k, v in self._batches.items():
-            if k == BatchKey.gsp_t0_idx or k == BatchKey.wind_t0_idx or k == BatchKey.pv_t0_idx:
+            if k == f"{self.key_to_keep}_t0_idx":
                 batch[k] = v[0]
             else:
                 batch[k] = torch.cat(v, dim=0)

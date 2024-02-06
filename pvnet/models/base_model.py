@@ -277,8 +277,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Number of timestemps for 30 minutely data
         self.history_len = history_minutes // interval_minutes
         self.forecast_len = forecast_minutes // interval_minutes
-        # self.forecast_len_15 = forecast_minutes // 15
-        # self.history_len_15 = history_minutes // 15
 
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
@@ -389,13 +387,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
-        common_metrics_each_step = {
-            "mae": torch.mean(torch.abs(y_hat - y), dim=0),
-            "rmse": torch.sqrt(torch.mean((y_hat - y) ** 2, dim=0)),
-        }
         # common_metrics_each_step = common_metrics(predictions=y_hat.numpy(), target=y.numpy())
-        mse_each_step = common_metrics_each_step["rmse"] ** 2
-        mae_each_step = common_metrics_each_step["mae"]
+        mse_each_step = torch.sqrt(torch.mean((y_hat - y) ** 2, dim=0)) ** 2
+        mae_each_step = torch.mean(torch.abs(y_hat - y), dim=0)
 
         losses.update({f"MSE_horizon/step_{i:03}": m for i, m in enumerate(mse_each_step)})
         losses.update({f"MAE_horizon/step_{i:03}": m for i, m in enumerate(mae_each_step)})
@@ -452,8 +446,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def training_step(self, batch, batch_idx):
         """Run training step"""
-        # Make all -1 values 0.0
-        batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         y = batch[self._target_key][:, -self.forecast_len :, 0]
 
@@ -470,8 +462,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
-        # Make all -1 values 0.0
-        batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         # Sensor seems to be in batch, station, time order
         y = batch[self._target_key][:, -self.forecast_len :, 0]
@@ -558,8 +548,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def test_step(self, batch, batch_idx):
         """Run test step"""
-        # Make all -1 values 0.0
-        batch[self._target_key] = batch[self._target_key].clamp(min=0.0)
         y_hat = self(batch)
         y = batch[self._target_key][:, -self.forecast_len :, 0]
 
