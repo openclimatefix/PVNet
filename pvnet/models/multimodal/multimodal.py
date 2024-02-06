@@ -209,7 +209,7 @@ class Model(BaseModel):
             assert pv_history_minutes is not None
 
             self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // pv_interval_minutes,
+                sequence_length=pv_history_minutes // pv_interval_minutes + 1,
                 target_key_to_use=self.target_key_name,
                 input_key_to_use="pv",
             )
@@ -222,7 +222,7 @@ class Model(BaseModel):
                 wind_history_minutes = history_minutes
 
             self.wind_encoder = wind_encoder(
-                sequence_length=wind_history_minutes // wind_interval_minutes,
+                sequence_length=wind_history_minutes // wind_interval_minutes + 1,
                 target_key_to_use=self.target_key_name,
                 input_key_to_use="wind",
             )
@@ -235,7 +235,7 @@ class Model(BaseModel):
                 sensor_history_minutes = history_minutes
 
             self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes,
+                sequence_length=sensor_history_minutes // sensor_interval_minutes + 1,
                 target_key_to_use=self.target_key_name,
                 input_key_to_use="sensor",
             )
@@ -306,7 +306,7 @@ class Model(BaseModel):
                 # Target is PV, so only take the history
                 # Copy batch
                 x_tmp = x.copy()
-                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len]
+                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len+1]
                 modes["pv"] = self.pv_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
@@ -329,7 +329,7 @@ class Model(BaseModel):
             else:
                 # Have to be its own Batch format
                 x_tmp = x.copy()
-                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len]
+                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len+1]
                 # This needs to be a Batch as input
                 modes["wind"] = self.wind_encoder(x_tmp)
 
@@ -339,7 +339,7 @@ class Model(BaseModel):
                 modes["sensor"] = self.sensor_encoder(x)
             else:
                 x_tmp = x.copy()
-                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len]
+                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len+1]
                 # This needs to be a Batch as input
                 modes["sensor"] = self.sensor_encoder(x_tmp)
 
