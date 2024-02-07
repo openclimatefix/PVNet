@@ -54,11 +54,16 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     config["general"]["description"] = "Config for training the saved PVNet model"
     config["general"]["name"] = "PVNet current"
 
-    for source in ["gsp", "nwp", "satellite", "hrvsatellite"]:
+    for source in ["gsp", "satellite", "hrvsatellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
             if config["input_data"][source][f"{source}_zarr_path"] != "":
                 config["input_data"][source][f"{source}_zarr_path"] = f"{placeholder}.zarr"
+
+    if "nwp" in config["input_data"]:
+        for source in config["input_data"]["nwp"]:
+            if config["input_data"]["nwp"][source][f"nwp_zarr_path"] != "":
+                config["input_data"]["nwp"][source][f"nwp_zarr_path"] = f"{placeholder}.zarr"
 
     if "pv" in config["input_data"]:
         for d in config["input_data"]["pv"]["pv_files_groups"]:
