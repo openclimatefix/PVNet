@@ -342,16 +342,9 @@ class Model(BaseModel):
                 modes["sensor"] = self.sensor_encoder(x_tmp)
 
         if self.include_sun:
-            if self.target_key_name == "gsp":
-                sun = torch.cat(
-                    (x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1
-                ).float()
-            elif self.target_key_name == "pv":
-                sun = torch.cat(
-                    (x[BatchKey.pv_solar_azimuth], x[BatchKey.pv_solar_elevation]), dim=1
-                ).float()
-            else:
-                raise ValueError(f"Unknown target key for sun elevation {self.target_key_name}")
+            sun = torch.cat(
+                (x[BatchKey[f"{self.target_key_name}_solar_azimuth"]], x[BatchKey[f"{self.target_key_name}_solar_elevation"]]), dim=1
+            ).float()
             sun = self.sun_fc1(sun)
             modes["sun"] = sun
 
