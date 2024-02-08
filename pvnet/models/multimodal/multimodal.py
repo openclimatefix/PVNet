@@ -115,6 +115,9 @@ class Model(BaseModel):
             output_quantiles=output_quantiles,
             target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.pv,
         )
+        
+        self.gsp_len = (self.forecast_len_30 + self.history_len_30 + 1)
+
 
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
@@ -190,9 +193,8 @@ class Model(BaseModel):
             fusion_input_features += embedding_dim
 
         if self.include_sun:
-            # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1),
+                in_features=2 * self.gsp_len,
                 out_features=16,
             )
 
@@ -212,6 +214,11 @@ class Model(BaseModel):
 
     def forward(self, x):
         """Run model forward"""
+        
+        x[BatchKey.gsp] = x[BatchKey.gsp][:, :self.gsp_len]
+        x[BatchKey.gsp_time_utc] = x[BatchKey.gsp_time_utc][:, :self.gsp_len]
+
+        
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -233,15 +240,18 @@ class Model(BaseModel):
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
+                nwp_data = torch.clip(nwp_data, min=-50, max=50)
                 nwp_data = center_crop(
                     nwp_data, 
                     output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
                 ) 
-                nwp_data = nwp_data[:,:,:self.sequence_length]
+                nwp_data = nwp_data[:,:,:self.nwp_encoders_dict[nwp_source].sequence_length]
                 if self.add_image_embedding_channel:
                     id = x[BatchKey.gsp_id][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
-                modes[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source](nwp_data)
+                
+                nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
+                modes[f"nwp/{nwp_source}"] = nwp_out
 
         # *********************** PV Data *************************************
         # Add site-level PV yield
@@ -267,8 +277,13 @@ class Model(BaseModel):
             modes["id"] = id_embedding
 
         if self.include_sun:
+            
             sun = torch.cat(
-                (x[BatchKey.gsp_solar_azimuth], x[BatchKey.gsp_solar_elevation]), dim=1
+                (
+                    x[BatchKey.gsp_solar_azimuth][:, :self.gsp_len], 
+                    x[BatchKey.gsp_solar_elevation][:, :self.gsp_len]
+                ),
+                dim=1
             ).float()
             sun = self.sun_fc1(sun)
             modes["sun"] = sun

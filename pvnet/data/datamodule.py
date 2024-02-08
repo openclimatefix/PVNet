@@ -101,7 +101,7 @@ class DataModule(LightningDataModule):
                 .map(torch.load)
                 # Split the batches and reshuffle them to be combined into new batches
                 .split_batches()
-                .shuffle(buffer_size=100 * self.batch_size)
+                .shuffle(buffer_size=10 * self.batch_size)
             )
         else:
             data_pipeline = (
