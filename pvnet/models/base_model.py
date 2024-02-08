@@ -62,8 +62,8 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
 
     if "nwp" in config["input_data"]:
         for source in config["input_data"]["nwp"]:
-            if config["input_data"]["nwp"][source][f"nwp_zarr_path"] != "":
-                config["input_data"]["nwp"][source][f"nwp_zarr_path"] = f"{placeholder}.zarr"
+            if config["input_data"]["nwp"][source]["nwp_zarr_path"] != "":
+                config["input_data"]["nwp"][source]["nwp_zarr_path"] = f"{placeholder}.zarr"
 
     if "pv" in config["input_data"]:
         for d in config["input_data"]["pv"]["pv_files_groups"]:
