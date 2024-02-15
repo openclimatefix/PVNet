@@ -31,7 +31,7 @@ input_data:
     # This is the list of pv_ml_ids to be sliced from the PV site level data
     # The IDs below are 349 of the PV systems which have very little NaN data in the historic data
     # and which are still reporting live (as of Oct 2023)
-    pv_ml_ids: 
+    pv_ml_ids:
       [
         154, 155, 156, 158, 159, 160, 162, 164, 165, 166, 167, 168, 169, 171, 173, 177, 178, 179,
         181, 182, 185, 186, 187, 188, 189, 190, 191, 192, 193, 197, 198, 199, 200, 202, 204, 205,
