@@ -200,7 +200,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         else:
             ids = x[BatchKey[f"{self.input_key_to_use}_id"]][:, 0]
         ids = ids.squeeze().int()
-        if len(ids.shape) == 2:  # Batch was squeezed down to nothing
+        if len(ids.shape) == 0:  # Batch was squeezed down to nothing
             ids = ids.unsqueeze(0)
         query = self.target_id_embedding(ids).unsqueeze(1)
         return query
@@ -244,7 +244,6 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         query = self._encode_query(x)
         key = self._encode_key(x)
         value = self._encode_value(x)
-
         attn_output, attn_weights = self.multihead_attn(
             query, key, value, average_attn_weights=average_attn_weights
         )
@@ -258,5 +257,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
         # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]
         x_out = attn_output.squeeze()
+        if len(x_out.shape) == 1:
+            x_out = x_out.unsqueeze(0)
 
         return x_out
