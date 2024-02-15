@@ -176,7 +176,7 @@ class Model(BaseModel):
         if self.include_sun:
             # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1),
+                in_features=2 * (self.forecast_len + self.history_len + 1),
                 out_features=16,
             )
 
@@ -187,11 +187,11 @@ class Model(BaseModel):
         if include_nwp:
             weather_cat_features += encoder_out_features
         if version == 1:
-            weather_cat_features += self.forecast_len_30
+            weather_cat_features += self.forecast_len
 
         nonweather_cat_features = 0
         if include_gsp_yield_history:
-            nonweather_cat_features += self.history_len_30
+            nonweather_cat_features += self.history_len
         if embedding_dim:
             nonweather_cat_features += embedding_dim
         if include_sun:
@@ -199,19 +199,19 @@ class Model(BaseModel):
 
         self.simple_output_network = output_network(
             in_features=nonweather_cat_features,
-            out_features=self.forecast_len_30,
+            out_features=self.forecast_len,
             **output_network_kwargs,
         )
 
         self.weather_residual_network = nn.Sequential(
             output_network(
                 in_features=weather_cat_features,
-                out_features=self.forecast_len_30,
+                out_features=self.forecast_len,
                 **output_network_kwargs,
             ),
             # All output network return LeakyReLU activated outputs
             # However, the residual could be positive or negative
-            nn.Linear(self.forecast_len_30, self.forecast_len_30),
+            nn.Linear(self.forecast_len, self.forecast_len),
         )
 
         self.source_dropout_0d = CompleteDropoutNd(0, p=source_dropout)
@@ -247,7 +247,7 @@ class Model(BaseModel):
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len_30].float()
+            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             gsp_history = self.source_dropout_0d(gsp_history)
             modes["gsp"] = gsp_history
@@ -295,7 +295,7 @@ class Model(BaseModel):
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hats = self.multi_mode_forward(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hats["weather_out"])
         losses = {f"{k}/train": v for k, v in losses.items()}

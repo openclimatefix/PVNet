@@ -3,6 +3,7 @@ import logging
 import os
 import warnings
 from collections.abc import Sequence
+from typing import Optional
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
@@ -242,29 +243,40 @@ def finish(
             wandb.finish()
 
 
-def plot_batch_forecasts(batch, y_hat, batch_idx=None, quantiles=None, key_to_plot: str = "gsp"):
+def plot_batch_forecasts(
+    batch,
+    y_hat,
+    batch_idx=None,
+    quantiles=None,
+    key_to_plot: str = "gsp",
+    timesteps_to_plot: Optional[list[int]] = None,
+):
     """Plot a batch of data and the forecast from that batch"""
 
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
-    y_key = BatchKey.gsp if key_to_plot == "gsp" else BatchKey.pv
-    y_id_key = BatchKey.gsp_id if key_to_plot == "gsp" else BatchKey.pv_id
-    t0_idx_key = BatchKey.gsp_t0_idx if key_to_plot == "gsp" else BatchKey.pv_t0_idx
-    time_utc_key = BatchKey.gsp_time_utc if key_to_plot == "gsp" else BatchKey.pv_time_utc
-    plotting_name = key_to_plot.upper()
-    y = batch[y_key].cpu().numpy()
+    y_key = BatchKey[f"{key_to_plot}"]
+    y_id_key = BatchKey[f"{key_to_plot}_id"]
+    BatchKey[f"{key_to_plot}_t0_idx"]
+    time_utc_key = BatchKey[f"{key_to_plot}_time_utc"]
+    y = batch[y_key][:, :, 0].cpu().numpy()  # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()
+    # Select between the timesteps in timesteps to plot
+    plotting_name = key_to_plot.upper()
 
     gsp_ids = batch[y_id_key].cpu().numpy().squeeze()
-    batch[t0_idx_key]
 
     times_utc = batch[time_utc_key].cpu().numpy().squeeze().astype("datetime64[s]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
+    if timesteps_to_plot is not None:
+        y = y[:, timesteps_to_plot[0] : timesteps_to_plot[1]]
+        y_hat = y_hat[:, timesteps_to_plot[0] : timesteps_to_plot[1]]
+        times_utc = [t[timesteps_to_plot[0] : timesteps_to_plot[1]] for t in times_utc]
 
     batch_size = y.shape[0]
 
-    fig, axes = plt.subplots(4, 4, figsize=(8, 8))
+    fig, axes = plt.subplots(4, 4, figsize=(16, 16))
 
     for i, ax in enumerate(axes.ravel()):
         if i >= batch_size:
