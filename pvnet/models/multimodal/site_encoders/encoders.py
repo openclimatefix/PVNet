@@ -200,6 +200,8 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         else:
             ids = x[BatchKey[f"{self.input_key_to_use}_id"]][:, 0]
         ids = ids.squeeze().int()
+        if len(ids.shape) == 2:  # Batch was squeezed down to nothing
+            ids = ids.unsqueeze(0)
         query = self.target_id_embedding(ids).unsqueeze(1)
         return query
 
