@@ -8,6 +8,7 @@ unfixable = []
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
+    "*.yaml",
     ".bzr",
     ".direnv",
     ".eggs",
