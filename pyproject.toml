@@ -25,4 +25,4 @@ testpaths = [
 
 [tool.ruff]
 line-length = 100
-exclude = [".ipynb_checkpoints", "tests"]
+exclude = [".ipynb_checkpoints", "tests", "configs.example"]
