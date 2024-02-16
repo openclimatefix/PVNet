@@ -7,6 +7,7 @@ from typing import Dict, Optional, Union
 
 import hydra
 import lightning.pytorch as pl
+import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -19,7 +20,6 @@ from huggingface_hub.hf_api import HfApi
 from huggingface_hub.utils._deprecation import _deprecate_positional_args
 from ocf_datapipes.batch import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
-from ocf_ml_metrics.metrics.errors import common_metrics
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -54,16 +54,26 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     config["general"]["description"] = "Config for training the saved PVNet model"
     config["general"]["name"] = "PVNet current"
 
-    for source in ["gsp", "nwp", "satellite", "hrvsatellite"]:
+    for source in ["gsp", "satellite", "hrvsatellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
             if config["input_data"][source][f"{source}_zarr_path"] != "":
                 config["input_data"][source][f"{source}_zarr_path"] = f"{placeholder}.zarr"
 
+    if "nwp" in config["input_data"]:
+        for source in config["input_data"]["nwp"]:
+            if config["input_data"]["nwp"][source]["nwp_zarr_path"] != "":
+                config["input_data"]["nwp"][source]["nwp_zarr_path"] = f"{placeholder}.zarr"
+
     if "pv" in config["input_data"]:
         for d in config["input_data"]["pv"]["pv_files_groups"]:
             d["pv_filename"] = f"{placeholder}.netcdf"
             d["pv_metadata_filename"] = f"{placeholder}.csv"
+
+    if "sensor" in config["input_data"]:
+        # If not empty - i.e. if used
+        if config["input_data"][source][f"{source}_filename"] != "":
+            config["input_data"][source][f"{source}_filename"] = f"{placeholder}.nc"
 
     with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
@@ -234,7 +244,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         forecast_minutes: int,
         optimizer: AbstractOptimizer,
         output_quantiles: Optional[list[float]] = None,
-        target_key: BatchKey = BatchKey.gsp,
+        target_key: str = "gsp",
+        interval_minutes: int = 30,
+        timestep_intervals_to_plot: Optional[list[int]] = None,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -245,11 +257,21 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             output_quantiles: A list of float (0.0, 1.0) quantiles to predict values for. If set to
                 None the output is a single value.
             target_key: The key of the target variable in the batch
+            interval_minutes: The interval in minutes between each timestep in the data
+            timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
         """
         super().__init__()
 
         self._optimizer = optimizer
-        self._target_key = target_key
+        self._target_key_name = target_key
+        self._target_key = BatchKey[f"{target_key}"]
+        if timestep_intervals_to_plot is not None:
+            for interval in timestep_intervals_to_plot:
+                assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(
+                    f"timestep_intervals_to_plot must be a list of tuples or lists of length 2, "
+                    f"but got {timestep_intervals_to_plot=}"
+                )
+        self.time_step_intervals_to_plot = timestep_intervals_to_plot
 
         # Model must have lr to allow tuning
         # This setting is only used when lr is tuned with callback
@@ -260,13 +282,13 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.output_quantiles = output_quantiles
 
         # Number of timestemps for 30 minutely data
-        self.history_len_30 = history_minutes // 30
-        self.forecast_len_30 = forecast_minutes // 30
+        self.history_len = history_minutes // interval_minutes
+        self.forecast_len = forecast_minutes // interval_minutes
 
-        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len_30)
+        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
         self._accumulated_metrics = MetricAccumulator()
-        self._accumulated_batches = BatchAccumulator()
+        self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key_name)
         self._accumulated_y_hat = PredAccumulator()
 
     @property
@@ -278,9 +300,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def num_output_features(self):
         """Number of ouput features he model chould predict for"""
         if self.use_quantile_regression:
-            out_features = self.forecast_len_30 * len(self.output_quantiles)
+            out_features = self.forecast_len * len(self.output_quantiles)
         else:
-            out_features = self.forecast_len_30
+            out_features = self.forecast_len
         return out_features
 
     def _quantiles_to_prediction(self, y_quantiles):
@@ -372,15 +394,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
             # Take median value for remaining metric calculations
             y_hat = self._quantiles_to_prediction(y_hat)
+        mse_each_step = torch.mean((y_hat - y) ** 2, dim=0)
+        mae_each_step = torch.mean(torch.abs(y_hat - y), dim=0)
 
-        common_metrics_each_step = common_metrics(
-            predictions=y_hat.cpu().numpy(), target=y.cpu().numpy()
-        )
-        mse_each_step = common_metrics_each_step["rmse"] ** 2
-        mae_each_step = common_metrics_each_step["mae"]
+        losses.update({f"MSE_horizon/step_{i:03}": m for i, m in enumerate(mse_each_step)})
+        losses.update({f"MAE_horizon/step_{i:03}": m for i, m in enumerate(mae_each_step)})
 
-        losses.update({f"MSE_horizon/step_{i:02}": m for i, m in enumerate(mse_each_step)})
-        losses.update({f"MAE_horizon/step_{i:02}": m for i, m in enumerate(mae_each_step)})
         return losses
 
     def _calculate_test_losses(self, y, y_hat):
@@ -421,13 +440,20 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # We only create the figure every 8 log steps
             # This was reduced as it was creating figures too often
             if grad_batch_num % (8 * self.trainer.log_every_n_steps) == 0:
-                fig = plot_batch_forecasts(batch, y_hat, batch_idx, quantiles=self.output_quantiles)
+                fig = plot_batch_forecasts(
+                    batch,
+                    y_hat,
+                    batch_idx,
+                    quantiles=self.output_quantiles,
+                    key_to_plot=self._target_key_name,
+                )
                 fig.savefig("latest_logged_train_batch.png")
+                plt.close(fig)
 
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -443,12 +469,36 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        # Sensor seems to be in batch, station, time order
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))
 
         logged_losses = {f"{k}/val": v for k, v in losses.items()}
+        # Get the losses in the format of {VAL>_horizon/step_000: 0.1, VAL>_horizon/step_001: 0.2}
+        # for each step in the forecast horizon
+        # This is needed for the custom plot
+        # And needs to be in order of step
+        x_values = [
+            int(k.split("_")[-1].split("/")[0])
+            for k in logged_losses.keys()
+            if "MAE_horizon/step" in k
+        ]
+        y_values = []
+        for x in x_values:
+            y_values.append(logged_losses[f"MAE_horizon/step_{x:03}/val"])
+        per_step_losses = [[x, y] for (x, y) in zip(x_values, y_values)]
+        # Check if WandBLogger is being used
+        if isinstance(self.logger, pl.loggers.WandbLogger):
+            table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
+            wandb.log(
+                {
+                    "mae_vs_timestep": wandb.plot.line(
+                        table, "timestep", "MAE", title="MAE vs Timestep"
+                    )
+                }
+            )
 
         self.log_dict(
             logged_losses,
@@ -462,23 +512,46 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Store these temporarily under self
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
-                self._val_batches = BatchAccumulator()
+                self._val_batches = BatchAccumulator(key_to_keep=self._target_key_name)
 
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
-
             # if batch had accumulated
             if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:
                 y_hat = self._val_y_hats.flush()
                 batch = self._val_batches.flush()
 
-                fig = plot_batch_forecasts(batch, y_hat, quantiles=self.output_quantiles)
+                fig = plot_batch_forecasts(
+                    batch,
+                    y_hat,
+                    quantiles=self.output_quantiles,
+                    key_to_plot=self._target_key_name,
+                )
 
                 self.logger.experiment.log(
                     {
-                        f"val_forecast_samples/batch_idx_{accum_batch_num}": wandb.Image(fig),
+                        f"val_forecast_samples/batch_idx_{accum_batch_num}_all": wandb.Image(fig),
                     }
                 )
+                plt.close(fig)
+
+                if self.time_step_intervals_to_plot is not None:
+                    for interval in self.time_step_intervals_to_plot:
+                        fig = plot_batch_forecasts(
+                            batch,
+                            y_hat,
+                            quantiles=self.output_quantiles,
+                            key_to_plot=self._target_key_name,
+                            timesteps_to_plot=interval,
+                        )
+                        self.logger.experiment.log(
+                            {
+                                f"val_forecast_samples/batch_idx_{accum_batch_num}_"
+                                f"timestep_{interval}": wandb.Image(fig),
+                            }
+                        )
+                        plt.close(fig)
+
                 del self._val_y_hats
                 del self._val_batches
 
@@ -487,7 +560,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def test_step(self, batch, batch_idx):
         """Run test step"""
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses.update(self._calculate_val_losses(y, y_hat))

@@ -161,7 +161,7 @@ class Model(BaseModel):
         if self.include_sun:
             # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len_30 + self.history_len_30 + 1),
+                in_features=2 * (self.forecast_len + self.history_len + 1),
                 out_features=16,
             )
 
@@ -170,18 +170,18 @@ class Model(BaseModel):
             num_cat_features += encoder_out_features
             self.sat_output_network = output_network(
                 in_features=encoder_out_features,
-                out_features=self.forecast_len_30,
+                out_features=self.forecast_len,
                 **output_network_kwargs,
             )
         if include_nwp:
             num_cat_features += encoder_out_features
             self.nwp_output_network = output_network(
                 in_features=encoder_out_features,
-                out_features=self.forecast_len_30,
+                out_features=self.forecast_len,
                 **output_network_kwargs,
             )
         if include_gsp_yield_history:
-            num_cat_features += self.history_len_30
+            num_cat_features += self.history_len
         if embedding_dim:
             num_cat_features += embedding_dim
         if include_sun:
@@ -189,7 +189,7 @@ class Model(BaseModel):
 
         self.output_network = output_network(
             in_features=num_cat_features,
-            out_features=self.forecast_len_30,
+            out_features=self.forecast_len,
             **output_network_kwargs,
         )
 
@@ -226,7 +226,7 @@ class Model(BaseModel):
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len_30].float()
+            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             gsp_history = self.source_dropout_0d(gsp_history)
             modes["gsp"] = gsp_history
@@ -266,7 +266,7 @@ class Model(BaseModel):
     def training_step(self, batch, batch_idx):
         """Training step"""
         y_hats = self.multi_mode_forward(batch)
-        y = batch[BatchKey.gsp][:, -self.forecast_len_30 :, 0]
+        y = batch[BatchKey.gsp][:, -self.forecast_len :, 0]
 
         losses = self._calculate_common_losses(y, y_hats["all"])
         losses = {f"{k}/train": v for k, v in losses.items()}

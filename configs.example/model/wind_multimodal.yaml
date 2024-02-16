@@ -5,40 +5,24 @@ output_quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
 #--------------------------------------------
 # NWP encoder
 #--------------------------------------------
-
 nwp_encoders_dict:
-  ukv:
+  ecmwf:
     _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
     _partial_: True
-    in_channels: 2
+    in_channels: 14
     out_features: 256
     number_of_conv3d_layers: 6
     conv3d_channels: 32
-    image_size_pixels: 24
+    image_size_pixels: 16
 
 #--------------------------------------------
-# Sat encoder settings
+# Sensor encoder settings
 #--------------------------------------------
 
-sat_encoder:
-  _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
-  _partial_: True
-  in_channels: 11
-  out_features: 256
-  number_of_conv3d_layers: 6
-  conv3d_channels: 32
-  image_size_pixels: 24
-
-add_image_embedding_channel: False
-
-#--------------------------------------------
-# PV encoder settings
-#--------------------------------------------
-
-pv_encoder:
+wind_encoder:
   _target_: pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork
   _partial_: True
-  num_sites: 349
+  num_sites: 19
   out_features: 40
   num_heads: 4
   kdim: 40
@@ -57,7 +41,7 @@ output_network:
   dropout_frac: 0.0
 
 embedding_dim: 16
-include_sun: True
+include_sun: False
 include_gsp_yield_history: False
 
 #--------------------------------------------
@@ -70,16 +54,15 @@ history_minutes: 120
 
 min_sat_delay_minutes: 60
 
-# These must also be set even if identical to forecast_minutes and  history_minutes
+# --- set to null if same as history_minutes ---
 sat_history_minutes: 90
+nwp_history_minutes: 60
+nwp_forecast_minutes: 2880
 pv_history_minutes: 180
+pv_interval_minutes: 15
+sat_interval_minutes: 15
 
-# These must be set for each NWP encoder
-nwp_history_minutes:
-  ukv: 120
-nwp_forecast_minutes:
-  ukv: 480
-
+target_key: "sensor"
 # ----------------------------------------------
 # Optimizer
 # ----------------------------------------------
