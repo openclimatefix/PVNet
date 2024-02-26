@@ -115,16 +115,18 @@ class ResidualConv3dBlock2(nn.Module):
         for i in range(n_layers):
             if batch_norm:
                 layers.append(nn.BatchNorm3d(in_channels))
-            layers.extend([
-                nn.Dropout3d(p=dropout_frac),
-                nn.LeakyReLU(),
-                nn.Conv3d(
-                    in_channels=in_channels,
-                    out_channels=in_channels,
-                    kernel_size=(3, 3, 3),
-                    padding=(1, 1, 1),
-                ),
-            ])
+            layers.extend(
+                [
+                    nn.Dropout3d(p=dropout_frac),
+                    nn.LeakyReLU(),
+                    nn.Conv3d(
+                        in_channels=in_channels,
+                        out_channels=in_channels,
+                        kernel_size=(3, 3, 3),
+                        padding=(1, 1, 1),
+                    ),
+                ]
+            )
 
         self.model = nn.Sequential(*layers)
 
@@ -132,7 +134,6 @@ class ResidualConv3dBlock2(nn.Module):
         """Run model forward"""
         return self.model(x) + x
 
-    
 
 class ImageSequenceEncoder(nn.Module):
     """Simple network which independently encodes each image in a sequence into 1D features"""

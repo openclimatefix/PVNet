@@ -6,6 +6,7 @@ from typing import Optional
 import torch
 from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torch import nn
+from torchvision.transforms.functional import center_crop
 
 import pvnet
 from pvnet.models.base_model import BaseModel
@@ -15,7 +16,6 @@ from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearN
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
 
-from torchvision.transforms.functional import center_crop
 
 class Model(BaseModel):
     """Neural network which combines information from different sources
@@ -143,9 +143,8 @@ class Model(BaseModel):
             interval_minutes=interval_minutes,
             timestep_intervals_to_plot=timestep_intervals_to_plot,
         )
-        
-        self.forecast_len = (self.forecast_len + self.history_len + 1)
 
+        self.forecast_len = self.forecast_len + self.history_len + 1
 
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
@@ -275,20 +274,19 @@ class Model(BaseModel):
 
     def forward(self, x):
         """Run model forward"""
-        
-        x[BatchKey.gsp] = x[BatchKey.gsp][:, :self.forecast_len]
-        x[BatchKey.gsp_time_utc] = x[BatchKey.gsp_time_utc][:, :self.forecast_len]
 
-        
+        x[BatchKey.gsp] = x[BatchKey.gsp][:, : self.forecast_len]
+        x[BatchKey.gsp_time_utc] = x[BatchKey.gsp_time_utc][:, : self.forecast_len]
+
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
-            
-            sat_data = center_crop(sat_data, output_size=self.sat_encoder.image_size_pixels) 
-            
+
+            sat_data = center_crop(sat_data, output_size=self.sat_encoder.image_size_pixels)
+
             if self.add_image_embedding_channel:
                 id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
@@ -303,14 +301,13 @@ class Model(BaseModel):
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
                 nwp_data = center_crop(
-                    nwp_data, 
-                    output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
-                ) 
-                nwp_data = nwp_data[:,:,:self.nwp_encoders_dict[nwp_source].sequence_length]
+                    nwp_data, output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
+                )
+                nwp_data = nwp_data[:, :, : self.nwp_encoders_dict[nwp_source].sequence_length]
                 if self.add_image_embedding_channel:
                     id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
-                
+
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
                 modes[f"nwp/{nwp_source}"] = nwp_out
 
@@ -361,11 +358,10 @@ class Model(BaseModel):
                 modes["sensor"] = self.sensor_encoder(x_tmp)
 
         if self.include_sun:
-            
             sun = torch.cat(
                 (
-                    x[BatchKey[f"{self.target_key_name}_solar_azimuth"]][:, :self.forecast_len],
-                    x[BatchKey[f"{self.target_key_name}_solar_elevation"]][:, :self.forecast_len],
+                    x[BatchKey[f"{self.target_key_name}_solar_azimuth"]][:, : self.forecast_len],
+                    x[BatchKey[f"{self.target_key_name}_solar_elevation"]][:, : self.forecast_len],
                 ),
                 dim=1,
             ).float()

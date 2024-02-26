@@ -1,26 +1,22 @@
 """The default composite model architecture for PVNet"""
 
+import glob
 from collections import OrderedDict
 from typing import Optional
-import glob
 
-import torch
-from ocf_datapipes.batch import BatchKey, NWPBatchKey
-from torch import nn
-import torch.nn.functional as F
 import hydra
+import torch
+import torch.nn.functional as F
+from ocf_datapipes.batch import BatchKey, NWPBatchKey
+from pyaml_env import parse_config
+from torch import nn
+from torchvision.transforms.functional import center_crop
 
 import pvnet
 from pvnet.models.base_model import BaseModel
-from pvnet.models.multimodal.basic_blocks import ImageEmbedding
-from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
-from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
-from pyaml_env import parse_config
 
-
-from torchvision.transforms.functional import center_crop
 
 class Model(BaseModel):
     """Neural network which combines information from different sources
@@ -100,70 +96,64 @@ class Model(BaseModel):
             output_quantiles=output_quantiles,
             target_key="gsp",
         )
-        
-        self.gsp_len = (self.forecast_len + self.history_len + 1)
 
+        self.gsp_len = self.forecast_len + self.history_len + 1
 
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
         fusion_input_features = 0
-        
+
         self.teacher_models = torch.nn.ModuleDict()
         self.mode_teacher_dict = mode_teacher_dict
-        
-        
+
         for mode, path in mode_teacher_dict.items():
-        
             # load teacher model and freeze its weights
             self.teacher_models[mode] = self.get_unimodal_encoder(path, True, val_best=val_best)
-            
+
             for param in self.teacher_models[mode].parameters():
                 param.requires_grad = False
-            
+
             # Recreate model as student
             mode_student_model = self.get_unimodal_encoder(
                 path, load_weights=(not cold_start), val_best=val_best
             )
-            
-            if mode=="sat":
+
+            if mode == "sat":
                 self.include_sat = True
                 self.sat_sequence_len = mode_student_model.sat_sequence_len
                 self.sat_encoder = mode_student_model.sat_encoder
-                
+
                 if mode_student_model.add_image_embedding_channel:
                     self.sat_embed = mode_student_model.sat_embed
                     self.add_image_embedding_channel = True
 
                 fusion_input_features += self.sat_encoder.out_features
-                
-            
-            elif mode=="pv":
+
+            elif mode == "pv":
                 self.include_pv = True
                 self.pv_encoder = mode_student_model.pv_encoder
                 fusion_input_features += self.pv_encoder.out_features
-                
-            
+
             elif mode.startswith("nwp"):
                 nwp_source = mode.removeprefix("nwp/")
-                
+
                 if not self.include_nwp:
                     self.include_nwp = True
                     self.nwp_encoders_dict = torch.nn.ModuleDict()
-                    
+
                     if mode_student_model.add_image_embedding_channel:
                         self.add_image_embedding_channel = True
                         self.nwp_embed_dict = torch.nn.ModuleDict()
 
-                self.nwp_encoders_dict[nwp_source] = (
-                    mode_student_model.nwp_encoders_dict[nwp_source]
-                )
-                
+                self.nwp_encoders_dict[nwp_source] = mode_student_model.nwp_encoders_dict[
+                    nwp_source
+                ]
+
                 if self.add_image_embedding_channel:
                     self.nwp_embed_dict[nwp_source] = mode_student_model.nwp_embed_dict[nwp_source]
 
                 fusion_input_features += self.nwp_encoders_dict[nwp_source].out_features
-            
-        
+
         if self.embedding_dim:
             self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
             fusion_input_features += embedding_dim
@@ -184,15 +174,13 @@ class Model(BaseModel):
         )
 
         self.save_hyperparameters()
-        
-    
+
     def get_unimodal_encoder(self, path, load_weights, val_best):
-        
         model_config = parse_config(f"{path}/model_config.yaml")
 
         # Load the teacher model
         encoder = hydra.utils.instantiate(model_config)
-        
+
         if load_weights:
             if val_best:
                 # Only one epoch (best) saved per model
@@ -204,42 +192,41 @@ class Model(BaseModel):
 
             encoder.load_state_dict(state_dict=checkpoint["state_dict"])
         return encoder
-    
-        
+
     def teacher_forward(self, x):
-        
         modes = OrderedDict()
         for mode, teacher_model in self.teacher_models.items():
-        
             # ******************* Satellite imagery *************************
-            if mode=="sat":
+            if mode == "sat":
                 # Shape: batch_size, seq_length, channel, height, width
                 sat_data = x[BatchKey.satellite_actual][:, : teacher_model.sat_sequence_len]
                 sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
                 sat_data = center_crop(
                     sat_data, output_size=teacher_model.sat_encoder.image_size_pixels
-                ) 
+                )
 
                 if self.add_image_embedding_channel:
                     id = x[BatchKey.gsp_id][:, 0].int()
                     sat_data = teacher_model.sat_embed(sat_data, id)
-                
+
                 modes[mode] = teacher_model.sat_encoder(sat_data)
 
             # *********************** NWP Data ************************************
             if mode.startswith("nwp"):
                 nwp_source = mode.removeprefix("nwp/")
-                
+
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
                 nwp_data = center_crop(
-                    nwp_data, 
-                    output_size=teacher_model.nwp_encoders_dict[nwp_source].image_size_pixels
-                ) 
-                nwp_data = nwp_data[:,:,:teacher_model.nwp_encoders_dict[nwp_source].sequence_length]
+                    nwp_data,
+                    output_size=teacher_model.nwp_encoders_dict[nwp_source].image_size_pixels,
+                )
+                nwp_data = nwp_data[
+                    :, :, : teacher_model.nwp_encoders_dict[nwp_source].sequence_length
+                ]
                 if teacher_model.add_image_embedding_channel:
                     id = x[BatchKey.gsp_id][:, 0].int()
                     nwp_data = teacher_model.nwp_embed_dict[nwp_source](nwp_data, id)
@@ -249,28 +236,26 @@ class Model(BaseModel):
 
             # *********************** PV Data *************************************
             # Add site-level PV yield
-            if mode=="pv":
+            if mode == "pv":
                 modes[mode] = teacher_model.pv_encoder(x)
-                
+
         return modes
 
-    
     def forward(self, x, return_modes=False):
         """Run model forward"""
-        
-        x[BatchKey.gsp] = x[BatchKey.gsp][:, :self.gsp_len]
-        x[BatchKey.gsp_time_utc] = x[BatchKey.gsp_time_utc][:, :self.gsp_len]
 
-        
+        x[BatchKey.gsp] = x[BatchKey.gsp][:, : self.gsp_len]
+        x[BatchKey.gsp_time_utc] = x[BatchKey.gsp_time_utc][:, : self.gsp_len]
+
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
-            
-            sat_data = center_crop(sat_data, output_size=self.sat_encoder.image_size_pixels) 
-            
+
+            sat_data = center_crop(sat_data, output_size=self.sat_encoder.image_size_pixels)
+
             if self.add_image_embedding_channel:
                 id = x[BatchKey.gsp_id][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
@@ -285,14 +270,13 @@ class Model(BaseModel):
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
                 nwp_data = center_crop(
-                    nwp_data, 
-                    output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
-                ) 
-                nwp_data = nwp_data[:,:,:self.nwp_encoders_dict[nwp_source].sequence_length]
+                    nwp_data, output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
+                )
+                nwp_data = nwp_data[:, :, : self.nwp_encoders_dict[nwp_source].sequence_length]
                 if self.add_image_embedding_channel:
                     id = x[BatchKey.gsp_id][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
-                
+
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
                 modes[f"nwp/{nwp_source}"] = nwp_out
 
@@ -320,13 +304,12 @@ class Model(BaseModel):
             modes["id"] = id_embedding
 
         if self.include_sun:
-            
             sun = torch.cat(
                 (
-                    x[BatchKey.gsp_solar_azimuth][:, :self.gsp_len], 
-                    x[BatchKey.gsp_solar_elevation][:, :self.gsp_len]
+                    x[BatchKey.gsp_solar_azimuth][:, : self.gsp_len],
+                    x[BatchKey.gsp_solar_elevation][:, : self.gsp_len],
                 ),
-                dim=1
+                dim=1,
             ).float()
             sun = self.sun_fc1(sun)
             modes["sun"] = sun
@@ -342,22 +325,20 @@ class Model(BaseModel):
         else:
             return out
 
-        
     def _calculate_teacher_loss(self, modes, teacher_modes):
         enc_losses = {}
         for m, enc in teacher_modes.items():
             enc_losses[f"enc_loss/{m}"] = F.l1_loss(enc, modes[m])
-        enc_losses["enc_loss/total"] = sum([v for k,v in enc_losses.items()])
+        enc_losses["enc_loss/total"] = sum([v for k, v in enc_losses.items()])
         return enc_losses
-        
-        
+
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat, modes = self.forward(batch, return_modes=True)
         y = batch[self._target_key][:, -self.forecast_len :, 0]
-        
+
         losses = self._calculate_common_losses(y, y_hat)
-        
+
         teacher_modes = self.teacher_forward(batch)
         teacher_loss = self._calculate_teacher_loss(modes, teacher_modes)
         losses.update(teacher_loss)
@@ -366,33 +347,32 @@ class Model(BaseModel):
             opt_target = losses["quantile_loss"]
         else:
             opt_target = losses["MAE"]
-            
+
         t_loss = teacher_loss["enc_loss/total"]
-        
-        # The scales of the two losses
+
+        # The scales of the two losses
         l_s = opt_target.detach()
         tl_s = max(t_loss.detach(), 1e-9)
-        
-        #opt_target = t_loss/tl_s * l_s * self.enc_loss_frac + opt_target * (1-self.enc_loss_frac)
-        losses["opt_loss"]  = t_loss/tl_s * l_s * self.enc_loss_frac + opt_target * (1-self.enc_loss_frac)
-    
+
+        # opt_target = t_loss/tl_s * l_s * self.enc_loss_frac + opt_target * (1-self.enc_loss_frac)
+        losses["opt_loss"] = t_loss / tl_s * l_s * self.enc_loss_frac + opt_target * (
+            1 - self.enc_loss_frac
+        )
+
         losses = {f"{k}/train": v for k, v in losses.items()}
         self._training_accumulate_log(batch, batch_idx, losses, y_hat)
-        
+
         return losses["opt_loss/train"]
-    
-    
+
     def convert_to_multimodal_model(self, config):
-        
         config = config.copy()
         del config["cold_start"]
         config["_target_"] = "pvnet.models.multimodal.multimodal.Model"
-        
+
         sources = []
         for mode, path in config["mode_teacher_dict"].items():
-            
             model_config = parse_config(f"{path}/model_config.yaml")
-            
+
             if mode.startswith("nwp"):
                 nwp_source = mode.removeprefix("nwp/")
                 if "nwp_encoders_dict" in config:
@@ -403,34 +383,34 @@ class Model(BaseModel):
                     for key in ["nwp_encoders_dict", "nwp_history_minutes", "nwp_forecast_minutes"]:
                         config[key] = {nwp_source: model_config[key][nwp_source]}
                 config["add_image_embedding_channel"] = model_config["add_image_embedding_channel"]
-                    
-            elif mode=="sat":
+
+            elif mode == "sat":
                 for key in [
-                    "sat_encoder", "add_image_embedding_channel", 
-                    "min_sat_delay_minutes", "sat_history_minutes"
+                    "sat_encoder",
+                    "add_image_embedding_channel",
+                    "min_sat_delay_minutes",
+                    "sat_history_minutes",
                 ]:
                     config[key] = model_config[key]
                 sources.append("sat")
-                
-            elif mode=="pv":
+
+            elif mode == "pv":
                 for key in ["pv_encoder", "pv_history_minutes"]:
                     config[key] = model_config[key]
                 sources.append("pv")
-        
+
         del config["mode_teacher_dict"]
-        
+
         # Load the teacher model
         multimodal_model = hydra.utils.instantiate(config)
-        
+
         if "sat" in sources:
             multimodal_model.sat_encoder.load_state_dict(self.sat_encoder.state_dict())
         if "nwp" in sources:
             multimodal_model.nwp_encoders_dict.load_state_dict(self.nwp_encoders_dict.state_dict())
         if "pv" in sources:
             multimodal_model.pv_encoder.load_state_dict(self.pv_encoder.state_dict())
-            
-        multimodal_model.output_network.load_state_dict(
-            self.output_network.state_dict()
-        )
-        
+
+        multimodal_model.output_network.load_state_dict(self.output_network.state_dict())
+
         return multimodal_model, config
