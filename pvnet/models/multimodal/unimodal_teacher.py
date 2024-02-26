@@ -98,10 +98,10 @@ class Model(BaseModel):
             forecast_minutes=forecast_minutes,
             optimizer=optimizer,
             output_quantiles=output_quantiles,
-            target_key=BatchKey.gsp if target_key == "gsp" else BatchKey.pv,
+            target_key="gsp",
         )
         
-        self.gsp_len = (self.forecast_len_30 + self.history_len_30 + 1)
+        self.gsp_len = (self.forecast_len + self.history_len + 1)
 
 
         # Number of features expected by the output_network
@@ -109,6 +109,7 @@ class Model(BaseModel):
         fusion_input_features = 0
         
         self.teacher_models = torch.nn.ModuleDict()
+        self.mode_teacher_dict = mode_teacher_dict
         
         
         for mode, path in mode_teacher_dict.items():
@@ -175,7 +176,7 @@ class Model(BaseModel):
             fusion_input_features += 16
 
         if include_gsp_yield_history:
-            fusion_input_features += self.history_len_30
+            fusion_input_features += self.history_len
 
         self.output_network = output_network(
             in_features=fusion_input_features,
@@ -302,13 +303,13 @@ class Model(BaseModel):
                 modes["pv"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
-                pv_history = x[BatchKey.pv][:, : self.history_len_30].float()
+                pv_history = x[BatchKey.pv][:, : self.history_len].float()
                 modes["pv"] = self.pv_encoder(pv_history)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len_30].float()
+            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             modes["gsp"] = gsp_history
 
@@ -334,7 +335,7 @@ class Model(BaseModel):
 
         if self.use_quantile_regression:
             # Shape: batch_size, seq_length * num_quantiles
-            out = out.reshape(out.shape[0], self.forecast_len_30, len(self.output_quantiles))
+            out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
 
         if return_modes:
             return out, modes
@@ -353,7 +354,7 @@ class Model(BaseModel):
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat, modes = self.forward(batch, return_modes=True)
-        y = batch[self._target_key][:, -self.forecast_len_30 :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
         
         losses = self._calculate_common_losses(y, y_hat)
         
@@ -379,4 +380,57 @@ class Model(BaseModel):
         self._training_accumulate_log(batch, batch_idx, losses, y_hat)
         
         return losses["opt_loss/train"]
-
+    
+    
+    def convert_to_multimodal_model(self, config):
+        
+        config = config.copy()
+        del config["cold_start"]
+        config["_target_"] = "pvnet.models.multimodal.multimodal.Model"
+        
+        sources = []
+        for mode, path in config["mode_teacher_dict"].items():
+            
+            model_config = parse_config(f"{path}/model_config.yaml")
+            
+            if mode.startswith("nwp"):
+                nwp_source = mode.removeprefix("nwp/")
+                if "nwp_encoders_dict" in config:
+                    for key in ["nwp_encoders_dict", "nwp_history_minutes", "nwp_forecast_minutes"]:
+                        config[key][nwp_source] = model_config[key][nwp_source]
+                    sources.append("nwp")
+                else:
+                    for key in ["nwp_encoders_dict", "nwp_history_minutes", "nwp_forecast_minutes"]:
+                        config[key] = {nwp_source: model_config[key][nwp_source]}
+                config["add_image_embedding_channel"] = model_config["add_image_embedding_channel"]
+                    
+            elif mode=="sat":
+                for key in [
+                    "sat_encoder", "add_image_embedding_channel", 
+                    "min_sat_delay_minutes", "sat_history_minutes"
+                ]:
+                    config[key] = model_config[key]
+                sources.append("sat")
+                
+            elif mode=="pv":
+                for key in ["pv_encoder", "pv_history_minutes"]:
+                    config[key] = model_config[key]
+                sources.append("pv")
+        
+        del config["mode_teacher_dict"]
+        
+        # Load the teacher model
+        multimodal_model = hydra.utils.instantiate(config)
+        
+        if "sat" in sources:
+            multimodal_model.sat_encoder.load_state_dict(self.sat_encoder.state_dict())
+        if "nwp" in sources:
+            multimodal_model.nwp_encoders_dict.load_state_dict(self.nwp_encoders_dict.state_dict())
+        if "pv" in sources:
+            multimodal_model.pv_encoder.load_state_dict(self.pv_encoder.state_dict())
+            
+        multimodal_model.output_network.load_state_dict(
+            self.output_network.state_dict()
+        )
+        
+        return multimodal_model, config
