@@ -31,8 +31,8 @@ def test_defaultpvnet2_forward(sample_satellite_batch, encoder_model_kwargs):
 
 def test_resconv3dnet2_forward(sample_satellite_batch, encoder_model_kwargs):
     _test_model_forward(sample_satellite_batch, ResConv3DNet2, encoder_model_kwargs)
-    
-    
+
+
 def test_encoderunet_forward(sample_satellite_batch, encoder_model_kwargs):
     _test_model_forward(sample_satellite_batch, EncoderUNET, encoder_model_kwargs)
 

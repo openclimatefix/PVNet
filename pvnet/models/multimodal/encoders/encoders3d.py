@@ -5,7 +5,6 @@ from typing import List, Union
 import torch
 from torch import nn
 from torchvision.transforms import CenterCrop
-import numpy as np
 
 from pvnet.models.multimodal.encoders.basic_blocks import (
     AbstractNWPSatelliteEncoder,
@@ -213,11 +212,11 @@ class ResConv3DNet2(AbstractNWPSatelliteEncoder):
     """
 
     def __init__(
-        self,        
+        self,
         sequence_length: int,
         image_size_pixels: int,
         in_channels: int,
-        out_features: int,        
+        out_features: int,
         hidden_channels: int = 32,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
@@ -237,42 +236,45 @@ class ResConv3DNet2(AbstractNWPSatelliteEncoder):
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
 
         model = [
-                nn.Conv3d(
-                    in_channels=in_channels,
-                    out_channels=hidden_channels,
-                    kernel_size=(3, 3, 3),
-                    padding=(1, 1, 1),
-                ),
+            nn.Conv3d(
+                in_channels=in_channels,
+                out_channels=hidden_channels,
+                kernel_size=(3, 3, 3),
+                padding=(1, 1, 1),
+            ),
         ]
 
         for i in range(n_res_blocks):
-            model.extend([
-                ResidualConv3dBlock2(
-                    in_channels=hidden_channels,
-                    n_layers=res_block_layers,
-                    dropout_frac=dropout_frac,
-                    batch_norm=batch_norm,
-                ),
-                nn.AvgPool3d((1, 2, 2), stride=(1, 2, 2))
-            ])
-            
+            model.extend(
+                [
+                    ResidualConv3dBlock2(
+                        in_channels=hidden_channels,
+                        n_layers=res_block_layers,
+                        dropout_frac=dropout_frac,
+                        batch_norm=batch_norm,
+                    ),
+                    nn.AvgPool3d((1, 2, 2), stride=(1, 2, 2)),
+                ]
+            )
+
         # Calculate the size of the output of the 3D convolutional layers
         final_im_size = image_size_pixels // (2**n_res_blocks)
-        cnn_output_size = hidden_channels*sequence_length*final_im_size*final_im_size
-        
-        model.extend([
-            nn.ELU(),
-            nn.Flatten(start_dim=1, end_dim=-1),
-            nn.Linear(in_features=cnn_output_size, out_features=out_features),
-            nn.ELU(),
-        ])
+        cnn_output_size = hidden_channels * sequence_length * final_im_size * final_im_size
+
+        model.extend(
+            [
+                nn.ELU(),
+                nn.Flatten(start_dim=1, end_dim=-1),
+                nn.Linear(in_features=cnn_output_size, out_features=out_features),
+                nn.ELU(),
+            ]
+        )
 
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
         """Run model forward"""
         return self.model(x)
-
 
 
 class EncoderUNET(AbstractNWPSatelliteEncoder):
@@ -395,5 +397,3 @@ class EncoderUNET(AbstractNWPSatelliteEncoder):
         out = torch.flatten(out, start_dim=1)
         out = self.final_layer(out)
         return out
-
-    

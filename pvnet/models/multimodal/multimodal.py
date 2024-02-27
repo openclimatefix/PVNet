@@ -9,6 +9,7 @@ from torchvision.transforms.functional import center_crop
 
 from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torch import nn
+from torchvision.transforms.functional import center_crop
 
 import pvnet
 from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
@@ -150,7 +151,7 @@ class Model(MultimodalBaseModel):
             interval_minutes=interval_minutes,
             timestep_intervals_to_plot=timestep_intervals_to_plot,
         )
-    
+        
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
         fusion_input_features = 0
@@ -283,7 +284,7 @@ class Model(MultimodalBaseModel):
         
         if self.adapt_batches:
             x = self._adapt_batch(x)
-        
+
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -311,7 +312,7 @@ class Model(MultimodalBaseModel):
                 if self.add_image_embedding_channel:
                     id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
-                
+
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
                 modes[f"nwp/{nwp_source}"] = nwp_out
 
@@ -362,7 +363,6 @@ class Model(MultimodalBaseModel):
                 modes["sensor"] = self.sensor_encoder(x_tmp)
 
         if self.include_sun:
-            
             sun = torch.cat(
                 (
                     x[BatchKey[f"{self._target_key_name}_solar_azimuth"]],
