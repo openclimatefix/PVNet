@@ -107,7 +107,7 @@ class ResidualConv3dBlock2(nn.Module):
             in_channels: Number of input channels.
             n_layers: Number of layers in residual pathway.
             dropout_frac: Probability of an element to be zeroed.
-            include_batchnorm: Whether to use batchnorm
+            batch_norm: Whether to use batchnorm
         """
         super().__init__()
 

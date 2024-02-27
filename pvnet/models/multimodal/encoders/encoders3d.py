@@ -226,11 +226,14 @@ class ResConv3DNet2(AbstractNWPSatelliteEncoder):
         """Fully connected deep network based on ResNet architecture.
 
         Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
             in_channels: Number of input channels.
             out_features: Number of output features.
-            fc_hidden_features: Number of channels in middle hidden layers.
+            hidden_channels: Number of channels in middle hidden layers.
             n_res_blocks: Number of residual blocks to use.
             res_block_layers: Number of Conv3D layers used in each residual block.
+            batch_norm: Whether to include batch normalisation.
             dropout_frac: Probability of an element to be zeroed in the residual pathways.
         """
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)

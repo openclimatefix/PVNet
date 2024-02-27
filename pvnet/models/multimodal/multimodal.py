@@ -4,16 +4,18 @@ from collections import OrderedDict
 from typing import Optional
 
 import torch
-from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torch import nn
 
+from ocf_datapipes.batch import BatchKey, NWPBatchKey
+
 import pvnet
+from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
-from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
+
 
 
 class Model(MultimodalBaseModel):
@@ -121,7 +123,7 @@ class Model(MultimodalBaseModel):
             sensor_encoder: Encoder for sensor data
             sensor_history_minutes: Length of recent sensor data used as input.
             adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
-                the model to use. This allows us to overprepare batches and slice from them for the
+                the model to use. This allows us to overprepare batches and slice from them for the 
                 data we need for a model run.
         """
 
@@ -146,7 +148,7 @@ class Model(MultimodalBaseModel):
             interval_minutes=interval_minutes,
             timestep_intervals_to_plot=timestep_intervals_to_plot,
         )
-
+        
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
         fusion_input_features = 0
@@ -273,9 +275,10 @@ class Model(MultimodalBaseModel):
 
         self.save_hyperparameters()
 
+        
     def forward(self, x):
         """Run model forward"""
-
+        
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
@@ -285,7 +288,7 @@ class Model(MultimodalBaseModel):
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
-
+            
             if self.add_image_embedding_channel:
                 id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
@@ -298,11 +301,11 @@ class Model(MultimodalBaseModel):
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
-
-                # Some NWP variables can overflow into NaNs when normalised if they have extreme
+                
+                # Some NWP variables can overflow into NaNs when normalised if they have extreme
                 # tails
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
-
+                
                 if self.add_image_embedding_channel:
                     id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
@@ -374,3 +377,5 @@ class Model(MultimodalBaseModel):
             out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
 
         return out
+    
+

@@ -75,7 +75,7 @@ def test_model_init(unimodal_model_kwargs):
 
 
 def test_model_forward(unimodal_teacher_model, sample_batch):
-    y = unimodal_teacher_model(sample_batch)
+    y, _ = unimodal_teacher_model(sample_batch, return_modes=True)
 
     # check output is the correct shape
     # batch size=2, forecast_len=15
