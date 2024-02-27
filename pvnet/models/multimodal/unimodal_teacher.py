@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import hydra
 
 import pvnet
-from pvnet.models.base_model import BaseModel
+from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
@@ -20,10 +20,10 @@ from pvnet.optimizers import AbstractOptimizer
 from pyaml_env import parse_config
 
 
-from torchvision.transforms.functional import center_crop
-
-class Model(BaseModel):
+class Model(MultimodalBaseModel):
     """Neural network which combines information from different sources
+    
+    The network is trained via unimodal teachers [1].
 
     Architecture is roughly as follows:
 
@@ -37,6 +37,7 @@ class Model(BaseModel):
         network to combine them and produce a forecast.
 
     * if included
+    [1] https://arxiv.org/pdf/2305.01233.pdf
     """
 
     name = "unimodal_teacher"
@@ -56,8 +57,13 @@ class Model(BaseModel):
         val_best: bool = True,
         cold_start: bool = True,
         enc_loss_frac: float = 0.3,
+        adapt_batches: Optional[bool] = False,
     ):
         """Neural network which combines information from different sources.
+        
+        The network is trained via unimodal teachers [1].
+        
+        [1] https://arxiv.org/pdf/2305.01233.pdf
 
         Notes:
             In the args, where it says a module `m` is partially instantiated, it means that a
@@ -79,8 +85,15 @@ class Model(BaseModel):
             history_minutes: The default amount of historical minutes that are used.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
+            mode_teacher_dict: A dictionary of paths to different model checkpoint directories, 
+                which will be used as the unimodal teachers.
+            val_best: Whether to load the model which performed best on the validation set. Else the
+                last checkpoint is loaded.
             cold_start: Whether to train the uni-modal encoders from scratch. Else start them with
                 weights from the uni-modal teachers.
+            adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
+                the model to use. This allows us to overprepare batches and slice from them for the 
+                data we need for a model run.
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -91,7 +104,11 @@ class Model(BaseModel):
         self.include_sat = False
         self.include_nwp = False
         self.include_pv = False
-        self.add_image_embedding_channel = False
+        self.adapt_batches = adapt_batches
+        
+        # This is set but modified later based on the teachers
+        self.add_image_embedding_channel = False 
+        
 
         super().__init__(
             history_minutes=history_minutes,
@@ -100,9 +117,6 @@ class Model(BaseModel):
             output_quantiles=output_quantiles,
             target_key="gsp",
         )
-        
-        self.gsp_len = (self.forecast_len + self.history_len + 1)
-
 
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
@@ -170,7 +184,7 @@ class Model(BaseModel):
 
         if self.include_sun:
             self.sun_fc1 = nn.Linear(
-                in_features=2 * self.gsp_len,
+                in_features=2 * (self.forecast_len + self.history_len + 1),
                 out_features=16,
             )
             fusion_input_features += 16
@@ -187,6 +201,7 @@ class Model(BaseModel):
         
     
     def get_unimodal_encoder(self, path, load_weights, val_best):
+        """Load a model to function as a unimodal teacher"""
         
         model_config = parse_config(f"{path}/model_config.yaml")
 
@@ -258,9 +273,8 @@ class Model(BaseModel):
     def forward(self, x, return_modes=False):
         """Run model forward"""
         
-        x[BatchKey.gsp] = x[BatchKey.gsp][:, :self.gsp_len]
-        x[BatchKey.gsp_time_utc] = x[BatchKey.gsp_time_utc][:, :self.gsp_len]
-
+        if self.adapt_batches:
+            x = self._adapt_batch(x)
         
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
@@ -268,9 +282,7 @@ class Model(BaseModel):
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
-            
-            sat_data = center_crop(sat_data, output_size=self.sat_encoder.image_size_pixels) 
-            
+                        
             if self.add_image_embedding_channel:
                 id = x[BatchKey.gsp_id][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
@@ -283,12 +295,10 @@ class Model(BaseModel):
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
+                # Some NWP variables can overflow into NaNs when normalised if they have extreme
+                # tails
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
-                nwp_data = center_crop(
-                    nwp_data, 
-                    output_size=self.nwp_encoders_dict[nwp_source].image_size_pixels
-                ) 
-                nwp_data = nwp_data[:,:,:self.nwp_encoders_dict[nwp_source].sequence_length]
+
                 if self.add_image_embedding_channel:
                     id = x[BatchKey.gsp_id][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
@@ -323,8 +333,8 @@ class Model(BaseModel):
             
             sun = torch.cat(
                 (
-                    x[BatchKey.gsp_solar_azimuth][:, :self.gsp_len], 
-                    x[BatchKey.gsp_solar_elevation][:, :self.gsp_len]
+                    x[BatchKey.gsp_solar_azimuth],
+                    x[BatchKey.gsp_solar_elevation],
                 ),
                 dim=1
             ).float()

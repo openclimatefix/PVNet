@@ -4,6 +4,8 @@ import logging
 import math
 from typing import Optional
 
+from torch import nn
+
 import numpy as np
 import torch
 from ocf_datapipes.batch import BatchKey
@@ -149,14 +151,14 @@ class WeightedLosses:
             self.decay_rate = math.log(2)
 
         # make weights from decay rate
-        weights = torch.FloatTensor(
-            [math.exp(-self.decay_rate * i) for i in range(0, self.forecast_length)]
+        weights = torch.from_numpy(
+                np.exp(-self.decay_rate*np.arange(self.forecast_length))
         )
 
         # normalized the weights, so there mean is 1.
         # To calculate the loss, we times the weights by the differences between truth
         # and predictions and then take the mean across all forecast horizons and the batch
-        self.weights = weights / weights.mean()
+        self.weights = weights/weights.mean()
 
     def get_mse_exp(self, output, target):
         """Loss function weighted MSE"""
