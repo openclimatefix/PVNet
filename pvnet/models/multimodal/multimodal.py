@@ -8,15 +8,15 @@ from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torch import nn
 
 import pvnet
-from pvnet.models.base_model import BaseModel
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
+from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
 
 
-class Model(BaseModel):
+class Model(MultimodalBaseModel):
     """Neural network which combines information from different sources
 
     Architecture is roughly as follows:
@@ -66,6 +66,7 @@ class Model(BaseModel):
         wind_interval_minutes: int = 15,
         num_embeddings: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
+        adapt_batches: Optional[bool] = False,
     ):
         """Neural network which combines information from different sources.
 
@@ -119,6 +120,9 @@ class Model(BaseModel):
             addition to the full forecast
             sensor_encoder: Encoder for sensor data
             sensor_history_minutes: Length of recent sensor data used as input.
+            adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
+                the model to use. This allows us to overprepare batches and slice from them for the
+                data we need for a model run.
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -130,8 +134,8 @@ class Model(BaseModel):
         self.include_sensor = sensor_encoder is not None
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
-        self.target_key_name = target_key
         self.interval_minutes = interval_minutes
+        self.adapt_batches = adapt_batches
 
         super().__init__(
             history_minutes=history_minutes,
@@ -210,7 +214,7 @@ class Model(BaseModel):
 
             self.pv_encoder = pv_encoder(
                 sequence_length=pv_history_minutes // pv_interval_minutes + 1,
-                target_key_to_use=self.target_key_name,
+                target_key_to_use=self._target_key_name,
                 input_key_to_use="pv",
             )
 
@@ -223,7 +227,7 @@ class Model(BaseModel):
 
             self.wind_encoder = wind_encoder(
                 sequence_length=wind_history_minutes // wind_interval_minutes + 1,
-                target_key_to_use=self.target_key_name,
+                target_key_to_use=self._target_key_name,
                 input_key_to_use="wind",
             )
 
@@ -236,7 +240,7 @@ class Model(BaseModel):
 
             self.sensor_encoder = sensor_encoder(
                 sequence_length=sensor_history_minutes // sensor_interval_minutes + 1,
-                target_key_to_use=self.target_key_name,
+                target_key_to_use=self._target_key_name,
                 input_key_to_use="sensor",
             )
 
@@ -250,7 +254,6 @@ class Model(BaseModel):
             fusion_input_features += embedding_dim
 
         if self.include_sun:
-            # the minus 12 is bit of hard coded smudge for pvnet
             self.sun_fc1 = nn.Linear(
                 in_features=2 * (self.forecast_len + self.history_len + 1),
                 out_features=16,
@@ -272,14 +275,19 @@ class Model(BaseModel):
 
     def forward(self, x):
         """Run model forward"""
+
+        if self.adapt_batches:
+            x = self._adapt_batch(x)
+
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
             # Shape: batch_size, seq_length, channel, height, width
             sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
+
             if self.add_image_embedding_channel:
-                id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
+                id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -290,15 +298,22 @@ class Model(BaseModel):
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
+
+                # Some NWP variables can overflow into NaNs when normalised if they have extreme
+                # tails
+                nwp_data = torch.clip(nwp_data, min=-50, max=50)
+
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
+                    id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
-                modes[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source](nwp_data)
+
+                nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
+                modes[f"nwp/{nwp_source}"] = nwp_out
 
         # *********************** PV Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            if self.target_key_name != "pv":
+            if self._target_key_name != "pv":
                 modes["pv"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
@@ -316,13 +331,13 @@ class Model(BaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey[f"{self.target_key_name}_id"]][:, 0].int()
+            id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
         # *********************** Wind Data ************************************
         if self.include_wind:
-            if self.target_key_name != "wind":
+            if self._target_key_name != "wind":
                 modes["wind"] = self.wind_encoder(x)
             else:
                 # Have to be its own Batch format
@@ -333,7 +348,7 @@ class Model(BaseModel):
 
         # *********************** Sensor Data ************************************
         if self.include_sensor:
-            if self.target_key_name != "sensor":
+            if self._target_key_name != "sensor":
                 modes["sensor"] = self.sensor_encoder(x)
             else:
                 x_tmp = x.copy()
@@ -344,8 +359,8 @@ class Model(BaseModel):
         if self.include_sun:
             sun = torch.cat(
                 (
-                    x[BatchKey[f"{self.target_key_name}_solar_azimuth"]],
-                    x[BatchKey[f"{self.target_key_name}_solar_elevation"]],
+                    x[BatchKey[f"{self._target_key_name}_solar_azimuth"]],
+                    x[BatchKey[f"{self._target_key_name}_solar_elevation"]],
                 ),
                 dim=1,
             ).float()

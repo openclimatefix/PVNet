@@ -16,6 +16,8 @@ import typer
 import wandb
 from pyaml_env import parse_config
 
+from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
+
 
 def push_to_huggingface(
     checkpoint_dir_path: str,
@@ -58,6 +60,9 @@ def push_to_huggingface(
         checkpoint = torch.load(f"{checkpoint_dir_path}/last.ckpt", map_location="cpu")
 
     model.load_state_dict(state_dict=checkpoint["state_dict"])
+
+    if isinstance(model, UMTModel):
+        model, model_config = model.convert_to_multimodal_model(model_config)
 
     # Check for data config
     data_config = f"{checkpoint_dir_path}/data_config.yaml"

@@ -149,9 +149,7 @@ class WeightedLosses:
             self.decay_rate = math.log(2)
 
         # make weights from decay rate
-        weights = torch.FloatTensor(
-            [math.exp(-self.decay_rate * i) for i in range(0, self.forecast_length)]
-        )
+        weights = torch.from_numpy(np.exp(-self.decay_rate * np.arange(self.forecast_length)))
 
         # normalized the weights, so there mean is 1.
         # To calculate the loss, we times the weights by the differences between truth

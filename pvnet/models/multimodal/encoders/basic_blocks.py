@@ -30,6 +30,7 @@ class AbstractNWPSatelliteEncoder(nn.Module, metaclass=ABCMeta):
         super().__init__()
         self.out_features = out_features
         self.image_size_pixels = image_size_pixels
+        self.sequence_length = sequence_length
 
     @abstractmethod
     def forward(self):
@@ -75,6 +76,62 @@ class ResidualConv3dBlock(nn.Module):
 
     def forward(self, x):
         """Run residual connection"""
+        return self.model(x) + x
+
+
+class ResidualConv3dBlock2(nn.Module):
+    """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1].
+
+    This was the best performing residual block tested in the study. This implementation differs
+    from that block just by using LeakyReLU activation to avoid dead neurons, and by including
+    optional dropout in the residual branch. This is also a 3D fully connected layer residual block
+    rather than a 2D convolutional block.
+
+    Sources:
+        [1] https://arxiv.org/pdf/1603.05027.pdf
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        n_layers: int = 2,
+        dropout_frac: float = 0.0,
+        batch_norm: bool = True,
+    ):
+        """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1].
+
+        Sources:
+            [1] https://arxiv.org/pdf/1603.05027.pdf
+
+        Args:
+            in_channels: Number of input channels.
+            n_layers: Number of layers in residual pathway.
+            dropout_frac: Probability of an element to be zeroed.
+            batch_norm: Whether to use batchnorm
+        """
+        super().__init__()
+
+        layers = []
+        for i in range(n_layers):
+            if batch_norm:
+                layers.append(nn.BatchNorm3d(in_channels))
+            layers.extend(
+                [
+                    nn.Dropout3d(p=dropout_frac),
+                    nn.LeakyReLU(),
+                    nn.Conv3d(
+                        in_channels=in_channels,
+                        out_channels=in_channels,
+                        kernel_size=(3, 3, 3),
+                        padding=(1, 1, 1),
+                    ),
+                ]
+            )
+
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        """Run model forward"""
         return self.model(x) + x
 
 

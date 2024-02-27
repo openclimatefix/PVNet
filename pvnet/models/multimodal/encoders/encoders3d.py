@@ -9,6 +9,7 @@ from torchvision.transforms import CenterCrop
 from pvnet.models.multimodal.encoders.basic_blocks import (
     AbstractNWPSatelliteEncoder,
     ResidualConv3dBlock,
+    ResidualConv3dBlock2,
 )
 
 
@@ -199,6 +200,84 @@ class DefaultPVNet2(AbstractNWPSatelliteEncoder):
         out = self.final_block(out)
 
         return out
+
+
+class ResConv3DNet2(AbstractNWPSatelliteEncoder):
+    """3D convolutional network based on ResNet architecture.
+
+    The residual blocks are implemented based on the best performing block in [1].
+
+    Sources:
+        [1] https://arxiv.org/pdf/1603.05027.pdf
+    """
+
+    def __init__(
+        self,
+        sequence_length: int,
+        image_size_pixels: int,
+        in_channels: int,
+        out_features: int,
+        hidden_channels: int = 32,
+        n_res_blocks: int = 4,
+        res_block_layers: int = 2,
+        batch_norm=True,
+        dropout_frac=0.0,
+    ):
+        """Fully connected deep network based on ResNet architecture.
+
+        Args:
+            sequence_length: The time sequence length of the data.
+            image_size_pixels: The spatial size of the image. Assumed square.
+            in_channels: Number of input channels.
+            out_features: Number of output features.
+            hidden_channels: Number of channels in middle hidden layers.
+            n_res_blocks: Number of residual blocks to use.
+            res_block_layers: Number of Conv3D layers used in each residual block.
+            batch_norm: Whether to include batch normalisation.
+            dropout_frac: Probability of an element to be zeroed in the residual pathways.
+        """
+        super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
+
+        model = [
+            nn.Conv3d(
+                in_channels=in_channels,
+                out_channels=hidden_channels,
+                kernel_size=(3, 3, 3),
+                padding=(1, 1, 1),
+            ),
+        ]
+
+        for i in range(n_res_blocks):
+            model.extend(
+                [
+                    ResidualConv3dBlock2(
+                        in_channels=hidden_channels,
+                        n_layers=res_block_layers,
+                        dropout_frac=dropout_frac,
+                        batch_norm=batch_norm,
+                    ),
+                    nn.AvgPool3d((1, 2, 2), stride=(1, 2, 2)),
+                ]
+            )
+
+        # Calculate the size of the output of the 3D convolutional layers
+        final_im_size = image_size_pixels // (2**n_res_blocks)
+        cnn_output_size = hidden_channels * sequence_length * final_im_size * final_im_size
+
+        model.extend(
+            [
+                nn.ELU(),
+                nn.Flatten(start_dim=1, end_dim=-1),
+                nn.Linear(in_features=cnn_output_size, out_features=out_features),
+                nn.ELU(),
+            ]
+        )
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, x):
+        """Run model forward"""
+        return self.model(x)
 
 
 class EncoderUNET(AbstractNWPSatelliteEncoder):

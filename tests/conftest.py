@@ -194,7 +194,7 @@ def site_encoder_model_kwargs():
 
 
 @pytest.fixture()
-def multimodal_model_kwargs(model_minutes_kwargs):
+def raw_multimodal_model_kwargs(model_minutes_kwargs):
     kwargs = dict(
         sat_encoder=dict(
             _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
@@ -244,10 +244,14 @@ def multimodal_model_kwargs(model_minutes_kwargs):
         min_sat_delay_minutes=30,
     )
 
-    kwargs = hydra.utils.instantiate(kwargs)
-
     kwargs.update(model_minutes_kwargs)
+
     return kwargs
+
+
+@pytest.fixture()
+def multimodal_model_kwargs(raw_multimodal_model_kwargs):
+    return hydra.utils.instantiate(raw_multimodal_model_kwargs)
 
 
 @pytest.fixture()
