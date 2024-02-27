@@ -24,8 +24,9 @@ class BaseDataModule(LightningDataModule):
         val_period=[None, None],
         test_period=[None, None],
         batch_dir=None,
+        shuffle_factor=100,
     ):
-        """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`.
+        """Datamodule for training pvnet architecture.
 
         Can also be used with pre-made batches if `batch_dir` is set.
 
@@ -40,12 +41,16 @@ class BaseDataModule(LightningDataModule):
             test_period: Date range filter for test dataloader.
             batch_dir: Path to the directory of pre-saved batches. Cannot be used together with
                 `configuration` or 'train/val/test_period'.
+            shuffle_factor: Number of presaved batches to be split and reshuffled to create returned
+                batches. A larger factor means on each epoch the batches will be more diverse but at
+                the cost of using more RAM.
 
         """
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
         self.batch_dir = batch_dir
+        self.shuffle_factor = shuffle_factor
 
         if not ((batch_dir is not None) ^ (configuration is not None)):
             raise ValueError("Exactly one of `batch_dir` or `configuration` must be set.")
@@ -79,44 +84,10 @@ class BaseDataModule(LightningDataModule):
         )
 
     def _get_datapipe(self, start_time, end_time):
-        data_pipeline = pvnet_datapipe(
-            self.configuration,
-            start_time=start_time,
-            end_time=end_time,
-        )
-
-        data_pipeline = (
-            data_pipeline.batch(self.batch_size)
-            .map(stack_np_examples_into_batch)
-            .map(batch_to_tensor)
-        )
-        return data_pipeline
+        raise NotImplemented
 
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
-        data_pipeline = FileLister(f"{self.batch_dir}/{subdir}", masks="*.pt", recursive=False)
-        if shuffle:
-            data_pipeline = (
-                data_pipeline.shuffle(buffer_size=10_000)
-                .sharding_filter()
-                .map(torch.load)
-                # Split the batches and reshuffle them to be combined into new batches
-                .split_batches()
-                .shuffle(buffer_size=100 * self.batch_size)
-            )
-        else:
-            data_pipeline = (
-                data_pipeline.sharding_filter().map(torch.load)
-                # Split the batches so we can use any batch-size
-                .split_batches()
-            )
-
-        data_pipeline = (
-            data_pipeline.batch(self.batch_size)
-            .map(stack_np_examples_into_batch)
-            .map(batch_to_tensor)
-        )
-
-        return data_pipeline
+        raise NotImplemented
 
     def train_dataloader(self):
         """Construct train dataloader"""
