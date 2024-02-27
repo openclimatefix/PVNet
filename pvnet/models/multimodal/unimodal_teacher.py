@@ -49,7 +49,6 @@ class Model(MultimodalBaseModel):
         forecast_minutes: int = 30,
         history_minutes: int = 60,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
-        target_key: str = "gsp",
         mode_teacher_dict: dict = {},
         val_best: bool = True,
         cold_start: bool = True,
@@ -81,7 +80,6 @@ class Model(MultimodalBaseModel):
             forecast_minutes: The amount of minutes that should be forecasted.
             history_minutes: The default amount of historical minutes that are used.
             optimizer: Optimizer factory function used for network.
-            target_key: The key of the target variable in the batch.
             mode_teacher_dict: A dictionary of paths to different model checkpoint directories,
                 which will be used as the unimodal teachers.
             val_best: Whether to load the model which performed best on the validation set. Else the
