@@ -95,7 +95,6 @@ class Model(MultimodalBaseModel):
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sun = include_sun
         self.embedding_dim = embedding_dim
-        self.target_key_name = target_key
         self.enc_loss_frac = enc_loss_frac
         self.include_sat = False
         self.include_nwp = False
@@ -286,7 +285,7 @@ class Model(MultimodalBaseModel):
         # *********************** PV Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            if self.target_key_name != "pv":
+            if self._target_key_name != "pv":
                 modes["pv"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
