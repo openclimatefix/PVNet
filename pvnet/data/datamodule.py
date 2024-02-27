@@ -1,5 +1,7 @@
 """ Data module for pytorch lightning """
 
+import resource
+
 import torch
 from ocf_datapipes.batch import stack_np_examples_into_batch
 from ocf_datapipes.training.pvnet import pvnet_datapipe
@@ -8,8 +10,6 @@ from torch.utils.data.datapipes.iter import FileLister
 from pvnet.data.base import BaseDataModule
 from pvnet.data.utils import batch_to_tensor
 
-
-import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 

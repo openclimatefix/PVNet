@@ -1,14 +1,8 @@
 """ Data module for pytorch lightning """
 from datetime import datetime
 
-import torch
 from lightning.pytorch import LightningDataModule
-from ocf_datapipes.batch import stack_np_examples_into_batch
-from ocf_datapipes.training.pvnet import pvnet_datapipe
 from torch.utils.data import DataLoader
-from torch.utils.data.datapipes.iter import FileLister
-
-from pvnet.data.utils import batch_to_tensor
 
 
 class BaseDataModule(LightningDataModule):
@@ -84,10 +78,10 @@ class BaseDataModule(LightningDataModule):
         )
 
     def _get_datapipe(self, start_time, end_time):
-        raise NotImplemented
+        raise NotImplementedError
 
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
-        raise NotImplemented
+        raise NotImplementedError
 
     def train_dataloader(self):
         """Construct train dataloader"""

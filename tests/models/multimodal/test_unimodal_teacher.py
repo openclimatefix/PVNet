@@ -15,35 +15,31 @@ from pvnet.models.multimodal.unimodal_teacher import Model
 
 @pytest.fixture
 def teacher_dir(multimodal_model, raw_multimodal_model_kwargs):
-    
     raw_multimodal_model_kwargs["_target_"] = "pvnet.models.multimodal.multimodal.Model"
-    
+
     with tempfile.TemporaryDirectory() as tmpdirname:
-        
         # Save teachers for these modes
         for mode in ["sat", "nwp_ukv"]:
-        
             mode_dir = f"{tmpdirname}/{mode}"
             os.mkdir(mode_dir)
 
             # Checkpoint paths would be like: epoch={X}-step={N}.ckpt or last.ckpt
             path = os.path.join(mode_dir, "epoch=2-step=35002.ckpt")
             path = f"{mode_dir}/epoch=2-step=35002.ckpt"
-            
-            # Save out themodel config file
-            with open(os.path.join(mode_dir, "model_config.yaml"), 'w') as outfile:
-                yaml.dump(raw_multimodal_model_kwargs, outfile)
-            
-            # Save the weights
-            torch.save({'model_state_dict': multimodal_model.state_dict()}, path)
-        
-        yield tempfile
-    
 
-@pytest.fixture   
+            # Save out themodel config file
+            with open(os.path.join(mode_dir, "model_config.yaml"), "w") as outfile:
+                yaml.dump(raw_multimodal_model_kwargs, outfile)
+
+            # Save the weights
+            torch.save({"model_state_dict": multimodal_model.state_dict()}, path)
+
+        yield tempfile
+
+
+@pytest.fixture
 def unimodal_model_kwargs(teacher_dir, model_minutes_kwargs):
-    
-    # Configure the fusion network
+    # Configure the fusion network
     kwargs = dict(
         output_network=dict(
             _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
@@ -54,7 +50,7 @@ def unimodal_model_kwargs(teacher_dir, model_minutes_kwargs):
             dropout_frac=0.0,
         ),
     )
-    
+
     # Get the teacher model save directories
     mode_dirs = glob.glob(f"{teacher_dir}/*")
     mode_teacher_dict = dict()
@@ -62,15 +58,14 @@ def unimodal_model_kwargs(teacher_dir, model_minutes_kwargs):
         mode_name = mode_dir.split("/")[-1].replace("nwp_", "nwp/")
         mode_teacher_dict[mode_name] = mode_dir
     kwargs["mode_teacher_dict"] = mode_teacher_dict
-    
+
     # Add the forecast and history minutes to be compatible with the sample batch
     kwargs.update(model_minutes_kwargs)
-    
-    yield hydra.utils.instantiate(kwargs)
-        
-    
 
-@pytest.fixture   
+    yield hydra.utils.instantiate(kwargs)
+
+
+@pytest.fixture
 def unimodal_teacher_model(unimodal_model_kwargs):
     return Model(**unimodal_model_kwargs)
 

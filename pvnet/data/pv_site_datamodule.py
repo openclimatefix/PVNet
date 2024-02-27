@@ -11,7 +11,6 @@ from pvnet.data.utils import batch_to_tensor
 class PVSiteDataModule(BaseDataModule):
     """Datamodule for training pvnet site and using pvnet site pipeline in `ocf_datapipes`."""
 
-
     def _get_datapipe(self, start_time, end_time):
         data_pipeline = pvnet_site_netcdf_datapipe(
             keys=["pv", "nwp"],

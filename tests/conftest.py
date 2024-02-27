@@ -243,14 +243,16 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
         pv_history_minutes=180,
         min_sat_delay_minutes=30,
     )
-    
+
     kwargs.update(model_minutes_kwargs)
-   
+
     return kwargs
+
 
 @pytest.fixture()
 def multimodal_model_kwargs(raw_multimodal_model_kwargs):
     return hydra.utils.instantiate(raw_multimodal_model_kwargs)
+
 
 @pytest.fixture()
 def multimodal_model(multimodal_model_kwargs):
