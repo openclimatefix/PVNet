@@ -210,6 +210,7 @@ class Model(MultimodalBaseModel):
         return encoder
 
     def teacher_forward(self, x):
+        """Run the teacher models and return their encodings"""
         modes = OrderedDict()
         for mode, teacher_model in self.teacher_models.items():
             # ******************* Satellite imagery *************************
