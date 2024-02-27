@@ -1,7 +1,7 @@
 """Base model class for multimodal model and unimodal teacher"""
+from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torchvision.transforms.functional import center_crop
 
-from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from pvnet.models.base_model import BaseModel
 
 

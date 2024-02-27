@@ -12,17 +12,14 @@ from pyaml_env import parse_config
 from torch import nn
 
 import pvnet
-from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
-from pvnet.models.multimodal.basic_blocks import ImageEmbedding
-from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
-
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
+from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.optimizers import AbstractOptimizer
 
 
 class Model(MultimodalBaseModel):
     """Neural network which combines information from different sources
-    
+
     The network is trained via unimodal teachers [1].
 
     Architecture is roughly as follows:
@@ -60,9 +57,9 @@ class Model(MultimodalBaseModel):
         adapt_batches: Optional[bool] = False,
     ):
         """Neural network which combines information from different sources.
-        
+
         The network is trained via unimodal teachers [1].
-        
+
         [1] https://arxiv.org/pdf/2305.01233.pdf
 
         Notes:
@@ -85,7 +82,7 @@ class Model(MultimodalBaseModel):
             history_minutes: The default amount of historical minutes that are used.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
-            mode_teacher_dict: A dictionary of paths to different model checkpoint directories, 
+            mode_teacher_dict: A dictionary of paths to different model checkpoint directories,
                 which will be used as the unimodal teachers.
             val_best: Whether to load the model which performed best on the validation set. Else the
                 last checkpoint is loaded.
@@ -93,7 +90,7 @@ class Model(MultimodalBaseModel):
                 weights from the uni-modal teachers.
             enc_loss_frac: Fraction of total loss attributed to the teacher encoders.
             adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
-                the model to use. This allows us to overprepare batches and slice from them for the 
+                the model to use. This allows us to overprepare batches and slice from them for the
                 data we need for a model run.
         """
 
@@ -106,10 +103,10 @@ class Model(MultimodalBaseModel):
         self.include_nwp = False
         self.include_pv = False
         self.adapt_batches = adapt_batches
-        
+
         # This is set but modified later based on the teachers
-        self.add_image_embedding_channel = False 
-        
+        self.add_image_embedding_channel = False
+
         super().__init__(
             history_minutes=history_minutes,
             forecast_minutes=forecast_minutes,
@@ -117,7 +114,7 @@ class Model(MultimodalBaseModel):
             output_quantiles=output_quantiles,
             target_key="gsp",
         )
-        
+
         # Number of features expected by the output_network
         # Add to this as network pices are constructed
         fusion_input_features = 0
@@ -194,10 +191,9 @@ class Model(MultimodalBaseModel):
 
         self.save_hyperparameters()
 
-
     def get_unimodal_encoder(self, path, load_weights, val_best):
         """Load a model to function as a unimodal teacher"""
-        
+
         model_config = parse_config(f"{path}/model_config.yaml")
 
         # Load the teacher model
@@ -215,7 +211,6 @@ class Model(MultimodalBaseModel):
             encoder.load_state_dict(state_dict=checkpoint["state_dict"])
         return encoder
 
-    
     def teacher_forward(self, x):
         modes = OrderedDict()
         for mode, teacher_model in self.teacher_models.items():
@@ -253,10 +248,9 @@ class Model(MultimodalBaseModel):
 
         return modes
 
-    
     def forward(self, x, return_modes=False):
         """Run model forward"""
-        
+
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
@@ -279,7 +273,7 @@ class Model(MultimodalBaseModel):
                 # shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
-                # Some NWP variables can overflow into NaNs when normalised if they have extreme
+                # Some NWP variables can overflow into NaNs when normalised if they have extreme
                 # tails
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
@@ -335,7 +329,6 @@ class Model(MultimodalBaseModel):
         else:
             return out
 
-        
     def _calculate_teacher_loss(self, modes, teacher_modes):
         enc_losses = {}
         for m, enc in teacher_modes.items():
@@ -343,7 +336,6 @@ class Model(MultimodalBaseModel):
         enc_losses["enc_loss/total"] = sum([v for k, v in enc_losses.items()])
         return enc_losses
 
-    
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat, modes = self.forward(batch, return_modes=True)
@@ -376,7 +368,6 @@ class Model(MultimodalBaseModel):
 
         return losses["opt_loss/train"]
 
-    
     def convert_to_multimodal_model(self, config):
         """Convert the model into a multimodal model class whilst preserving weights"""
         config = config.copy()
