@@ -168,7 +168,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         data_config: Union[str, Path],
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
-        wandb_model_code: Optional[str] = None,
+        wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
         **kwargs,
     ) -> Optional[str]:
@@ -187,7 +187,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the Huggingface Hub after saving it.
-            wandb_model_code: Identifier of the model on wandb.
+            wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the huggingface model card template. Defaults to card in
                 PVNet library if set to None.
             kwargs:
@@ -214,11 +214,19 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             card_template_path = (
                 f"{os.path.dirname(os.path.abspath(__file__))}/model_card_template.md"
             )
+        
+        if isinstance(wandb_ids, str):
+            wandb_ids = [wandb_ids]
+            
+        wandb_links = ""
+        for wandb_id in wandb_ids:
+            link = f"https://wandb.ai/openclimatefix/pvnet2.1/runs/{wandb_id}"
+            wandb_links += f" - [{link}]({link})\n"
 
         card = ModelCard.from_template(
             card_data,
             template_path=card_template_path,
-            wandb_model_code=wandb_model_code,
+            wandb_links=wandb_links,
         )
 
         (save_directory / "README.md").write_text(str(card))
@@ -280,6 +288,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.history_minutes = history_minutes
         self.forecast_minutes = forecast_minutes
         self.output_quantiles = output_quantiles
+        self.interval_minutes = interval_minutes
 
         # Number of timestemps for 30 minutely data
         self.history_len = history_minutes // interval_minutes

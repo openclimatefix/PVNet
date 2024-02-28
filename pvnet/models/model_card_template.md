@@ -26,7 +26,7 @@ This model class uses satellite data, numericl weather predictions, and recent G
 
 <!-- This should link to a Data Card, perhaps with a short stub of information on what the training data is all about as well as documentation related to data pre-processing or additional filtering. -->
 
-The model is trained on data from 2017-2020 and validated on data from 2021. See experimental notes in the [the google doc](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing) for more details.
+The model is trained on data from 2019-2022 and validated on data from 2022-2023. See experimental notes in the [the google doc](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing) for more details.
 
 
 ### Preprocessing
@@ -36,7 +36,8 @@ Data is prepared with the `ocf_datapipes.training.pvnet` datapipe [2].
 
 ## Results
 
-The training logs for the current model can be found [here on wandb](https://wandb.ai/openclimatefix/pvnet2.1/runs/{{ wandb_model_code }}).
+The training logs for the current model can be found here: 
+{{ wandb_links }}
 
 The training logs for all model runs of PVNet2 can be found [here](https://wandb.ai/openclimatefix/pvnet2.1).
 
