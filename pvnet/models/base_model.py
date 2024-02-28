@@ -214,10 +214,10 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             card_template_path = (
                 f"{os.path.dirname(os.path.abspath(__file__))}/model_card_template.md"
             )
-        
+
         if isinstance(wandb_ids, str):
             wandb_ids = [wandb_ids]
-            
+
         wandb_links = ""
         for wandb_id in wandb_ids:
             link = f"https://wandb.ai/openclimatefix/pvnet2.1/runs/{wandb_id}"

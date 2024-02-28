@@ -36,7 +36,7 @@ Data is prepared with the `ocf_datapipes.training.pvnet` datapipe [2].
 
 ## Results
 
-The training logs for the current model can be found here: 
+The training logs for the current model can be found here:
 {{ wandb_links }}
 
 The training logs for all model runs of PVNet2 can be found [here](https://wandb.ai/openclimatefix/pvnet2.1).

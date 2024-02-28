@@ -8,17 +8,17 @@ python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
 import glob
 import os
 import tempfile
-from typing import Optional, Union
+from typing import Optional
 
 import hydra
 import torch
 import typer
 import wandb
 from pyaml_env import parse_config
-import yaml
 
-from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
 from pvnet.models.ensemble import Ensemble
+from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
+
 
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
@@ -28,7 +28,7 @@ def push_to_huggingface(
     push_to_hub: bool = True,
 ):
     """Push a local model to pvnet_v2 huggingface model repo
-    
+
     Args:
         checkpoint_dir_paths: Path(s) of the checkpoint directory(ies)
         val_best: Use best model according to val loss, else last saved model
@@ -40,11 +40,11 @@ def push_to_huggingface(
     assert push_to_hub or local_path is not None
 
     os.path.dirname(os.path.abspath(__file__))
-    
+
     is_ensemble = len(checkpoint_dir_paths)
-    
+
     # Check if checkpoint dir name is wandb run ID
-    if wandb_ids==[]:
+    if wandb_ids == []:
         all_wandb_ids = [run.id for run in wandb.Api().runs(path="openclimatefix/pvnet2.1")]
         for path in checkpoint_dir_paths:
             dirname = path.split("/")[-1]
@@ -52,11 +52,11 @@ def push_to_huggingface(
                 wandb_ids.append(dirname)
             else:
                 wandb_ids.append(None)
-    
+
     model_configs = []
     models = []
     data_configs = []
-    
+
     for path in checkpoint_dir_paths:
         # Load the model
         model_config = parse_config(f"{path}/model_config.yaml")
@@ -75,25 +75,23 @@ def push_to_huggingface(
 
         if isinstance(model, UMTModel):
             model, model_config = model.convert_to_multimodal_model(model_config)
-        
+
         # Check for data config
         data_config = f"{path}/data_config.yaml"
         assert os.path.isfile(data_config)
-        
+
         model_configs.append(model_config)
         models.append(model)
         data_configs.append(data_config)
-    
+
     if is_ensemble:
         model_config = {
             "_target_": "pvnet.models.ensemble.Ensemble",
             "model_list": model_configs,
         }
-        model = Ensemble(
-            model_list = models
-        )
+        model = Ensemble(model_list=models)
         data_config = data_configs[0]
-        
+
     else:
         model_config = model_configs[0]
         model = models[0]
