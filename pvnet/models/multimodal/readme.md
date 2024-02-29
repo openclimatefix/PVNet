@@ -10,10 +10,3 @@ This model uses encoders which take 4D (time, channel, x, y) inputs of NWP and s
 
 Different choices for the fusion model are contained inside `linear_networks`.
 
-### Additional model architectures
-
-The `deep_supervision.Model` network adds additional fusion model heads which predict the GSP output from only the satellite feature vector and from only the NWP feature vector.
-
-The `weather_residual.Model` network trains one head using the solar coords, GSP history and GSP ID, and trains a second network to learn a residual to this output from the NWP and satellite inputs. This loosely separates the predictions into "blue sky" and weather components.
-
-The `nwp_weighting.Model` network is a simple model which learns a linear interpolation of the downward short wave radiation flux from the NWP to predict the GSP output.
