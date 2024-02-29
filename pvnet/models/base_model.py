@@ -300,19 +300,14 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key_name)
         self._accumulated_y_hat = PredAccumulator()
 
-    @property
-    def use_quantile_regression(self):
-        """Whether the model should use quantile regression or simply predict the mean"""
-        return self.output_quantiles is not None
+        # Store whether the model should use quantile regression or simply predict the mean
+        self.use_quantile_regression = self.output_quantiles is not None
 
-    @property
-    def num_output_features(self):
-        """Number of ouput features he model chould predict for"""
+        # Store the number of ouput features that the model should predict for
         if self.use_quantile_regression:
-            out_features = self.forecast_len * len(self.output_quantiles)
+            self.num_output_features = self.forecast_len * len(self.output_quantiles)
         else:
-            out_features = self.forecast_len
-        return out_features
+            self.num_output_features = self.forecast_len
 
     def _quantiles_to_prediction(self, y_quantiles):
         """
