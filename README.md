@@ -17,8 +17,14 @@ together.
 
 ## Experiments
 
-Some quite rough working notes on experiments training this model and running it in production are
+**Link to our workshop paper coming soon**
+
+Some very rough working notes on this model are
 [here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA/edit?usp=sharing).
+
+Some slightly more structured notes on deliberate experiments we have performed with PVNet are [here](https://docs.google.com/document/d/1VumDwWd8YAfvXbOtJEv3ZJm_FHQDzrKXR0jU9vnvGQg/edit?usp=sharing)
+
+
 
 ## Setup / Installation
 
