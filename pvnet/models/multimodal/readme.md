@@ -9,4 +9,3 @@ The core model is `multimodel.Model`, and its architecture is shown in the diagr
 This model uses encoders which take 4D (time, channel, x, y) inputs of NWP and satellite and encode them into 1D feature vectors. Different encoders are contained inside `encoders`.
 
 Different choices for the fusion model are contained inside `linear_networks`.
-
