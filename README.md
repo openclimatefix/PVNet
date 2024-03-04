@@ -101,7 +101,7 @@ conda create -n ocf_datapipes python=3.10
 Then go inside the ocf_datapipes repo to add packages
 
 ```bash
-pip install -r requirements.txt requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 Then exit this environment, and enter back into the pvnet conda environment and install ocf_datapies in editable mode (-e). This means the package is directly linked to the source code in the ocf_datapies repo.

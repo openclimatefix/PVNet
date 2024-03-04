@@ -15,6 +15,14 @@ python save_batches.py \
 ```
 
 """
+# This is needed to get multiprocessing/multiple workers to behave
+try:
+    import torch.multiprocessing as mp
+
+    mp.set_start_method("spawn", force=True)
+except RuntimeError:
+    pass
+
 import logging
 import os
 import shutil
