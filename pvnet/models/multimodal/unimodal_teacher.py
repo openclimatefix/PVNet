@@ -416,4 +416,10 @@ class Model(MultimodalBaseModel):
 
         multimodal_model.output_network.load_state_dict(self.output_network.state_dict())
 
+        if self.embedding_dim:
+            multimodal_model.embed.load_state_dict(self.embed.state_dict())
+
+        if self.include_sun:
+            multimodal_model.sun_fc1.load_state_dict(self.sun_fc1.state_dict())
+        
         return multimodal_model, config
