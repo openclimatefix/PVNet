@@ -15,6 +15,14 @@ nwp_encoders_dict:
     number_of_conv3d_layers: 6
     conv3d_channels: 32
     image_size_pixels: 24
+  ecmwf:
+    _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+    _partial_: True
+    in_channels: 12
+    out_features: 256
+    number_of_conv3d_layers: 4
+    conv3d_channels: 32
+    image_size_pixels: 12
 
 #--------------------------------------------
 # Sat encoder settings
@@ -77,8 +85,10 @@ pv_history_minutes: 180
 # These must be set for each NWP encoder
 nwp_history_minutes:
   ukv: 120
+  ecmwf: 120
 nwp_forecast_minutes:
   ukv: 480
+  ecmwf: 480
 
 # ----------------------------------------------
 # Optimizer
