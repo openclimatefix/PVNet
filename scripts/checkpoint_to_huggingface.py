@@ -41,7 +41,7 @@ def push_to_huggingface(
 
     os.path.dirname(os.path.abspath(__file__))
 
-    is_ensemble = len(checkpoint_dir_paths)
+    is_ensemble = len(checkpoint_dir_paths) > 1
 
     # Check if checkpoint dir name is wandb run ID
     if wandb_ids == []:
