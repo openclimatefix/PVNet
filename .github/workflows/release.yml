@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'configs.example/**' # ignores all files in configs.example
+      - '**/README.md' # ignores all README files
 
 jobs:
   release:
