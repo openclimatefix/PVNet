@@ -19,9 +19,5 @@ trainer:
   min_epochs: 1
   max_epochs: 10
 
-datamodule:
-  n_train_data: 4000
-  n_val_data: 400
-
 model:
   conv3d_channels: 32
