@@ -22,8 +22,6 @@ trainer:
   max_epochs: 2
 
 datamodule:
-  n_train_data: 2
-  n_val_data: 2
-  fake_data: 1
+  batch_size: 32
 
 validate_only: "1" # by putting this key in the config file, the model does not get trained.

@@ -19,7 +19,3 @@ validate_only: "1" # by putting this key in the config file, the model does not 
 trainer:
   min_epochs: 1
   max_epochs: 1
-
-datamodule:
-  n_train_data: 2
-  n_val_data: 10
