@@ -255,6 +255,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         target_key: str = "gsp",
         interval_minutes: int = 30,
         timestep_intervals_to_plot: Optional[list[int]] = None,
+        use_weighted_loss: bool = False,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -267,6 +268,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             target_key: The key of the target variable in the batch
             interval_minutes: The interval in minutes between each timestep in the data
             timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
+            use_weighted_loss: Whether to use a weighted loss function
         """
         super().__init__()
 
@@ -302,6 +304,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # Store whether the model should use quantile regression or simply predict the mean
         self.use_quantile_regression = self.output_quantiles is not None
+        self.use_weighted_loss = use_weighted_loss
 
         # Store the number of ouput features that the model should predict for
         if self.use_quantile_regression:
@@ -350,31 +353,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             errors = y - y_quantiles[..., i]
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
         losses = 2 * torch.cat(losses, dim=2)
-        return losses.mean()
-
-    def _calculate_weighted_quantile_loss(self, y_quantiles, y):
-        """Calculate quantile loss.
-
-        Note:
-            Implementation copied from:
-                https://pytorch-forecasting.readthedocs.io/en/stable/_modules/pytorch_forecasting
-                /metrics/quantile.html#QuantileLoss.loss
-
-        Args:
-            y_quantiles: Quantile prediction of network
-            y: Target values
-
-        Returns:
-            Quantile loss
-        """
-        # calculate quantile loss
-        losses = []
-        for i, q in enumerate(self.output_quantiles):
-            errors = y - y_quantiles[..., i]
-            losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
-        losses = 2 * torch.cat(losses, dim=2)
-        # Weight the loss here
-        losses = losses * self.weighted_losses.weights
+        if self.use_weighted_loss:
+            losses = losses * self.weighted_losses.weights
         return losses.mean()
 
     def _calculate_common_losses(self, y, y_hat):
@@ -383,7 +363,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         losses = {}
 
         if self.use_quantile_regression:
-            losses["quantile_loss"] = self._calculate_weighted_quantile_loss(y_hat, y)
+            losses["quantile_loss"] = self._quantile_loss(y_hat, y)
             y_hat = self._quantiles_to_prediction(y_hat)
 
         # calculate mse, mae
