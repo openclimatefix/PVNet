@@ -363,7 +363,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         losses = {}
 
         if self.use_quantile_regression:
-            losses["quantile_loss"] = self._quantile_loss(y_hat, y)
+            losses["quantile_loss"] = self._calculate_qauntile_loss(y_hat, y)
             y_hat = self._quantiles_to_prediction(y_hat)
 
         # calculate mse, mae
