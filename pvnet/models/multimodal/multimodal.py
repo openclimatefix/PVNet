@@ -147,7 +147,7 @@ class Model(MultimodalBaseModel):
             target_key=target_key,
             interval_minutes=interval_minutes,
             timestep_intervals_to_plot=timestep_intervals_to_plot,
-            use_weighted_loss=use_weighted_loss
+            use_weighted_loss=use_weighted_loss,
         )
 
         # Number of features expected by the output_network
