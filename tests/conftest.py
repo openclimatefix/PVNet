@@ -264,3 +264,9 @@ def multimodal_model(multimodal_model_kwargs):
 def multimodal_quantile_model(multimodal_model_kwargs):
     model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
     return model
+
+
+@pytest.fixture()
+def multimodal_weighted_quantile_model(multimodal_model_kwargs):
+    model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, use_weighted_loss=True)
+    return model
