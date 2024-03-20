@@ -354,7 +354,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
         losses = 2 * torch.cat(losses, dim=2)
         if self.use_weighted_loss:
-            weights = self.weighted_losses.weights.unsqueeze(1).unsqueeze(0)
+            weights = self.weighted_losses.weights.unsqueeze(1).unsqueeze(0).to(y.device)
             losses = losses * weights
         return losses.mean()
 
