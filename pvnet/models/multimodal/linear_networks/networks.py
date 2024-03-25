@@ -1,4 +1,5 @@
 """Linear networks used for the fusion model"""
+
 from torch import nn
 
 from pvnet.models.multimodal.linear_networks.basic_blocks import (

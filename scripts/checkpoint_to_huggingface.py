@@ -5,6 +5,7 @@ python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
 """
+
 import glob
 import os
 import tempfile

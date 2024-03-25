@@ -1,4 +1,5 @@
 """Basic blocks for PV-site encoders"""
+
 from abc import ABCMeta, abstractmethod
 
 from torch import nn

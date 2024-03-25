@@ -1,4 +1,5 @@
 """Average value model"""
+
 import torch
 from ocf_datapipes.batch import BatchKey
 from torch import nn
