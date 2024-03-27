@@ -1,11 +1,10 @@
 """ Data module for pytorch lightning """
 import glob
 
-from ocf_datapipes.batch import BatchKey, stack_np_examples_into_batch
+from ocf_datapipes.batch import BatchKey, batch_to_tensor, stack_np_examples_into_batch
 from ocf_datapipes.training.pvnet_site import pvnet_site_netcdf_datapipe
 
 from pvnet.data.base import BaseDataModule
-from pvnet.data.utils import batch_to_tensor
 
 
 class PVSiteDataModule(BaseDataModule):
