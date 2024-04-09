@@ -130,6 +130,7 @@ def extras(config: DictConfig) -> None:
             config.datamodule.pin_memory = False
         if config.datamodule.get("num_workers"):
             config.datamodule.num_workers = 0
+            config.datamodule.prefetch_factor = None
 
     # disable adding new keys to config
     OmegaConf.set_struct(config, True)

@@ -13,7 +13,7 @@ class PVSiteDataModule(BaseDataModule):
 
     def _get_datapipe(self, start_time, end_time):
         data_pipeline = pvnet_site_netcdf_datapipe(
-            keys=["pv", "nwp"],
+            keys=["pv", "nwp", "sat"],
         )
 
         data_pipeline = (
@@ -26,7 +26,7 @@ class PVSiteDataModule(BaseDataModule):
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
         filenames = list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc"))
         data_pipeline = pvnet_site_netcdf_datapipe(
-            keys=["pv", "nwp"],
+            keys=["pv", "nwp", "sat"],
             filenames=filenames,
         )
         data_pipeline = (

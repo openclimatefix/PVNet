@@ -15,6 +15,13 @@ python save_batches.py \
 ```
 
 """
+# This is needed to get the multiprocessing/multiple workers to behave 
+try:
+    import torch.multiprocessing as mp
+    mp.set_start_method('spawn', force=True)
+except RuntimeError:
+    pass
+
 import logging
 import os
 import shutil
@@ -63,7 +70,8 @@ def _get_datapipe(config_path, start_time, end_time, batch_size, renewable: str 
         data_pipeline_fn = pvnet_datapipe
     elif renewable == "wind":
         data_pipeline_fn = windnet_datapipe
-    elif renewable == "pv_india":
+    elif renewable in ["pv_india", "pv_site"]:
+        print("USING PVNET SITE DATAPIPES!")
         data_pipeline_fn = pvnet_site_datapipe
     else:
         raise ValueError(f"Unknown renewable: {renewable}")
