@@ -424,5 +424,5 @@ class Model(MultimodalBaseModel):
 
         if self.include_sun:
             multimodal_model.sun_fc1.load_state_dict(self.sun_fc1.state_dict())
-        
+
         return multimodal_model, config
