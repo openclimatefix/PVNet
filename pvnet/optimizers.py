@@ -185,7 +185,6 @@ class AdamWReduceLROnPlateau(AbstractOptimizer):
         if not isinstance(self._lr, float):
             return self._call_multi(model)
         else:
-            assert False
             default_lr = self._lr if model.lr is None else model.lr
             opt = torch.optim.AdamW(model.parameters(), lr=default_lr, **self.opt_kwargs)
             sch = torch.optim.lr_scheduler.ReduceLROnPlateau(

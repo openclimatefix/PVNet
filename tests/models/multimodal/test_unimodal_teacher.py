@@ -49,6 +49,7 @@ def unimodal_model_kwargs(teacher_dir, model_minutes_kwargs):
             res_block_layers=2,
             dropout_frac=0.0,
         ),
+        cold_start=True,
     )
 
     # Get the teacher model save directories
@@ -89,3 +90,16 @@ def test_model_backward(unimodal_teacher_model, sample_batch):
 
     # Backwards on sum drives sum to zero
     y.sum().backward()
+
+
+def test_model_conversion(unimodal_model_kwargs, sample_batch):
+    # Create the unimodal model
+    um_model = Model(**unimodal_model_kwargs)
+    # Convert to the equivalent multimodel model
+    mm_model, _ = um_model.convert_to_multimodal_model(unimodal_model_kwargs)
+
+    # If the model has been successfully converted the predictions should be identical
+    y_um = um_model(sample_batch, return_modes=False)
+    y_mm = mm_model(sample_batch)
+
+    assert (y_um == y_mm).all()

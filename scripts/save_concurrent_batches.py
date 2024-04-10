@@ -13,6 +13,13 @@ python save_concurrent_batches.py \
 ```
 
 """
+# This is needed to get multiprocessing/multiple workers to behave
+try:
+    import torch.multiprocessing as mp
+
+    mp.set_start_method("spawn", force=True)
+except RuntimeError:
+    pass
 
 import logging
 import os
@@ -157,9 +164,6 @@ def main(config: DictConfig):
 
     shutil.copyfile(config_dm.configuration, f"{config.batch_output_dir}/data_configuration.yaml")
 
-    os.mkdir(f"{config.batch_output_dir}/train")
-    os.mkdir(f"{config.batch_output_dir}/val")
-
     dataloader_kwargs = dict(
         shuffle=False,
         batch_size=None,  # batched in datapipe step
@@ -175,35 +179,41 @@ def main(config: DictConfig):
         persistent_workers=False,
     )
 
-    print("----- Saving val batches -----")
+    if config.num_val_batches > 0:
+        print("----- Saving val batches -----")
 
-    val_batch_pipe = _get_datapipe(
-        config_dm.configuration,
-        *config_dm.val_period,
-        config.num_val_batches,
-    )
+        os.mkdir(f"{config.batch_output_dir}/val")
 
-    _save_batches_with_dataloader(
-        batch_pipe=val_batch_pipe,
-        batch_dir=f"{config.batch_output_dir}/val",
-        num_batches=config.num_val_batches,
-        dataloader_kwargs=dataloader_kwargs,
-    )
+        val_batch_pipe = _get_datapipe(
+            config_dm.configuration,
+            *config_dm.val_period,
+            config.num_val_batches,
+        )
 
-    print("----- Saving train batches -----")
+        _save_batches_with_dataloader(
+            batch_pipe=val_batch_pipe,
+            batch_dir=f"{config.batch_output_dir}/val",
+            num_batches=config.num_val_batches,
+            dataloader_kwargs=dataloader_kwargs,
+        )
 
-    train_batch_pipe = _get_datapipe(
-        config_dm.configuration,
-        *config_dm.train_period,
-        config.num_train_batches,
-    )
+    if config.num_train_batches > 0:
+        print("----- Saving train batches -----")
 
-    _save_batches_with_dataloader(
-        batch_pipe=train_batch_pipe,
-        batch_dir=f"{config.batch_output_dir}/train",
-        num_batches=config.num_train_batches,
-        dataloader_kwargs=dataloader_kwargs,
-    )
+        os.mkdir(f"{config.batch_output_dir}/train")
+
+        train_batch_pipe = _get_datapipe(
+            config_dm.configuration,
+            *config_dm.train_period,
+            config.num_train_batches,
+        )
+
+        _save_batches_with_dataloader(
+            batch_pipe=train_batch_pipe,
+            batch_dir=f"{config.batch_output_dir}/train",
+            num_batches=config.num_train_batches,
+            dataloader_kwargs=dataloader_kwargs,
+        )
 
     print("done")
 

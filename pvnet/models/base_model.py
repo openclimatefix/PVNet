@@ -165,7 +165,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         self,
         save_directory: Union[str, Path],
         config: dict,
-        data_config: Union[str, Path],
+        data_config: Optional[Union[str, Path]],
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_ids: Optional[Union[list[str], str]] = None,
@@ -206,7 +206,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
 
         # Save cleaned datapipes configuration file
-        make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
+        if data_config is not None:
+            make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
