@@ -369,7 +369,10 @@ class Model(MultimodalBaseModel):
     def convert_to_multimodal_model(self, config):
         """Convert the model into a multimodal model class whilst preserving weights"""
         config = config.copy()
-        del config["cold_start"]
+        
+        if "cold_start" in config:
+            del config["cold_start"]
+        
         config["_target_"] = "pvnet.models.multimodal.multimodal.Model"
 
         sources = []

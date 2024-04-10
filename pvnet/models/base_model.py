@@ -165,7 +165,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         self,
         save_directory: Union[str, Path],
         config: dict,
-        data_config: Union[str, Path],
+        data_config: Optional[Union[str, Path]],
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_ids: Optional[Union[list[str], str]] = None,
@@ -206,7 +206,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
 
         # Save cleaned datapipes configuration file
-        make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
+        if data_config is not None:
+            make_clean_data_config(data_config, save_directory / DATA_CONFIG_NAME)
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
@@ -220,7 +221,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         wandb_links = ""
         for wandb_id in wandb_ids:
-            link = f"https://wandb.ai/openclimatefix/pvnet2.1/runs/{wandb_id}"
+            link = f"https://wandb.ai/openclimatefix/pvnet_summation/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
         card = ModelCard.from_template(
@@ -506,7 +507,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             y_values.append(logged_losses[f"MAE_horizon/step_{x:03}/val"])
         per_step_losses = [[x, y] for (x, y) in zip(x_values, y_values)]
         # Check if WandBLogger is being used
-        if isinstance(self.logger, pl.loggers.WandbLogger):
+        if False: #isinstance(self.logger, pl.loggers.WandbLogger):
             table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
             wandb.log(
                 {
