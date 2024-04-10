@@ -221,7 +221,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         wandb_links = ""
         for wandb_id in wandb_ids:
-            link = f"https://wandb.ai/openclimatefix/pvnet_2.1/runs/{wandb_id}"
+            link = f"https://wandb.ai/openclimatefix/pvnet2.1/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
         card = ModelCard.from_template(
