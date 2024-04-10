@@ -23,7 +23,7 @@ import warnings
 import hydra
 import numpy as np
 import torch
-from ocf_datapipes.batch import BatchKey, stack_np_examples_into_batch
+from ocf_datapipes.batch import BatchKey, batch_to_tensor, stack_np_examples_into_batch
 from ocf_datapipes.training.common import (
     open_and_return_datapipes,
 )
@@ -34,7 +34,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
-from pvnet.data.utils import batch_to_tensor
 from pvnet.utils import GSPLocationLookup
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
