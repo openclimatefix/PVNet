@@ -164,7 +164,6 @@ def main(config: DictConfig):
         f.write(OmegaConf.to_yaml(config.datamodule))
 
     shutil.copyfile(config_dm.configuration, f"{config.batch_output_dir}/data_configuration.yaml")
-    
 
     dataloader_kwargs = dict(
         shuffle=False,
@@ -181,14 +180,11 @@ def main(config: DictConfig):
         persistent_workers=False,
     )
 
-    
-    
-    if config.num_val_batches>0:
-        
+    if config.num_val_batches > 0:
         print("----- Saving val batches -----")
-        
+
         os.mkdir(f"{config.batch_output_dir}/val")
-        
+
         val_batch_pipe = _get_datapipe(
             config_dm.configuration,
             *config_dm.val_period,
@@ -202,7 +198,7 @@ def main(config: DictConfig):
             dataloader_kwargs=dataloader_kwargs,
         )
 
-    if config.num_train_batches>0:
+    if config.num_train_batches > 0:
         print("----- Saving train batches -----")
 
         os.mkdir(f"{config.batch_output_dir}/train")
