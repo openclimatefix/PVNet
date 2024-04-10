@@ -221,7 +221,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         wandb_links = ""
         for wandb_id in wandb_ids:
-            link = f"https://wandb.ai/openclimatefix/pvnet_summation/runs/{wandb_id}"
+            link = f"https://wandb.ai/openclimatefix/pvnet_2.1/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
         card = ModelCard.from_template(
@@ -507,7 +507,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             y_values.append(logged_losses[f"MAE_horizon/step_{x:03}/val"])
         per_step_losses = [[x, y] for (x, y) in zip(x_values, y_values)]
         # Check if WandBLogger is being used
-        if False:  # isinstance(self.logger, pl.loggers.WandbLogger):
+        if isinstance(self.logger, pl.loggers.WandbLogger):
             table = wandb.Table(data=per_step_losses, columns=["timestep", "MAE"])
             wandb.log(
                 {
