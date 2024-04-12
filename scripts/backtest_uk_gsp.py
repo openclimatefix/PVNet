@@ -7,7 +7,7 @@ Use:
   that the data config is set up appropriate for the model being run in this script
 - The PVNet and summation model checkpoints; the time range over which to make predictions are made;
   and the output directory where the results near the top of the script as hard coded user
-  variables. These shopuld be changed.
+  variables. These should be changed.
 
 
 ```
@@ -111,6 +111,9 @@ def get_gsp_ds(config_path: str) -> xr.Dataset:
 
     Args:
         config_path: Path to the data configuration file
+        
+    Returns:
+        xarray.Dataset of PVLive truths and capacities
     """
 
     config = load_yaml_configuration(config_path)
@@ -127,6 +130,9 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
         start_datetime: First potential t0 time
         end_datetime: Last potential t0 time
         config_path: Path to data config file
+        
+    Returns:
+        pandas.DatetimeIndex of the init-times available for required inputs
     """
 
     start_datetime = pd.Timestamp(start_datetime)
@@ -192,6 +198,11 @@ def get_loctimes_datapipes(config_path):
 
     Args:
         config_path: Path to data config file
+        
+    Returns:
+        tuple: A tuple of datapipes
+            - Datapipe yielding locations
+            - Datapipe yielding init-times
     """
 
     # Set up ID location query object
@@ -233,17 +244,28 @@ def get_loctimes_datapipes(config_path):
 
 
 class ModelPipe:
+    """A class to conveniently make and process predictions from batches"""
+    
     def __init__(self, model, summation_model, ds_gsp: xr.Dataset):
+        """A class to conveniently make and process predictions from batches
+        
+        Args:
+            model: PVNet GSP level model
+            summation_model: Summation model to make national forecast from GSP level forecasts
+            ds_gsp:xarray dataset of PVLive true values and capacities
+        """
         self.model = model
         self.summation_model = summation_model
         self.ds_gsp = ds_gsp
 
-    def predict_batch(self, batch: NumpyBatch):
+    def predict_batch(self, batch: NumpyBatch) -> xr.Dataset:
         """Run the batch through the model and compile the predictions into an xarray DataArray
 
         Args:
             batch: A batch of samples with inputs for each GSP for the same init-time
-            ds_gsp: Xarray dataset containing the capacities for all GSPs
+        
+        Returns:
+            xarray.Dataset of all GSP and national forecasts for the batch
         """
 
         # Unpack some variables from the batch
@@ -342,11 +364,14 @@ class ModelPipe:
         return ds_abs_all
 
 
-def get_datapipe(config_path: str):
+def get_datapipe(config_path: str) -> NumpyBatch:
     """Construct datapipe yielding batches of concurrent samples for all GSPs
 
     Args:
         config_path: Path to the data configuration file
+        
+    Returns:
+        NumpyBatch: Concurrent batch of samples for each GSP
     """
 
     # Construct location and init-time datapipes
@@ -375,7 +400,7 @@ def get_datapipe(config_path: str):
 
 @hydra.main(config_path="../configs", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig):
-    """Constructs and saves validation and training batches."""
+    """Runs the backtest"""
 
     dataloader_kwargs = dict(
         shuffle=False,

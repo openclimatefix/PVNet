@@ -1,18 +1,21 @@
 """Utils"""
 import logging
-import os
 import warnings
+import os
 from collections.abc import Sequence
 from typing import Optional
 
-import lightning.pytorch as pl
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import xarray as xr
+import torch
+import lightning.pytorch as pl
+
+import matplotlib.pyplot as plt
 import pylab
 import rich.syntax
 import rich.tree
-import xarray as xr
+
 import yaml
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
@@ -20,26 +23,6 @@ from ocf_datapipes.batch import BatchKey
 from ocf_datapipes.utils import Location
 from ocf_datapipes.utils.geospatial import osgb_to_lon_lat
 from omegaconf import DictConfig, OmegaConf
-
-import pvnet
-
-
-def load_config(config_file):
-    """
-    Open yam configruation file, and get rid eof '_target_' line
-    """
-
-    # get full path of config file
-    path = os.path.dirname(pvnet.__file__)
-    config_file = f"{path}/../{config_file}"
-
-    with open(config_file) as cfg:
-        config = yaml.load(cfg, Loader=yaml.FullLoader)
-
-    if "_target_" in config.keys():
-        config.pop("_target_")  # This is only for Hydra
-
-    return config
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
@@ -174,11 +157,6 @@ def print_config(
 
     with open("config_tree.txt", "w") as fp:
         rich.print(tree, file=fp)
-
-
-def empty(*args, **kwargs):
-    """Returns nothing"""
-    pass
 
 
 @rank_zero_only
