@@ -111,7 +111,7 @@ def get_gsp_ds(config_path: str) -> xr.Dataset:
 
     Args:
         config_path: Path to the data configuration file
-        
+
     Returns:
         xarray.Dataset of PVLive truths and capacities
     """
@@ -130,7 +130,7 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
         start_datetime: First potential t0 time
         end_datetime: Last potential t0 time
         config_path: Path to data config file
-        
+
     Returns:
         pandas.DatetimeIndex of the init-times available for required inputs
     """
@@ -198,7 +198,7 @@ def get_loctimes_datapipes(config_path):
 
     Args:
         config_path: Path to data config file
-        
+
     Returns:
         tuple: A tuple of datapipes
             - Datapipe yielding locations
@@ -245,10 +245,10 @@ def get_loctimes_datapipes(config_path):
 
 class ModelPipe:
     """A class to conveniently make and process predictions from batches"""
-    
+
     def __init__(self, model, summation_model, ds_gsp: xr.Dataset):
         """A class to conveniently make and process predictions from batches
-        
+
         Args:
             model: PVNet GSP level model
             summation_model: Summation model to make national forecast from GSP level forecasts
@@ -263,7 +263,7 @@ class ModelPipe:
 
         Args:
             batch: A batch of samples with inputs for each GSP for the same init-time
-        
+
         Returns:
             xarray.Dataset of all GSP and national forecasts for the batch
         """
@@ -369,7 +369,7 @@ def get_datapipe(config_path: str) -> NumpyBatch:
 
     Args:
         config_path: Path to the data configuration file
-        
+
     Returns:
         NumpyBatch: Concurrent batch of samples for each GSP
     """

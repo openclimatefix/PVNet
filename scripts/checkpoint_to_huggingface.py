@@ -6,7 +6,6 @@ python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
     --no-push-to-hub
 """
 
-import os
 import tempfile
 from typing import Optional
 
@@ -14,7 +13,7 @@ import typer
 import wandb
 
 from pvnet.load_model import get_model_from_checkpoints
-    
+
 wandb_repo = "openclimatefix/pvnet2.1"
 
 
@@ -48,12 +47,12 @@ def push_to_huggingface(
                 wandb_ids.append(dirname)
             else:
                 wandb_ids.append(None)
-    
+
     model, model_config, data_config = get_model_from_checkpoints(checkpoint_dir_paths, val_best)
 
     if not is_ensemble:
         wandb_ids = wandb_ids[0]
-        
+
     # Push to hub
     if local_path is None:
         temp_dir = tempfile.TemporaryDirectory()

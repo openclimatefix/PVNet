@@ -1,22 +1,17 @@
 """Utils"""
 import logging
 import warnings
-import os
 from collections.abc import Sequence
 from typing import Optional
 
+import lightning.pytorch as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import xarray as xr
-import torch
-import lightning.pytorch as pl
-
-import matplotlib.pyplot as plt
 import pylab
 import rich.syntax
 import rich.tree
-
-import yaml
+import xarray as xr
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from ocf_datapipes.batch import BatchKey
