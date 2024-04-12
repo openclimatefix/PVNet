@@ -154,6 +154,11 @@ def print_config(
         rich.print(tree, file=fp)
 
 
+def empty(*args, **kwargs):
+    """Returns nothing"""
+    pass
+
+
 @rank_zero_only
 def log_hyperparameters(
     config: DictConfig,
