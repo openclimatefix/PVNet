@@ -214,11 +214,9 @@ def finish(
     """Makes sure everything closed properly."""
 
     # without this sweeps with wandb logger might crash!
-    for logger in loggers:
-        if isinstance(logger, pl.loggers.wandb.WandbLogger):
-            import wandb
-
-            wandb.finish()
+    if any([isinstance(logger, pl.loggers.wandb.WandbLogger) for logger in loggers]):
+        import wandb
+        wandb.finish()
 
 
 def plot_batch_forecasts(

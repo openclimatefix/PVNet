@@ -434,12 +434,12 @@ def main(config: DictConfig):
 
     # Load the PVNet model and summation model
     model, *_ = get_model_from_checkpoints([model_chckpoint_dir], val_best=True)
-    model = model.to(device)
+    model = model.eval().to(device)
     if summation_chckpoint_dir is None:
         summation_model = None
     else:
         summation_model, *_ = get_model_from_checkpoints([summation_chckpoint_dir], val_best=True)
-        summation_model = summation_model.to(device)
+        summation_model = summation_model.eval().to(device)
 
     # Create object to make predictions for each input batch
     model_pipe = ModelPipe(model, summation_model, ds_gsp)
