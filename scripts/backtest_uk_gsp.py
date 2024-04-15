@@ -11,7 +11,7 @@ Use:
 
 
 ```
-python backtest.py
+python backtest_uk_gsp.py
 ```
 
 """
