@@ -1,8 +1,0 @@
-_target_: pvnet.data.pv_site_datamodule.PVSiteDataModule
-configuration: null
-# The batch_dir is the location batches were saved to using the save_batches.py script
-# The batch_dir should contain train and val subdirectories with batches
-batch_dir: /mnt/disks/sukh-pvnet-research-1/pvnet_smartest_energy/pvnet_site_batches
-num_workers: 2
-prefetch_factor: 2
-batch_size: 8
