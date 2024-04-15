@@ -521,7 +521,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # Store these to make horizon accuracy plot
         self._horizon_maes.append(
-            {i: losses[f"MAE_horizon/step_{i:03}"] for i in range(self.forecast_len)}
+            {i: losses[f"MAE_horizon/step_{i:03}"].cpu().numpy() for i in range(self.forecast_len)}
         )
 
         logged_losses = {f"{k}/val": v for k, v in losses.items()}
