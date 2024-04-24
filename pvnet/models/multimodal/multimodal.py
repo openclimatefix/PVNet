@@ -57,6 +57,7 @@ class Model(MultimodalBaseModel):
         pv_history_minutes: Optional[int] = None,
         wind_history_minutes: Optional[int] = None,
         sensor_history_minutes: Optional[int] = None,
+        sensor_forecast_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
         interval_minutes: int = 30,
@@ -121,6 +122,7 @@ class Model(MultimodalBaseModel):
             addition to the full forecast
             sensor_encoder: Encoder for sensor data
             sensor_history_minutes: Length of recent sensor data used as input.
+            sensor_forecast_minutes: Length of forecast sensor data used as input.
             adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
                 the model to use. This allows us to overprepare batches and slice from them for the
                 data we need for a model run.
@@ -240,9 +242,11 @@ class Model(MultimodalBaseModel):
         if self.include_sensor:
             if sensor_history_minutes is None:
                 sensor_history_minutes = history_minutes
+            if sensor_forecast_minutes is None:
+                sensor_forecast_minutes = forecast_minutes
 
             self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes + 1,
+                sequence_length=sensor_history_minutes // sensor_interval_minutes + sensor_forecast_minutes // sensor_interval_minutes + 1,
                 target_key_to_use=self._target_key_name,
                 input_key_to_use="sensor",
             )
