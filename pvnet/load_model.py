@@ -1,10 +1,13 @@
-from pyaml_env import parse_config
-from pvnet.models.ensemble import Ensemble
-from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
-import torch
-import hydra
 import glob
 import os
+
+import hydra
+import torch
+from pyaml_env import parse_config
+
+from pvnet.models.ensemble import Ensemble
+from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
+
 
 def get_model_from_checkpoints(
     checkpoint_dir_paths: list[str],
@@ -12,7 +15,7 @@ def get_model_from_checkpoints(
 ):
     """Load a model from its checkpoint directory"""
     is_ensemble = len(checkpoint_dir_paths) > 1
-    
+
     model_configs = []
     models = []
     data_configs = []
@@ -41,7 +44,7 @@ def get_model_from_checkpoints(
 
         # Check for data config
         data_config = f"{path}/data_config.yaml"
-        
+
         if os.path.isfile(data_config):
             data_configs.append(data_config)
         else:
@@ -49,7 +52,6 @@ def get_model_from_checkpoints(
 
         model_configs.append(model_config)
         models.append(model)
-        
 
     if is_ensemble:
         model_config = {
@@ -63,5 +65,5 @@ def get_model_from_checkpoints(
         model_config = model_configs[0]
         model = models[0]
         data_config = data_configs[0]
-    
+
     return model, model_config, data_config
