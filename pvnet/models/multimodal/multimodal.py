@@ -246,7 +246,9 @@ class Model(MultimodalBaseModel):
                 sensor_forecast_minutes = forecast_minutes
 
             self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes + sensor_forecast_minutes // sensor_interval_minutes + 1,
+                sequence_length=sensor_history_minutes // sensor_interval_minutes
+                + sensor_forecast_minutes // sensor_interval_minutes
+                + 1,
                 target_key_to_use=self._target_key_name,
                 input_key_to_use="sensor",
             )
