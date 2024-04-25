@@ -161,6 +161,7 @@ def sample_pv_batch(sample_batch):
     pv_data = sample_batch[BatchKey.pv]
     return pv_data
 
+
 @pytest.fixture()
 def sample_wind_batch():
     dm = WindDataModule(
@@ -175,6 +176,7 @@ def sample_wind_batch():
     )
     batch = next(iter(dm.train_dataloader()))
     return batch
+
 
 @pytest.fixture()
 def model_minutes_kwargs():

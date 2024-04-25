@@ -2,7 +2,6 @@ general:
   description: WindNet configuration for Leonardo
   name: windnet_india
 
-
 input_data:
   default_forecast_minutes: 2880
   default_history_minutes: 60
@@ -40,26 +39,26 @@ input_data:
       dropout_fraction: 1.0
       #start_datetime: "2021-01-01 00:00:00"
       #end_datetime: "2024-01-01 00:00:00"
-#    excarta:
-#      nwp_zarr_path: "/mnt/storage_b/nwp/excarta/hindcast.zarr"
-#      history_minutes: 60
-#      forecast_minutes: 2160 # 48 hours won't work much, as its only midnight ones, maybe 24 hours to ensure more coverage
-#      time_resolution_minutes: 60
-#      nwp_channels:
-#        - 10u
-#        - 100u
-#        - 10v
-#        - 100v
-#        - surface_pressure
-#        #- mean_sea_level_pressure
-#      nwp_image_size_pixels_height: 64 # roughtly equivalent to ukv 24 pixels
-#      nwp_image_size_pixels_width: 64
-#      nwp_provider: "excarta"
-#      x_dim_name: "longitude"
-#      y_dim_name: "latitude"
-#      dropout_timedeltas_minutes: [ -360 ] # 6 hours
-#      # Dropout applied with this probability
-#      dropout_fraction: 1.0
+  #    excarta:
+  #      nwp_zarr_path: "/mnt/storage_b/nwp/excarta/hindcast.zarr"
+  #      history_minutes: 60
+  #      forecast_minutes: 2160 # 48 hours won't work much, as its only midnight ones, maybe 24 hours to ensure more coverage
+  #      time_resolution_minutes: 60
+  #      nwp_channels:
+  #        - 10u
+  #        - 100u
+  #        - 10v
+  #        - 100v
+  #        - surface_pressure
+  #        #- mean_sea_level_pressure
+  #      nwp_image_size_pixels_height: 64 # roughtly equivalent to ukv 24 pixels
+  #      nwp_image_size_pixels_width: 64
+  #      nwp_provider: "excarta"
+  #      x_dim_name: "longitude"
+  #      y_dim_name: "latitude"
+  #      dropout_timedeltas_minutes: [ -360 ] # 6 hours
+  #      # Dropout applied with this probability
+  #      dropout_fraction: 1.0
   wind:
     wind_files_groups:
       - label: india
@@ -71,7 +70,7 @@ input_data:
     #end_datetime: "2024-01-01 00:00:00"
   sensor:
     #sensor_files_groups:
-  #    - label: meteomatics
+    #    - label: meteomatics
     sensor_filename: "/mnt/storage_b/nwp/meteomatics/nw_india/wind*.zarr.zip"
     get_center: false
     history_minutes: 60

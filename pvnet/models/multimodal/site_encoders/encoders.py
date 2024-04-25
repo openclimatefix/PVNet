@@ -2,10 +2,10 @@
 
 """
 
+import einops
 import torch
 from ocf_datapipes.batch import BatchKey
 from torch import nn
-import einops
 
 from pvnet.models.multimodal.linear_networks.networks import ResFCNet2
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
@@ -174,7 +174,8 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
         self._value_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length * self.num_channels + int(use_id_in_value) * id_embed_dim,
+                in_features=sequence_length * self.num_channels
+                + int(use_id_in_value) * id_embed_dim,
                 out_features=out_features,
                 fc_hidden_features=sequence_length * self.num_channels,
                 n_res_blocks=n_kv_res_blocks,
@@ -201,7 +202,6 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             num_heads=num_heads,
             batch_first=True,
         )
-
 
     def _encode_inputs(self, x):
         # Shape: [batch size, sequence length, PV site] -> [8, 197, 1]

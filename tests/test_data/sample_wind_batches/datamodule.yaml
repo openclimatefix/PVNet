@@ -5,11 +5,11 @@ prefetch_factor: 2
 batch_size: 8
 batch_dir: /mnt/storage_a/windnet_india_batches_large_meteomatics
 train_period:
-- '2019-01-01'
-- '2022-11-29'
+  - "2019-01-01"
+  - "2022-11-29"
 val_period:
-- '2022-12-01'
-- '2023-12-31'
+  - "2022-12-01"
+  - "2023-12-31"
 test_period:
-- '2023-09-01'
-- '2023-12-31'
+  - "2023-09-01"
+  - "2023-12-31"
