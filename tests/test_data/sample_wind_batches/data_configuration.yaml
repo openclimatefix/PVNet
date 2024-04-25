@@ -1,0 +1,97 @@
+general:
+  description: WindNet configuration for Leonardo
+  name: windnet_india
+
+
+input_data:
+  default_forecast_minutes: 2880
+  default_history_minutes: 60
+  data_source_which_defines_geospatial_locations: "wind"
+  nwp:
+    ecmwf:
+      # Path to ECMWF NWP data in zarr format
+      # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
+      nwp_zarr_path: "/mnt/storage_b/data/ocf/solar_pv_nowcasting/nowcasting_dataset_pipeline/NWP/ECMWF/nw-india/zarr/20*.zarr.zip"
+      history_minutes: 60
+      forecast_minutes: 2880
+      time_resolution_minutes: 60
+      nwp_channels:
+        #- hcc
+        #- lcc
+        #- mcc
+        #- prate
+        #- sde
+        #- sr
+        - t2m
+        #- tcc
+        - u10
+        - u100
+        - u200
+        - v10
+        - v100
+        - v200
+      nwp_image_size_pixels_height: 168 # roughtly equivalent to ukv 24 pixels
+      nwp_image_size_pixels_width: 168
+      x_dim_name: "longitude"
+      y_dim_name: "latitude"
+      nwp_provider: "ecmwf"
+      dropout_timedeltas_minutes: [-360] # 6 hours
+      # Dropout applied with this probability
+      dropout_fraction: 1.0
+      #start_datetime: "2021-01-01 00:00:00"
+      #end_datetime: "2024-01-01 00:00:00"
+#    excarta:
+#      nwp_zarr_path: "/mnt/storage_b/nwp/excarta/hindcast.zarr"
+#      history_minutes: 60
+#      forecast_minutes: 2160 # 48 hours won't work much, as its only midnight ones, maybe 24 hours to ensure more coverage
+#      time_resolution_minutes: 60
+#      nwp_channels:
+#        - 10u
+#        - 100u
+#        - 10v
+#        - 100v
+#        - surface_pressure
+#        #- mean_sea_level_pressure
+#      nwp_image_size_pixels_height: 64 # roughtly equivalent to ukv 24 pixels
+#      nwp_image_size_pixels_width: 64
+#      nwp_provider: "excarta"
+#      x_dim_name: "longitude"
+#      y_dim_name: "latitude"
+#      dropout_timedeltas_minutes: [ -360 ] # 6 hours
+#      # Dropout applied with this probability
+#      dropout_fraction: 1.0
+  wind:
+    wind_files_groups:
+      - label: india
+        wind_filename: /mnt/storage_ssd_4tb/india_wind_data.nc
+        wind_metadata_filename: /mnt/storage_ssd_4tb/india_wind_metadata.csv
+    get_center: true
+    n_wind_systems_per_example: 1
+    #start_datetime: "2021-01-01 00:00:00"
+    #end_datetime: "2024-01-01 00:00:00"
+  sensor:
+    #sensor_files_groups:
+  #    - label: meteomatics
+    sensor_filename: "/mnt/storage_b/nwp/meteomatics/nw_india/wind*.zarr.zip"
+    get_center: false
+    history_minutes: 60
+    forecast_minutes: 2880
+    #n_sensor_systems_per_example: 26
+    time_resolution_minutes: 15
+    #x_dim_name: "lon"
+    #y_dim_name: "lat"
+    sensor_variables:
+      - 100u
+      - 100v
+      - 10u
+      - 10v
+      - 200u
+      - 200v
+      - cape:Jkg
+      - air_density_25m:kgm3
+      - air_density_10m:kgm3
+      - air_density_100m:kgm3
+      - air_density_200m:kgm3
+      - wind_gusts_200m:ms
+      - wind_gusts_100m:ms
+      - wind_gusts_10m:ms

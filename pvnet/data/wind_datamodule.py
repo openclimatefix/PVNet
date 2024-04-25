@@ -13,7 +13,7 @@ class WindDataModule(BaseDataModule):
     def _get_datapipe(self, start_time, end_time):
         data_pipeline = windnet_netcdf_datapipe(
             self.configuration,
-            keys=["wind", "nwp"],
+            keys=["wind", "nwp", "sensor"],
         )
 
         data_pipeline = (
@@ -26,7 +26,7 @@ class WindDataModule(BaseDataModule):
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
         filenames = list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc"))
         data_pipeline = windnet_netcdf_datapipe(
-            keys=["wind", "nwp"],
+            keys=["wind", "nwp", "sensor"],
             filenames=filenames,
         )
         data_pipeline = (

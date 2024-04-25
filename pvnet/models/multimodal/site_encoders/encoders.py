@@ -5,6 +5,7 @@
 import torch
 from ocf_datapipes.batch import BatchKey
 from torch import nn
+import einops
 
 from pvnet.models.multimodal.linear_networks.networks import ResFCNet2
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
@@ -128,6 +129,8 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         target_id_dim: int = 318,
         target_key_to_use: str = "gsp",
         input_key_to_use: str = "pv",
+        num_channels: int = 0,
+        num_sites_in_inference: int = 1,
     ):
         """A simple attention-based model with a single multihead attention layer
 
@@ -148,6 +151,11 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             target_id_dim: The number of unique IDs.
             target_key_to_use: The key to use for the target in the attention layer.
             input_key_to_use: The key to use for the input in the attention layer.
+            num_channels: Number of channels in the input data. For single site generation, this will be 0, as there
+                is not channel dimension, for Sensors, this will probably be higher than that
+            num_sites_in_inference: Number of sites to use in inference. This is used to determine the
+                number of sites to use in the attention layer, for a single site, 1 works, while for multiple sites
+                (such as multiple sensors), this would be higher than that
 
         """
         super().__init__(sequence_length, num_sites, out_features)
@@ -158,15 +166,17 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         self.use_id_in_value = use_id_in_value
         self.target_key_to_use = target_key_to_use
         self.input_key_to_use = input_key_to_use
+        self.num_channels = num_channels
+        self.num_sites_in_inference = num_sites_in_inference
 
         if use_id_in_value:
             self.value_id_embedding = nn.Embedding(num_sites, id_embed_dim)
 
         self._value_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length + int(use_id_in_value) * id_embed_dim,
+                in_features=sequence_length * self.num_channels + int(use_id_in_value) * id_embed_dim,
                 out_features=out_features,
-                fc_hidden_features=sequence_length,
+                fc_hidden_features=sequence_length * self.num_channels,
                 n_res_blocks=n_kv_res_blocks,
                 res_block_layers=kv_res_block_layers,
                 dropout_frac=0,
@@ -175,9 +185,9 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
 
         self._key_encoder = nn.Sequential(
             ResFCNet2(
-                in_features=sequence_length + id_embed_dim,
+                in_features=id_embed_dim + sequence_length * self.num_channels,
                 out_features=kdim,
-                fc_hidden_features=id_embed_dim + sequence_length,
+                fc_hidden_features=id_embed_dim + sequence_length * self.num_channels,
                 n_res_blocks=n_kv_res_blocks,
                 res_block_layers=kv_res_block_layers,
                 dropout_frac=0,
@@ -191,6 +201,21 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             num_heads=num_heads,
             batch_first=True,
         )
+
+
+    def _encode_inputs(self, x):
+        # Shape: [batch size, sequence length, PV site] -> [8, 197, 1]
+        # Shape: [batch size,  station_id, sequence length,  channels] -> [8, 197, 26, 23]
+        input_data = x[BatchKey[f"{self.input_key_to_use}"]]
+        if len(input_data.shape) == 4:  # Has multiple channels
+            input_data = input_data[:, :, : self.sequence_length]
+            input_data = einops.rearrange(input_data, "b id s c -> b (s c) id")
+        else:
+            input_data = input_data[:, : self.sequence_length]
+        site_seqs = input_data.float()
+        batch_size = site_seqs.shape[0]
+        site_seqs = site_seqs.swapaxes(1, 2)  # [batch size, Site ID, sequence length]
+        return site_seqs, batch_size
 
     def _encode_query(self, x):
         # Select the first one
@@ -206,14 +231,12 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         return query
 
     def _encode_key(self, x):
-        # Shape: [batch size, sequence length, PV site]
-        site_seqs = x[BatchKey[f"{self.input_key_to_use}"]][:, : self.sequence_length].float()
-        batch_size = site_seqs.shape[0]
+        site_seqs, batch_size = self._encode_inputs(x)
 
         # wind ID embeddings are the same for each sample
         site_id_embed = torch.tile(self.site_id_embedding(self._ids), (batch_size, 1, 1))
         # Each concated (wind sequence, wind ID embedding) is processed with encoder
-        x_seq_in = torch.cat((site_seqs.swapaxes(1, 2), site_id_embed), dim=2).flatten(0, 1)
+        x_seq_in = torch.cat((site_seqs, site_id_embed), dim=2).flatten(0, 1)
         key = self._key_encoder(x_seq_in)
 
         # Reshape to [batch size, PV site, kdim]
@@ -221,19 +244,16 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         return key
 
     def _encode_value(self, x):
-        # Shape: [batch size, sequence length, PV site]
-        site_seqs = x[BatchKey[f"{self.input_key_to_use}"]][:, : self.sequence_length].float()
-        batch_size = site_seqs.shape[0]
+        site_seqs, batch_size = self._encode_inputs(x)
 
         if self.use_id_in_value:
             # wind ID embeddings are the same for each sample
             site_id_embed = torch.tile(self.value_id_embedding(self._ids), (batch_size, 1, 1))
             # Each concated (wind sequence, wind ID embedding) is processed with encoder
-            x_seq_in = torch.cat((site_seqs.swapaxes(1, 2), site_id_embed), dim=2).flatten(0, 1)
+            x_seq_in = torch.cat((site_seqs, site_id_embed), dim=2).flatten(0, 1)
         else:
             # Encode each PV sequence independently
-            x_seq_in = site_seqs.swapaxes(1, 2).flatten(0, 1)
-
+            x_seq_in = site_seqs.flatten(0, 1)
         value = self._value_encoder(x_seq_in)
 
         # Reshape to [batch size, PV site, vdim]

@@ -31,6 +31,8 @@ def test_simplelearnedaggregator_forward(sample_batch, site_encoder_model_kwargs
 def test_singleattentionnetwork_forward(sample_batch, site_encoder_model_kwargs):
     _test_model_forward(sample_batch, SingleAttentionNetwork, site_encoder_model_kwargs)
 
+def test_singleattentionnetwork_forward_4d(sample_wind_batch, site_encoder_sensor_model_kwargs):
+    _test_model_forward(sample_wind_batch, SingleAttentionNetwork, site_encoder_sensor_model_kwargs)
 
 # Test model backward on all models
 def test_simplelearnedaggregator_backward(sample_batch, site_encoder_model_kwargs):
