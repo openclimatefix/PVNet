@@ -129,7 +129,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
         target_id_dim: int = 318,
         target_key_to_use: str = "gsp",
         input_key_to_use: str = "pv",
-        num_channels: int = 0,
+        num_channels: int = 1,
         num_sites_in_inference: int = 1,
     ):
         """A simple attention-based model with a single multihead attention layer
@@ -151,7 +151,7 @@ class SingleAttentionNetwork(AbstractPVSitesEncoder):
             target_id_dim: The number of unique IDs.
             target_key_to_use: The key to use for the target in the attention layer.
             input_key_to_use: The key to use for the input in the attention layer.
-            num_channels: Number of channels in the input data. For single site generation, this will be 0, as there
+            num_channels: Number of channels in the input data. For single site generation, this will be 1, as there
                 is not channel dimension, for Sensors, this will probably be higher than that
             num_sites_in_inference: Number of sites to use in inference. This is used to determine the
                 number of sites to use in the attention layer, for a single site, 1 works, while for multiple sites
