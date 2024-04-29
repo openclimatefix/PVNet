@@ -29,32 +29,32 @@ Overall MAE is 4.9% on the validation set, and forecasts look overall good.
 [WandB Linl](https://wandb.ai/openclimatefix/india/runs/v3mja33d)
 
 This newest experiment uses Meteomatics data in addition to ECMWF data. The Meteomatics data is at specific locations corresponding
-to the gneeration sites we know about. It is smartly downscaled ECMWF data, down to 15 minutes and at a few height levels we are 
+to the gneeration sites we know about. It is smartly downscaled ECMWF data, down to 15 minutes and at a few height levels we are
 interested in, primarily 10m, 100m, and 200m. The Meteomatics data is a semi-reanalysis, with each block of 6 hours being from one forecast run.
 For example, in one day, hours 00-06 are from the same, 00 forecast run, and hours 06-12 are from the 06 forecast run. This is important to note
-as it is both not a real reanalysis, but we also can't have it exactly match the live data, as any forecast steps beyond 6 hours are thrown away. 
+as it is both not a real reanalysis, but we also can't have it exactly match the live data, as any forecast steps beyond 6 hours are thrown away.
 This does mean that these results should be taken as a best case or better than best case scenario, as every 6 hour, observations from the future
-are incorporated into the Meteomatics input data from the next NWP mode run. 
+are incorporated into the Meteomatics input data from the next NWP mode run.
 
 For the purposes of WindNet, Meteomatics data is treated as Sensor data that goes into the future.
 The model encodes the sensor information the same way as for the historical PV, Wind, and GSP generation, and has
 a simple, single attention head to encode the information. This is then concatenated along with the rest of the data, like in
 previous experiments.
 
-MAE is 
+MAE is
 
 ### April-29-2024 WindNet v1 Production Model
 
 [WandB Link](https://wandb.ai/openclimatefix/india/runs/5llq8iw6)
 
 Improvements: Larger input size (64x64), 7 hour delay for ECMWF NWP inputs, to match productions.
-New, much more efficient encoder for NWP, allowing for more filters and layers, with less parameters. 
+New, much more efficient encoder for NWP, allowing for more filters and layers, with less parameters.
 The 64x64 input size corresponds to 6.4 degrees x 6.4 degrees, which is around 700km x 700km. This allows for the
 model to see the wind over the wind generation sites, which seems to be the biggest reason for the improvement in the model.
 
 
 
-MAE is 7.9% with real improvements on the production side of things. 
+MAE is 7.9% with real improvements on the production side of things.
 
 
 There were other experiments with slightly different numbers of filters, model parameters and the like, but generally no
@@ -85,5 +85,3 @@ point in NW-India. Note: The majority of the wind generation is likely not cover
 ![batch_idx_1_all_1730_379a9f881a7f01153f98](https://github.com/openclimatefix/PVNet/assets/7170359/243d9f3e-4cb9-405e-80c5-40c6c218c17f)
 
 MAE is around 10% overall, although it doesn't seem to do very well on the ramps up and down.
-
-
