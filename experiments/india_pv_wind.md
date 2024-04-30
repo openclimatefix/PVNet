@@ -41,7 +41,7 @@ The model encodes the sensor information the same way as for the historical PV, 
 a simple, single attention head to encode the information. This is then concatenated along with the rest of the data, like in
 previous experiments.
 
-This model also has an even larger input size of ECMWF data, 81x81 pixels, corresponding to around 810kmx810km. 
+This model also has an even larger input size of ECMWF data, 81x81 pixels, corresponding to around 810kmx810km.
 
 MAE is 7.3% on the validation set, showing a slight improvement over the previous model.
 
