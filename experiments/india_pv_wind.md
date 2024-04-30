@@ -41,7 +41,9 @@ The model encodes the sensor information the same way as for the historical PV, 
 a simple, single attention head to encode the information. This is then concatenated along with the rest of the data, like in
 previous experiments.
 
-MAE is
+This model also has an even larger input size of ECMWF data, 81x81 pixels, corresponding to around 810kmx810km. 
+
+MAE is 7.3% on the validation set, showing a slight improvement over the previous model.
 
 ### April-29-2024 WindNet v1 Production Model
 
@@ -54,7 +56,7 @@ model to see the wind over the wind generation sites, which seems to be the bigg
 
 
 
-MAE is 7.9% with real improvements on the production side of things.
+MAE is 7.6% with real improvements on the production side of things.
 
 
 There were other experiments with slightly different numbers of filters, model parameters and the like, but generally no
