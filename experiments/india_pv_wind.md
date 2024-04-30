@@ -42,8 +42,13 @@ a simple, single attention head to encode the information. This is then concaten
 previous experiments.
 
 This model also has an even larger input size of ECMWF data, 81x81 pixels, corresponding to around 810kmx810km.
+![Screenshot_20240430_082855](https://github.com/openclimatefix/PVNet/assets/7170359/6981a088-8664-474b-bfea-c94c777fc119)
 
 MAE is 7.3% on the validation set, showing a slight improvement over the previous model.
+
+Example plot
+
+![Screenshot_20240430_082937](https://github.com/openclimatefix/PVNet/assets/7170359/88db342e-bf82-414e-8255-5ad4af659fb8)
 
 ### April-29-2024 WindNet v1 Production Model
 
