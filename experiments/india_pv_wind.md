@@ -44,7 +44,7 @@ previous experiments.
 This model also has an even larger input size of ECMWF data, 81x81 pixels, corresponding to around 810kmx810km.
 ![Screenshot_20240430_082855](https://github.com/openclimatefix/PVNet/assets/7170359/6981a088-8664-474b-bfea-c94c777fc119)
 
-MAE is 7.3% on the validation set, showing a slight improvement over the previous model.
+MAE is 7.0% on the validation set, showing a slight improvement over the previous model.
 
 Example plot
 
