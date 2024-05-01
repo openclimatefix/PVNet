@@ -508,8 +508,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         try:
             self.logger.experiment.log({plot_name: wandb.Image(fig)})
-        except:
+        except Exception as e:
             print(f"Failed to log {plot_name} to wandb")
+            print(e)
         plt.close(fig)
 
     def validation_step(self, batch: dict, batch_idx):
@@ -592,8 +593,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                         )
                     },
                 )
-            except:
+            except Exception as e:
                 print("Failed to log horizon_loss_curve to wandb")
+                print(e)
 
     def test_step(self, batch, batch_idx):
         """Run test step"""
