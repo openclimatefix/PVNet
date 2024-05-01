@@ -506,7 +506,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         plot_name = f"val_forecast_samples/batch_idx_{accum_batch_num}_{plot_suffix}"
 
-        self.logger.experiment.log({plot_name: wandb.Image(fig)})
+        try:
+            self.logger.experiment.log({plot_name: wandb.Image(fig)})
+        except:
+            print(f"Failed to log {plot_name} to wandb")
         plt.close(fig)
 
     def validation_step(self, batch: dict, batch_idx):
@@ -580,15 +583,17 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Create the horizon accuracy curve
         if isinstance(self.logger, pl.loggers.WandbLogger):
             per_step_losses = [[i, horizon_maes_dict[i]] for i in range(self.forecast_len)]
-
-            table = wandb.Table(data=per_step_losses, columns=["horizon_step", "MAE"])
-            wandb.log(
-                {
-                    "horizon_loss_curve": wandb.plot.line(
-                        table, "horizon_step", "MAE", title="Horizon loss curve"
-                    )
-                },
-            )
+            try:
+                table = wandb.Table(data=per_step_losses, columns=["horizon_step", "MAE"])
+                wandb.log(
+                    {
+                        "horizon_loss_curve": wandb.plot.line(
+                            table, "horizon_step", "MAE", title="Horizon loss curve"
+                        )
+                    },
+                )
+            except:
+                print("Failed to log horizon_loss_curve to wandb")
 
     def test_step(self, batch, batch_idx):
         """Run test step"""
