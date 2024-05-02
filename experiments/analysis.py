@@ -1,6 +1,7 @@
 """
 Script to generate a table comparing two run for MAE values for 48 hour 15 minute forecast
 """
+
 import numpy as np
 import wandb
 import argparse
