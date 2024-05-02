@@ -1,6 +1,7 @@
 """
 Script to generate a table comparing two run for MAE values for 48 hour 15 minute forecast
 """
+
 import argparse
 
 import numpy as np
@@ -19,7 +20,6 @@ def main(first_run: str, second_run: str) -> None:
     mae_cols = [col for col in df.columns if "MAE_horizon/step_" in col and "val" in col]
     # Sort them
     mae_cols.sort()
-    # Want MAE average of these groupings: [[0],[1],[2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15,16,17,18,19,20], etc]
     df = df[mae_cols]
     # Get last non-NaN value
     # Drop all rows with all NaNs
@@ -66,7 +66,7 @@ def main(first_run: str, second_run: str) -> None:
             if timestep >= grouping[0] and timestep <= grouping[1]
         ]
         print(
-            f"| {grouping[0]}-{grouping[1]} minutes | {df[group_idx].mean()*100.:0.3f} | {meteo_df[group_idx].mean()*100.:0.3f} |"
+            f"| {grouping[0]}-{grouping[1]} minutes | {df[group_idx].mean()*100.:0.3f} | {meteo_df[group_idx].mean()*100.:0.3f} |" # noqa
         )
 
 
