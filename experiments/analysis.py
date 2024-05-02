@@ -1,6 +1,6 @@
-import wandb
-import pandas as pd
 import numpy as np
+import wandb
+
 api = wandb.Api()
 run = api.run("openclimatefix/india/5llq8iw6")
 
@@ -40,10 +40,22 @@ df = df.iloc[-1]
 
 # Calculate the timedelta for each group
 # Get the step from the column name
-column_timesteps = [int(col.split("_")[-1].split("/")[0])*15 for col in mae_cols]
+column_timesteps = [int(col.split("_")[-1].split("/")[0]) * 15 for col in mae_cols]
 print(column_timesteps)
 # Get the timedelta for each group
-groupings = [[0,0], [15,15], [30,45], [45,60], [60,120], [120,240], [240,360], [360,480], [480,720], [720,1440], [1440,2880]]
+groupings = [
+    [0, 0],
+    [15, 15],
+    [30, 45],
+    [45, 60],
+    [60, 120],
+    [120, 240],
+    [240, 360],
+    [360, 480],
+    [480, 720],
+    [720, 1440],
+    [1440, 2880],
+]
 
 run = api.run("openclimatefix/india/v3mja33d")
 meteo_df = run.history()
@@ -64,7 +76,11 @@ print("| Timestep | Prod MAE % | Meteomatics MAE % |")
 print("| --- | --- | --- |")
 for grouping in groupings:
     # Select indicies from column_timesteps that are within the grouping, inclusive
-    group_idx = [idx for idx, timestep in enumerate(column_timesteps) if timestep >= grouping[0] and timestep <= grouping[1]]
-    print(f"| {grouping[0]}-{grouping[1]} minutes | {df[group_idx].mean()*100.:0.3f} | {meteo_df[group_idx].mean()*100.:0.3f} |")
-
-
+    group_idx = [
+        idx
+        for idx, timestep in enumerate(column_timesteps)
+        if timestep >= grouping[0] and timestep <= grouping[1]
+    ]
+    print(
+        f"| {grouping[0]}-{grouping[1]} minutes | {df[group_idx].mean()*100.:0.3f} | {meteo_df[group_idx].mean()*100.:0.3f} |"
+    )
