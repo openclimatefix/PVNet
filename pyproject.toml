@@ -53,7 +53,7 @@ dev=[
     "pytest-cov",
 ]
 all_models=[
-    "pytorch-tabnet", 
+    "pytorch-tabnet",
     "efficientnet_pytorch"
 ]
 all=["PVNet[dev,all_models]"]
