@@ -31,7 +31,7 @@ Some slightly more structured notes on deliberate experiments we have performed 
 ```bash
 git clone https://github.com/openclimatefix/PVNet.git
 cd PVNet
-pip install -r requirements.txt
+pip install .
 ```
 
 The commit history is extensive. To save download time, use a depth of 1:
@@ -49,7 +49,7 @@ pip install -e .
 ### Additional development dependencies
 
 ```bash
-pip install -r requirements-dev.txt
+pip install ".[dev]"
 ```
 
 
@@ -101,7 +101,7 @@ conda create -n ocf_datapipes python=3.10
 Then go inside the ocf_datapipes repo to add packages
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt
+pip install ".[dev]"
 ```
 
 Then exit this environment, and enter back into the pvnet conda environment and install ocf_datapies in editable mode (-e). This means the package is directly linked to the source code in the ocf_datapies repo.

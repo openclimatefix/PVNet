@@ -1,3 +1,63 @@
+[project]
+name="PVNet"
+description = "PVNet"
+authors = [{name="Peter Dudfield", email="info@openclimatefix.org"}]
+dynamic = ["version", "readme"]
+license={file="LICENCE"}
+
+dependencies = [
+    "ocf_datapipes>=3.3.6",
+    "ocf_ml_metrics>=0.0.11",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "xarray",
+    "ipykernel",
+    "h5netcdf",
+    "torch>=2.0.0",
+    "lightning>=2.0.1",
+    "torchvision",
+    "pytest",
+    "pytest-cov",
+    "typer",
+    "sqlalchemy",
+    "fsspec[s3]",
+    "wandb",
+    "huggingface-hub",
+    "tensorboard",
+    "tqdm",
+    "omegaconf",
+    "hydra-core",
+    "python-dotenv",
+    "hydra-optuna-sweeper",
+    "rich",
+    "gcsfs",# gcsfs is only needed when getting data from Google Cloud Storage
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "pvnet.__version__"}
+readme = {file = "README.md"}
+
+[tool.setuptools.package-dir]
+"PVNet" = "pvnet"
+
+[project.optional-dependencies]
+dev=[
+    "pvlive-api @ git+https://github.com/SheffieldSolar/PV_Live-API",
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+]
+all_models=[
+    "pytorch-tabnet", 
+    "efficientnet_pytorch"
+]
+all=["PVNet[dev,all_models]"]
+
 [tool.mypy]
 exclude = [
     "^tests/",
