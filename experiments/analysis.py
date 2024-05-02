@@ -66,7 +66,7 @@ def main(first_run: str, second_run: str) -> None:
             if timestep >= grouping[0] and timestep <= grouping[1]
         ]
         print(
-            f"| {grouping[0]}-{grouping[1]} minutes | {df[group_idx].mean()*100.:0.3f} | {meteo_df[group_idx].mean()*100.:0.3f} |" # noqa
+            f"| {grouping[0]}-{grouping[1]} minutes | {df[group_idx].mean()*100.:0.3f} | {meteo_df[group_idx].mean()*100.:0.3f} |"  # noqa
         )
 
 
