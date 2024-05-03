@@ -2,7 +2,7 @@
 import glob
 
 from ocf_datapipes.batch import BatchKey, batch_to_tensor, stack_np_examples_into_batch
-from ocf_datapipes.training.pvnet_site import pvnet_site_netcdf_datapipe, pvnet_site_datapipe
+from ocf_datapipes.training.pvnet_site import pvnet_site_netcdf_datapipe, pvnet_site_datapipe, uncombine_from_single_dataset, split_dataset_dict_dp, ConvertToNumpyBatchIterDataPipe
 
 from pvnet.data.base import BaseDataModule
 
@@ -12,10 +12,12 @@ class PVSiteDataModule(BaseDataModule):
 
     def _get_datapipe(self, start_time, end_time):
         data_pipeline = pvnet_site_datapipe(
-            self.configuration, 
+            self.configuration,
             start_time=start_time,
-            end_time=end_time
+            end_time=end_time,
         )
+        data_pipeline = data_pipeline.map(uncombine_from_single_dataset).map(split_dataset_dict_dp)
+        data_pipeline = data_pipeline.pvnet_site_convert_to_numpy_batch()
 
         data_pipeline = (
             data_pipeline.batch(self.batch_size)
