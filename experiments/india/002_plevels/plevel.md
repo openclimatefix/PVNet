@@ -1,7 +1,7 @@
 # Running WindNet for RUVNL for diferent Plevels
 
 https://wandb.ai/openclimatefix/india/runs/5llq8iw6 is the current production one
-This has 7 plevels and a small patch size. 
+This has 7 plevels and a small patch size.
 
 ## Experiments
 
