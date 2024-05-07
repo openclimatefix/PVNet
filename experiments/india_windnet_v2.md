@@ -22,19 +22,19 @@ MAE is 7.0% on the validation set, showing a slight improvement over the previou
 
 Comperison  with the production model:
 
-| Timestep | Prod MAE % | Meteomatics MAE % |
-| --- | --- | --- |
-| 0-0 minutes | 7.586 | 2.475 |
-| 15-15 minutes | 8.021 | 2.968 |
-| 30-45 minutes | 7.233 | 3.472 |
-| 45-60 minutes | 7.187 | 3.804 |
-| 60-120 minutes | 7.231 | 4.650 |
-| 120-240 minutes | 7.287 | 6.028 |
-| 240-360 minutes | 7.319 | 6.738 |
-| 360-480 minutes | 7.285 | 6.964 |
-| 480-720 minutes | 7.143 | 6.906 |
-| 720-1440 minutes | 7.380 | 6.962 |
-| 1440-2880 minutes | 7.904 | 7.507 |
+| Timestep | Prod MAE % | Meteomatics MAE % | No Meteomatics MAE % |
+| --- | --- | --- | --- |
+| 0-0 minutes | 7.586 | 2.475 | 4.417 |
+| 15-15 minutes | 8.021 | 2.968 | 4.527 |
+| 30-45 minutes | 7.233 | 3.472 | 4.744 |
+| 45-60 minutes | 7.187 | 3.804 | 4.960 |
+| 60-120 minutes | 7.231 | 4.650 | 5.538 |
+| 120-240 minutes | 7.287 | 6.028 | 6.367 |
+| 240-360 minutes | 7.319 | 6.738 | 6.691 |
+| 360-480 minutes | 7.285 | 6.964 | 6.897 |
+| 480-720 minutes | 7.143 | 6.906 | 6.913 |
+| 720-1440 minutes | 7.380 | 6.962 | 7.140 |
+| 1440-2880 minutes | 7.904 | 7.507 | 7.547 |
 
 Example plot
 
