@@ -18,7 +18,7 @@ https://wandb.ai/openclimatefix/india/runs/pcr2zsrc
 
 ## Training
 
-Each epoch took about ~4 hours, so the training runs took several days. 
+Each epoch took about ~4 hours, so the training runs took several days.
 
 TODO add number of samples
 
@@ -34,7 +34,7 @@ We can see that for p10 the results are not right, as they should converge to 0.
 ![](p10.png "p10")
 
 Interestingly the more plevels you have the better the results are for before 4 hours
-but the less plevels you have the better the results for >= 8 hours. 
+but the less plevels you have the better the results for >= 8 hours.
 
 | Timestep | P50 only MAE % | 7 plevels MAE % | 15 plevel MAE %  | 7 plevels small patch MAE % |
 | --- | --- | --- |  --- | --- |
