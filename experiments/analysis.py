@@ -4,9 +4,9 @@ Script to generate a table comparing two run for MAE values for 48 hour 15 minut
 
 import argparse
 
+import matplotlib.pyplot as plt
 import numpy as np
 import wandb
-import matplotlib.pyplot as plt
 
 
 def main(runs: list[str], run_names: list[str]) -> None:
