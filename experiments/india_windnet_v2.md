@@ -36,6 +36,10 @@ Comperison  with the production model:
 | 720-1440 minutes | 7.380 | 7.207 | 6.962 |
 | 1440-2880 minutes | 7.904 | 7.507 | 7.507 |
 
+![mae_per_timestep](https://github.com/openclimatefix/PVNet/assets/7170359/e3c942e8-65c6-4b95-8c51-f25d43e7a082)
+
+
+
 
 Example plot
 
