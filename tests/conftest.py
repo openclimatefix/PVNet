@@ -14,6 +14,7 @@ from datetime import timedelta
 
 import pvnet
 from pvnet.data.datamodule import DataModule
+from pvnet.data.wind_datamodule import WindDataModule
 
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
@@ -162,6 +163,22 @@ def sample_pv_batch(sample_batch):
 
 
 @pytest.fixture()
+def sample_wind_batch():
+    dm = WindDataModule(
+        configuration=None,
+        batch_size=2,
+        num_workers=0,
+        prefetch_factor=None,
+        train_period=[None, None],
+        val_period=[None, None],
+        test_period=[None, None],
+        batch_dir="tests/test_data/sample_wind_batches",
+    )
+    batch = next(iter(dm.train_dataloader()))
+    return batch
+
+
+@pytest.fixture()
 def model_minutes_kwargs():
     kwargs = dict(
         forecast_minutes=480,
@@ -189,6 +206,20 @@ def site_encoder_model_kwargs():
         sequence_length=180 // 5 + 1,
         num_sites=349,
         out_features=128,
+    )
+    return kwargs
+
+
+@pytest.fixture()
+def site_encoder_sensor_model_kwargs():
+    # Used to test site encoder model on PV data
+    kwargs = dict(
+        sequence_length=180 // 5 + 1,
+        num_sites=26,
+        out_features=128,
+        num_channels=23,
+        target_key_to_use="wind",
+        input_key_to_use="sensor",
     )
     return kwargs
 
