@@ -25,6 +25,26 @@ Overall MAE is 4.9% on the validation set, and forecasts look overall good.
 ## WindNet
 
 
+### April-29-2024 WindNet v1 Production Model
+
+[WandB Link](https://wandb.ai/openclimatefix/india/runs/5llq8iw6)
+
+Improvements: Larger input size (64x64), 7 hour delay for ECMWF NWP inputs, to match productions.
+New, much more efficient encoder for NWP, allowing for more filters and layers, with less parameters.
+The 64x64 input size corresponds to 6.4 degrees x 6.4 degrees, which is around 700km x 700km. This allows for the
+model to see the wind over the wind generation sites, which seems to be the biggest reason for the improvement in the model.
+
+
+
+MAE is 7.6% with real improvements on the production side of things.
+
+
+There were other experiments with slightly different numbers of filters, model parameters and the like, but generally no
+improvements were seen.
+
+
+## WindNet v1 Results
+
 ### Data
 
 We use Wind generation data for India from April 2019-Nov 2022 for training
