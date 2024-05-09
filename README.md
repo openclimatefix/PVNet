@@ -170,14 +170,14 @@ gcloud auth login
 
 For files stored in multiple locations they can be added as list. For example from the gcp_configuration.yaml file we can change from satellite data stored on a bucket:
 
-```
+```yaml
 satellite:
     satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
 ```
 
 To satellite data hosted by Google:
 
-```
+```yaml
 satellite:
     satellite_zarr_paths:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr"

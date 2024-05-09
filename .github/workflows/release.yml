@@ -2,8 +2,8 @@ name: Python Bump Version & release
 
 on:
   push:
-    branches:
-      - main
+#    branches:
+#      - main
     paths-ignore:
       - "configs.example/**" # ignores all files in configs.example
       - "**/README.md" # ignores all README files
