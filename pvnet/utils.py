@@ -1,6 +1,5 @@
 """Utils"""
 import logging
-import os
 import warnings
 from collections.abc import Sequence
 from typing import Optional
@@ -13,33 +12,12 @@ import pylab
 import rich.syntax
 import rich.tree
 import xarray as xr
-import yaml
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from ocf_datapipes.batch import BatchKey
 from ocf_datapipes.utils import Location
 from ocf_datapipes.utils.geospatial import osgb_to_lon_lat
 from omegaconf import DictConfig, OmegaConf
-
-import pvnet
-
-
-def load_config(config_file):
-    """
-    Open yam configruation file, and get rid eof '_target_' line
-    """
-
-    # get full path of config file
-    path = os.path.dirname(pvnet.__file__)
-    config_file = f"{path}/../{config_file}"
-
-    with open(config_file) as cfg:
-        config = yaml.load(cfg, Loader=yaml.FullLoader)
-
-    if "_target_" in config.keys():
-        config.pop("_target_")  # This is only for Hydra
-
-    return config
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
@@ -236,11 +214,10 @@ def finish(
     """Makes sure everything closed properly."""
 
     # without this sweeps with wandb logger might crash!
-    for logger in loggers:
-        if isinstance(logger, pl.loggers.wandb.WandbLogger):
-            import wandb
+    if any([isinstance(logger, pl.loggers.wandb.WandbLogger) for logger in loggers]):
+        import wandb
 
-            wandb.finish()
+        wandb.finish()
 
 
 def plot_batch_forecasts(
