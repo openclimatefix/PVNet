@@ -145,7 +145,7 @@ For this example we will be using the `streamed_batches.yaml` config. Like befor
 
 This should be given the whole path to the config on your local machine, such as for our example it should be changed to:
 
-`configuration: "/FULL-PATH-TO-REPO/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
+`configuration: "/FULL-PATH-TO-REPO/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"`
 `
 
 Where `FULL-PATH-TO-REPO` represent the whole path to the PVNet repo on your local machine.
