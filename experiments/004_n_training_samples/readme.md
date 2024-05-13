@@ -3,9 +3,9 @@
 Kicked off an experiment that uses N samples
 This is done by adding `limit_train_batches` to the `trainer/default.yaml`.
 
-I checked that when limiting the batches, the same batches are shown to model for each epoch. 
+I checked that when limiting the batches, the same batches are shown to model for each epoch.
 
-## Experiments 
+## Experiments
 
 Original is 6711 batches
 

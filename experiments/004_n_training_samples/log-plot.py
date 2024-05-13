@@ -1,7 +1,7 @@
 """ Small script to make MAE vs number of batches plot"""
 
-import plotly.graph_objects as go
 import pandas as df
+import plotly.graph_objects as go
 
 data = [[100, 7.779], [1000, 7.181], [3000, 7.180], [6711, 7.151]]
 df = df.DataFrame(data, columns=["n_samples", "MAE [%]"])
