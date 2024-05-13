@@ -1,8 +1,0 @@
-pvlive-api @ git+https://github.com/SheffieldSolar/PV_Live-API
-black
-flake8
-isort
-mypy
-pre-commit
-pytest
-pytest-cov

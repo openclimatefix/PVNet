@@ -31,7 +31,7 @@ Some slightly more structured notes on deliberate experiments we have performed 
 ```bash
 git clone https://github.com/openclimatefix/PVNet.git
 cd PVNet
-pip install -r requirements.txt
+pip install .
 ```
 
 The commit history is extensive. To save download time, use a depth of 1:
@@ -49,7 +49,7 @@ pip install -e .
 ### Additional development dependencies
 
 ```bash
-pip install -r requirements-dev.txt
+pip install ".[dev]"
 ```
 
 
@@ -101,7 +101,7 @@ conda create -n ocf_datapipes python=3.10
 Then go inside the ocf_datapipes repo to add packages
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt
+pip install ".[dev]"
 ```
 
 Then exit this environment, and enter back into the pvnet conda environment and install ocf_datapies in editable mode (-e). This means the package is directly linked to the source code in the ocf_datapies repo.
@@ -145,7 +145,7 @@ For this example we will be using the `streamed_batches.yaml` config. Like befor
 
 This should be given the whole path to the config on your local machine, such as for our example it should be changed to:
 
-`configuration: "/FULL-PATH-TO-REPO/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
+`configuration: "/FULL-PATH-TO-REPO/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"`
 `
 
 Where `FULL-PATH-TO-REPO` represent the whole path to the PVNet repo on your local machine.
@@ -170,14 +170,14 @@ gcloud auth login
 
 For files stored in multiple locations they can be added as list. For example from the gcp_configuration.yaml file we can change from satellite data stored on a bucket:
 
-```
+```yaml
 satellite:
     satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
 ```
 
 To satellite data hosted by Google:
 
-```
+```yaml
 satellite:
     satellite_zarr_paths:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr"
