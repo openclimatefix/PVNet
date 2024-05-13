@@ -72,6 +72,10 @@ def main(runs: list[str], run_names: list[str]) -> None:
             group_string += f" {df.iloc[group_idx].mean()*100.:0.3f} |"
         print(group_string)
 
+
+    for idx, df in enumerate(dfs):
+        print(f"{run_names[idx]}: {df.mean()*100:0.3f}")
+
     # Plot the error on per timestep, and grouped timesteps
     plt.figure()
     for idx, df in enumerate(dfs):
