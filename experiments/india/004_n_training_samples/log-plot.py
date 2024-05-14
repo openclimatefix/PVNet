@@ -3,7 +3,7 @@
 import pandas as df
 import plotly.graph_objects as go
 
-data = [[100, 7.779], [1000, 7.181], [3000, 7.180], [6711, 7.151]]
+data = [[100, 7.779], [300, 7.441], [1000, 7.181], [3000, 7.180], [6711, 7.151]]
 df = df.DataFrame(data, columns=["n_samples", "MAE [%]"])
 
 fig = go.Figure()
