@@ -9,7 +9,7 @@ df = df.DataFrame(data, columns=["n_samples", "MAE [%]"])
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=df["n_samples"], y=df["MAE [%]"], mode="lines+markers"))
 fig.update_layout(
-    title="MAE % for each timestep", xaxis_title="Timestep (minutes)", yaxis_title="MAE %"
+    title="MAE % for N samples", xaxis_title="N Samples", yaxis_title="MAE %"
 )
 # change to log log
 fig.update_xaxes(type="log")
