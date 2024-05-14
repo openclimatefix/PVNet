@@ -36,14 +36,14 @@ dependencies = [
 
 [tool.setuptools.dynamic]
 version = {attr = "pvnet.__version__"}
-readme = {file = "README.md"}
+readme = {file = "README.md", content-type = "text/markdown"}
 
 [tool.setuptools.package-dir]
-"PVNet" = "pvnet"
+"pvnet" = "pvnet"
 
 [project.optional-dependencies]
 dev=[
-    "pvlive-api @ git+https://github.com/SheffieldSolar/PV_Live-API",
+    "pvlive-api",
     "black",
     "flake8",
     "isort",
