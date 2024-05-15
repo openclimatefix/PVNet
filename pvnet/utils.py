@@ -68,6 +68,31 @@ class GSPLocationLookup:
             id=gsp_id,
         )
 
+class SiteLocationLookup:
+
+    def __init__(self, long: xr.DataArray, lat: xr.DataArray):
+        """Query object for site location from site ID
+
+        Args:
+            long: DataArray of the longitude coordinates for any given site ID
+            lat: DataArray of the latitude coordinates for any given site ID
+
+        """
+        self.longitude = long
+        self.latitude = lat
+
+    def __call__(self, ml_id: int) -> Location:
+        """Returns the locations for the input GSP IDs.
+
+        Args:
+            gsp_id: Integer ID of the GSP
+        """
+        return Location(
+            coordinate_system="lon_lat",
+            x=self.longitude.sel(pv_system_id=ml_id).item(),
+            y=self.latitude.sel(pv_system_id=ml_id).item(),
+            id=ml_id,
+        )
 
 def extras(config: DictConfig) -> None:
     """A couple of optional utilities.
