@@ -68,7 +68,8 @@ class GSPLocationLookup:
             id=gsp_id,
         )
 
-class SiteLocationLookup: 
+
+class SiteLocationLookup:
     """Query object for site location from site ID"""
 
     def __init__(self, long: xr.DataArray, lat: xr.DataArray):
