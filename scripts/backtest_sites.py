@@ -5,10 +5,9 @@ Use:
 
 - This script uses hydra to construct the config, just like in `run.py`. So you need to make sure
   that the data config is set up appropriate for the model being run in this script
-- The PVNet model checkpoint; the time range over which to make predictions are made; the site ids to produce forecasts for
-  and the output directory where the results near the top of the script as hard coded user
-  variables. These should be changed.
-
+- The PVNet model checkpoint; the time range over which to make predictions are made;
+  the site ids to produce forecasts for and the output directory where the results
+  near the top of the script as hard coded user variables. These should be changed.
 
 ```
 python scripts/backtest_sites.py
