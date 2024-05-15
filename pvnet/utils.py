@@ -68,8 +68,8 @@ class GSPLocationLookup:
             id=gsp_id,
         )
 
-class SiteLocationLookup:
 
+class SiteLocationLookup:
     def __init__(self, long: xr.DataArray, lat: xr.DataArray):
         """Query object for site location from site ID
 
@@ -93,6 +93,7 @@ class SiteLocationLookup:
             y=self.latitude.sel(pv_system_id=ml_id).item(),
             id=ml_id,
         )
+
 
 def extras(config: DictConfig) -> None:
     """A couple of optional utilities.
