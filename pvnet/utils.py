@@ -95,6 +95,7 @@ class SiteLocationLookup:
             id=site_id,
         )
 
+
 def extras(config: DictConfig) -> None:
     """A couple of optional utilities.
 
