@@ -19,10 +19,10 @@ together.
 
 Our paper based on this repo was accepted into the Tackling Climate Change with Machine Learning workshop at ICLR 2024 and can be viewed [here](https://www.climatechange.ai/papers/iclr2024/46).
 
-Some very rough working notes on this model are
-[here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA). These are
+Some slightly more structured notes on deliberate experiments we have performed with PVNet are [here](https://docs.google.com/document/d/1VumDwWd8YAfvXbOtJEv3ZJm_FHQDzrKXR0jU9vnvGQg).
 
-Some slightly more structured notes on deliberate experiments we have performed with PVNet are [here](https://docs.google.com/document/d/1VumDwWd8YAfvXbOtJEv3ZJm_FHQDzrKXR0jU9vnvGQg)
+Some very rough, early working notes on this model are
+[here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA). These are now somewhat out of date.
 
 
 
