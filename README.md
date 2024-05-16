@@ -343,6 +343,11 @@ val data batches, you can now train PVNet by running:
 python run.py
 ```
 
+## Backtest
+
+If you have succesfully trained a PVNet model and have a saved model checkpoint you can create a backtest using this, e.g. forecasts on historical data to evaluate forecast accuracy/skill. This can be done by running one of the scripts in this repo such as [the UK gsp backtest script](scripts/backtest_uk_gsp.py) or the [the pv site backtest script](scripts/backtest_sites.py), further info on how to run these are in each backtest file.
+
+
 ## Testing
 
 You can use `python -m pytest tests` to run tests

@@ -34,7 +34,7 @@ class PVSiteDataModule(BaseDataModule):
     def _get_premade_batches_datapipe(self, subdir, shuffle=False):
         filenames = list(glob.glob(f"{self.batch_dir}/{subdir}/*.nc"))
         data_pipeline = pvnet_site_netcdf_datapipe(
-            keys=["pv", "nwp"],
+            keys=["pv", "nwp"],  # add other keys e.g. sat if used as input in site model
             filenames=filenames,
         )
         data_pipeline = (
