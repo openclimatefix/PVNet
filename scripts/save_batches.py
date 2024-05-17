@@ -6,14 +6,19 @@ the same config file currently set to train the model.
 
 use:
 ```
+python save_batches.py
+```
+if setting all values in the datamodule config file, or
+
+```
 python save_batches.py \
-    +batch_output_dir="/mnt/disks/bigbatches/batches_v0" \
+    datamodule.batch_output_dir="/mnt/disks/bigbatches/batches_v0" \
     datamodule.batch_size=2 \
     datamodule.num_workers=2 \
-    +num_train_batches=0 \
-    +num_val_batches=2
+    datamodule.num_train_batches=0 \
+    datamodule.num_val_batches=2
 ```
-
+if wanting to override these values for example
 """
 # This is needed to get multiprocessing/multiple workers to behave
 try:
@@ -110,12 +115,12 @@ def main(config: DictConfig):
     print_config(config, resolve=False)
 
     # Set up directory
-    os.makedirs(config.batch_output_dir, exist_ok=False)
+    os.makedirs(config_dm.batch_output_dir, exist_ok=False)
 
-    with open(f"{config.batch_output_dir}/datamodule.yaml", "w") as f:
-        f.write(OmegaConf.to_yaml(config.datamodule))
+    with open(f"{config_dm.batch_output_dir}/datamodule.yaml", "w") as f:
+        f.write(OmegaConf.to_yaml(config_dm))
 
-    shutil.copyfile(config_dm.configuration, f"{config.batch_output_dir}/data_configuration.yaml")
+    shutil.copyfile(config_dm.configuration, f"{config_dm.batch_output_dir}/data_configuration.yaml")
 
     dataloader_kwargs = dict(
         shuffle=False,
@@ -132,8 +137,8 @@ def main(config: DictConfig):
         persistent_workers=False,
     )
 
-    if config.num_val_batches > 0:
-        os.mkdir(f"{config.batch_output_dir}/val")
+    if config_dm.num_val_batches > 0:
+        os.mkdir(f"{config_dm.batch_output_dir}/val")
         print("----- Saving val batches -----")
 
         val_batch_pipe = _get_datapipe(
@@ -145,14 +150,14 @@ def main(config: DictConfig):
 
         _save_batches_with_dataloader(
             batch_pipe=val_batch_pipe,
-            batch_dir=f"{config.batch_output_dir}/val",
-            num_batches=config.num_val_batches,
+            batch_dir=f"{config_dm.batch_output_dir}/val",
+            num_batches=config_dm.num_val_batches,
             dataloader_kwargs=dataloader_kwargs,
             output_format="torch" if config.renewable == "pv" else "netcdf",
         )
 
-    if config.num_train_batches > 0:
-        os.mkdir(f"{config.batch_output_dir}/train")
+    if config_dm.num_train_batches > 0:
+        os.mkdir(f"{config_dm.batch_output_dir}/train")
         print("----- Saving train batches -----")
 
         train_batch_pipe = _get_datapipe(
@@ -164,8 +169,8 @@ def main(config: DictConfig):
 
         _save_batches_with_dataloader(
             batch_pipe=train_batch_pipe,
-            batch_dir=f"{config.batch_output_dir}/train",
-            num_batches=config.num_train_batches,
+            batch_dir=f"{config_dm.batch_output_dir}/train",
+            num_batches=config_dm.num_train_batches,
             dataloader_kwargs=dataloader_kwargs,
             output_format="torch" if config.renewable == "pv" else "netcdf",
         )

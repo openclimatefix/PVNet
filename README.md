@@ -152,10 +152,15 @@ Where `FULL-PATH-TO-REPO` represent the whole path to the PVNet repo on your loc
 
 ### Running the batch creation script
 
-Run the save_batches.py script to create batches with the following example arguments as:
+Run the save_batches.py script to create batches if setting parameters in the datamodule config (`streamed_batches.yaml` in this example):
 
 ```
-python scripts/save_batches.py datamodule=streamed_batches +batch_output_dir="./output" +num_train_batches=10 +num_val_batches=5
+python scripts/save_batches.py
+```
+or with the following example arguments to override config:
+
+```
+python scripts/save_batches.py datamodule=streamed_batches datamodule.batch_output_dir="./output" datamodule.num_train_batches=10 datamodule.num_val_batches=5
 ```
 
 In this function the datamodule argument looks for a config under `PVNet/configs/datamodule`. The examples here are either to use "premade_batches" or "streamed_batches".
