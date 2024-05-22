@@ -1,0 +1,30 @@
+early_stopping:
+  _target_: pvnet.callbacks.MainEarlyStopping
+  # name of the logged metric which determines when model is improving
+  monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
+  mode: "min" # can be "max" or "min"
+  patience: 10 # how many epochs (or val check periods) of not improving until training stops
+  min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
+
+learning_rate_monitor:
+  _target_: lightning.pytorch.callbacks.LearningRateMonitor
+  logging_interval: "epoch"
+
+model_summary:
+  _target_: lightning.pytorch.callbacks.ModelSummary
+  max_depth: 3
+
+model_checkpoint:
+  _target_: lightning.pytorch.callbacks.ModelCheckpoint
+  # name of the logged metric which determines when model is improving
+  monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
+  mode: "min" # can be "max" or "min"
+  save_top_k: 1 # save k best models (determined by above metric)
+  save_last: True # additionaly always save model from last epoch
+  every_n_epochs: 1
+  verbose: False
+  filename: "epoch={epoch}-step={step}"
+  # The path to where the model checkpoints will be stored
+  dirpath: "PLACEHOLDER/${model_name}" #${..model_name}
+  auto_insert_metric_name: False
+  save_on_train_epoch_end: False

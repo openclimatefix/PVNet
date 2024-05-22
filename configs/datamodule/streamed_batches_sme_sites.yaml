@@ -1,0 +1,18 @@
+_target_: pvnet.data.pv_site_datamodule.PVSiteDataModule
+# Path to the data configuration yaml file. You can find examples in the configuration subdirectory
+# in configs.example/datamodule/configuration
+# Use the full local path such as: /FULL/PATH/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
+configuration: /home/sukhil/ocf-code/PVNet/configs/datamodule/configuration/batch_creation_sme_sites_test.yaml
+num_workers: 1 # set to 20 otherwise
+prefetch_factor: 2
+batch_size: 8
+
+batch_output_dir: "/home/sukhil/ocf-code/PVNet/examples_batches"
+num_train_batches: 2
+num_val_batches: 1
+train_period:
+  - '2019-01-01'
+  - '2021-12-31'
+val_period:
+  - '2022-01-01'
+  - '2022-12-31'
