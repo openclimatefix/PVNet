@@ -19,7 +19,7 @@ class BaseDataModule(LightningDataModule):
         test_period=[None, None],
         batch_dir=None,
         shuffle_factor=100,
-        nwp_channels=None
+        nwp_channels=None,
     ):
         """Datamodule for training pvnet architecture.
 

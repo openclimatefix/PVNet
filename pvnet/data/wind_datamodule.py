@@ -34,7 +34,7 @@ class WindDataModule(BaseDataModule):
         # lets reduce the number of nwp channels
         if self.nwp_channels is not None:
             for key, channels in self.nwp_channels:
-                dim_name = f'nwp-{key}__channel'
+                dim_name = f"nwp-{key}__channel"
                 data_pipeline.filter_channels(dim_name=dim_name, channels=channels)
 
         data_pipeline = (
