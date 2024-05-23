@@ -2,6 +2,7 @@ from pvnet.data.datamodule import DataModule
 from pvnet.data.wind_datamodule import WindDataModule
 from pvnet.data.pv_site_datamodule import PVSiteDataModule
 import os
+from ocf_datapipes.batch.batches import BatchKey, NWPBatchKey
 
 
 def test_init():
@@ -28,6 +29,24 @@ def test_wind_init():
         test_period=[None, None],
         batch_dir="tests/data/sample_batches",
     )
+
+
+def test_wind_init_with_nwp_filter():
+    dm = WindDataModule(
+        configuration=None,
+        batch_size=2,
+        num_workers=0,
+        prefetch_factor=None,
+        train_period=[None, None],
+        val_period=[None, None],
+        test_period=[None, None],
+        batch_dir="tests/test_data/sample_batches",
+        nwp_channels={"ecmwf": ["t2m", "v200"]},
+    )
+
+    batch = next(iter(dm.train_dataloader()))
+    assert batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp_channel_names] == ["t2m", "v200"]
+    assert batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp].shape[2] == 2
 
 
 def test_pv_site_init():
