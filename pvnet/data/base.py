@@ -39,7 +39,7 @@ class BaseDataModule(LightningDataModule):
             shuffle_factor: Number of presaved batches to be split and reshuffled to create returned
                 batches. A larger factor means on each epoch the batches will be more diverse but at
                 the cost of using more RAM.
-
+            nwp_channels: Number of NWP channels to use. If None, the all channels are used
         """
         super().__init__()
         self.configuration = configuration

@@ -35,7 +35,7 @@ class WindDataModule(BaseDataModule):
         if self.nwp_channels is not None:
             for key, channels in self.nwp_channels.items():
                 dim_name = f"nwp-{key}__channel"
-                data_pipeline.filter_channels(dim_name=dim_name, channels=channels)
+                data_pipeline = data_pipeline.filter_channels(dim_name=dim_name, channels=channels)
 
         data_pipeline = (
             data_pipeline.batch(self.batch_size)
