@@ -40,11 +40,12 @@ def test_wind_init_with_nwp_filter():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        batch_dir="tests/test_data/sample_batches",
+        batch_dir="tests/test_data/sample_wind_batches",
         nwp_channels={"ecmwf": ["t2m", "v200"]},
     )
+    dataloader = iter(dm.train_dataloader())
 
-    batch = next(iter(dm.train_dataloader()))
+    batch = next(dataloader)
     assert batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp_channel_names] == ["t2m", "v200"]
     assert batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp].shape[2] == 2
 
