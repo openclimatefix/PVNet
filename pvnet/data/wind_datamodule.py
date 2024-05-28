@@ -29,13 +29,8 @@ class WindDataModule(BaseDataModule):
         data_pipeline = windnet_netcdf_datapipe(
             keys=["wind", "nwp", "sensor"],
             filenames=filenames,
+            nwp_channels=self.nwp_channels,
         )
-
-        # lets reduce the number of nwp channels
-        if self.nwp_channels is not None:
-            for key, channels in self.nwp_channels.items():
-                dim_name = f"nwp-{key}__channel"
-                data_pipeline = data_pipeline.filter_channels(dim_name=dim_name, channels=channels)
 
         data_pipeline = (
             data_pipeline.batch(self.batch_size)
