@@ -11,6 +11,7 @@ class WindDataModule(BaseDataModule):
     """Datamodule for training windnet and using windnet pipeline in `ocf_datapipes`."""
 
     def _get_datapipe(self, start_time, end_time):
+        # TODO is this is not right, need to load full windnet pipeline
         data_pipeline = windnet_netcdf_datapipe(
             self.configuration,
             keys=["wind", "nwp", "sensor"],
@@ -28,7 +29,9 @@ class WindDataModule(BaseDataModule):
         data_pipeline = windnet_netcdf_datapipe(
             keys=["wind", "nwp", "sensor"],
             filenames=filenames,
+            nwp_channels=self.nwp_channels,
         )
+
         data_pipeline = (
             data_pipeline.batch(self.batch_size)
             .map(stack_np_examples_into_batch)

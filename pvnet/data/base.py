@@ -19,6 +19,7 @@ class BaseDataModule(LightningDataModule):
         test_period=[None, None],
         batch_dir=None,
         shuffle_factor=100,
+        nwp_channels=None,
     ):
         """Datamodule for training pvnet architecture.
 
@@ -38,16 +39,23 @@ class BaseDataModule(LightningDataModule):
             shuffle_factor: Number of presaved batches to be split and reshuffled to create returned
                 batches. A larger factor means on each epoch the batches will be more diverse but at
                 the cost of using more RAM.
-
+            nwp_channels: Number of NWP channels to use. If None, the all channels are used
         """
         super().__init__()
         self.configuration = configuration
         self.batch_size = batch_size
         self.batch_dir = batch_dir
         self.shuffle_factor = shuffle_factor
+        self.nwp_channels = nwp_channels
 
         if not ((batch_dir is not None) ^ (configuration is not None)):
             raise ValueError("Exactly one of `batch_dir` or `configuration` must be set.")
+
+        if (nwp_channels is not None) and (batch_dir is None):
+            raise ValueError(
+                "In order for 'nwp_channels' to work, we need batch_dir. "
+                "Otherwise the nwp channels is one in the configuration"
+            )
 
         if batch_dir is not None:
             if any([period != [None, None] for period in [train_period, val_period, test_period]]):
