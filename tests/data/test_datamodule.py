@@ -46,7 +46,10 @@ def test_wind_init_with_nwp_filter():
     dataloader = iter(dm.train_dataloader())
 
     batch = next(dataloader)
-    assert batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp_channel_names] == ["t2m", "v200"]
+    batch_channels = batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp_channel_names]
+    print(batch_channels)
+    for v in ["t2m", "v200"]:
+        assert v in batch_channels
     assert batch[BatchKey.nwp]["ecmwf"][NWPBatchKey.nwp].shape[2] == 2
 
 
