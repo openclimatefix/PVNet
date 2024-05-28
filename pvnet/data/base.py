@@ -51,10 +51,10 @@ class BaseDataModule(LightningDataModule):
         if not ((batch_dir is not None) ^ (configuration is not None)):
             raise ValueError("Exactly one of `batch_dir` or `configuration` must be set.")
 
-        if not (nwp_channels is not None) and (batch_dir is None):
+        if (nwp_channels is not None) and (batch_dir is None):
             raise ValueError(
                 "In order for 'nwp_channels' to work, we need batch_dir. "
-                "Otherwise the nwp channels id one in the configuration"
+                "Otherwise the nwp channels is one in the configuration"
             )
 
         if batch_dir is not None:
