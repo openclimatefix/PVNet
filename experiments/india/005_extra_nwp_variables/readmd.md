@@ -2,15 +2,15 @@
 
 I wanted to run Windnet but testing some new nwp variables from ecmwf
 
-General conclusion, although more experiments could be done. 
-The current nwp variables are about right. 
-If you add lots it makes it worse. 
-If you take some away, it makes it worse. 
+General conclusion, although more experiments could be done.
+The current nwp variables are about right.
+If you add lots it makes it worse.
+If you take some away, it makes it worse.
 
 ## Bugs
 
 Ran into a problem where found that some xamples have
-`d.__getitem__('nwp-ecmwf__init_time_utc').values` had size 50, where it should be just one values. I removed these examples. This might 
+`d.__getitem__('nwp-ecmwf__init_time_utc').values` had size 50, where it should be just one values. I removed these examples. This might
 
 ## Experiments
 
@@ -53,5 +53,3 @@ The experiment on wandb is [here](https://wandb.ai/openclimatefix/india/runs/22v
 
 The raw data is here
 ![](mae_steps.png "mae_steps")
-
-

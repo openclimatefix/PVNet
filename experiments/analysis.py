@@ -109,7 +109,6 @@ def main(runs: list[str], run_names: list[str]) -> None:
     plt.show()
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     "5llq8iw6"
