@@ -62,4 +62,3 @@ def test_weighted_quantile_model_forward(multimodal_quantile_model_ignore_minute
 
     # Backwards on sum drives sum to zero
     y_quantiles.sum().backward()
-
