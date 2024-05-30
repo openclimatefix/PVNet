@@ -300,6 +300,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         # Number of timestemps for 30 minutely data
         self.history_len = history_minutes // interval_minutes
         self.forecast_len = (forecast_minutes - forecast_minutes_ignore) // interval_minutes
+        self.forecast_len_ignore = forecast_minutes_ignore // interval_minutes
 
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 

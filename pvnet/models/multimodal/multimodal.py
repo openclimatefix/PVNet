@@ -268,7 +268,7 @@ class Model(MultimodalBaseModel):
 
         if self.include_sun:
             self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len + self.history_len + 1),
+                in_features=2 * (self.forecast_len + self.forecast_len_ignore + self.history_len + 1),
                 out_features=16,
             )
 
