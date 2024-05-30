@@ -69,6 +69,7 @@ class Model(MultimodalBaseModel):
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
         use_weighted_loss: Optional[bool] = False,
+        forecast_minutes_ignore: Optional[int] = 0,
     ):
         """Neural network which combines information from different sources.
 
@@ -127,6 +128,8 @@ class Model(MultimodalBaseModel):
                 the model to use. This allows us to overprepare batches and slice from them for the
                 data we need for a model run.
             use_weighted_loss: Whether to use a weighted loss function
+            forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
+                For example if set to 60, the model doesnt predict the first 60 minutes
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -150,6 +153,7 @@ class Model(MultimodalBaseModel):
             interval_minutes=interval_minutes,
             timestep_intervals_to_plot=timestep_intervals_to_plot,
             use_weighted_loss=use_weighted_loss,
+            forecast_minutes_ignore=forecast_minutes_ignore,
         )
 
         # Number of features expected by the output_network
