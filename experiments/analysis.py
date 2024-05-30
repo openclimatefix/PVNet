@@ -6,6 +6,7 @@ import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import wandb
 
 
@@ -53,6 +54,9 @@ def main(runs: list[str], run_names: list[str]) -> None:
         [720, 1440],
         [1440, 2880],
     ]
+
+    groups_df = []
+    grouping_starts = [grouping[0] for grouping in groupings]
     header = "| Timestep |"
     separator = "| --- |"
     for run_name in run_names:
@@ -68,14 +72,21 @@ def main(runs: list[str], run_names: list[str]) -> None:
             for idx, timestep in enumerate(column_timesteps)
             if timestep >= grouping[0] and timestep <= grouping[1]
         ]
+        data_one_group = []
         for df in dfs:
-            group_string += f" {df.iloc[group_idx].mean()*100.:0.3f} |"
+            mean_row = df.iloc[group_idx].mean()
+            group_string += f" {mean_row:0.3f} |"
+            data_one_group.append(mean_row)
         print(group_string)
+
+        groups_df.append(data_one_group)
+
+    groups_df = pd.DataFrame(groups_df, columns=run_names, index=grouping_starts)
 
     for idx, df in enumerate(dfs):
         print(f"{run_names[idx]}: {df.mean()*100:0.3f}")
 
-    # Plot the error on per timestep, and grouped timesteps
+    # Plot the error on per timestep, and all timesteps
     plt.figure()
     for idx, df in enumerate(dfs):
         plt.plot(column_timesteps, df, label=run_names[idx])
@@ -85,6 +96,18 @@ def main(runs: list[str], run_names: list[str]) -> None:
     plt.title("MAE % for each timestep")
     plt.savefig("mae_per_timestep.png")
     plt.show()
+
+    # Plot the error on per timestep, and grouped timesteps
+    plt.figure()
+    for run_name in run_names:
+        plt.plot(groups_df[run_name], label=run_name)
+    plt.legend()
+    plt.xlabel("Timestep (minutes)")
+    plt.ylabel("MAE %")
+    plt.title("MAE % for each timestep")
+    plt.savefig("mae_per_timestep.png")
+    plt.show()
+
 
 
 if __name__ == "__main__":
