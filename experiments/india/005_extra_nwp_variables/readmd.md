@@ -2,6 +2,11 @@
 
 I wanted to run Windnet but testing some new nwp variables from ecmwf
 
+General conclusion, although more experiments could be done. 
+The current nwp variables are about right. 
+If you add lots it makes it worse. 
+If you take some away, it makes it worse. 
+
 ## Bugs
 
 Ran into a problem where found that some xamples have
