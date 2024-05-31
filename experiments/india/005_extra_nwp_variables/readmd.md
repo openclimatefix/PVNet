@@ -14,7 +14,7 @@ Ran into a problem where found that some xamples have
 
 ## Experiments
 
-The number of samples were 8000 when training. 
+The number of samples were 8000 when training.
 
 ### 15 variablles
 Run windnet with `'hcc', 'lcc', 'mcc', 'prate', 'sde', 'sr', 't2m', 'tcc', 'u10',
