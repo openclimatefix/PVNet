@@ -3,9 +3,9 @@
 The idea was to create a forecast for DA (day-ahead) only for Windnet.
 We hope this would bring down the DA MAE values.
 
-We do this by not forecasting the first X hours. 
+We do this by not forecasting the first X hours.
 
-Unfortunately, it doesnt not look like ignore X hours, make the DA forecast better. 
+Unfortunately, it doesnt not look like ignore X hours, make the DA forecast better.
 
 ## Experiments
 
