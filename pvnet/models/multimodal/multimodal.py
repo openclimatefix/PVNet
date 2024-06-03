@@ -116,7 +116,8 @@ class Model(MultimodalBaseModel):
             wind_interval_minutes: The interval between each sample of the wind data
             wind_encoder: Encoder for wind data
             wind_history_minutes: Length of recent wind data used as input.
-            nwp_interval_minutes: Dictionary of intervals between each sample of NWP data for each source
+            nwp_interval_minutes: Dictionary of the intervals between each sample of the NWP
+                data for each source
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
