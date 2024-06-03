@@ -30,3 +30,8 @@ Unfortunately, it doesnt not look like ignore X hours, make the DA forecast bett
 | 1440-2880 minutes | 0.071 | 0.071   | 0.071   |
 
 ![](mae_steps.png "mae_steps")
+
+Here's two examples from the 6 hour ignore model, one that forecated it well, one that didnt
+
+![](bad.png "bad")
+![](good.png "good")
