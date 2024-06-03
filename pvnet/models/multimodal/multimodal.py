@@ -2,10 +2,10 @@
 
 from collections import OrderedDict
 from typing import Optional
-from omegaconf import DictConfig
 
 import torch
 from ocf_datapipes.batch import BatchKey, NWPBatchKey
+from omegaconf import DictConfig
 from torch import nn
 
 import pvnet
