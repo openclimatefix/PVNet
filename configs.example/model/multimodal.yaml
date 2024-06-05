@@ -89,7 +89,7 @@ nwp_history_minutes:
 nwp_forecast_minutes:
   ukv: 480
   ecmwf: 480
-# This dictionary is optional, but make sure to include if using data with different time resolution as defaults to 60
+# Optional; defaults to 60, so must be set for data with different time resolution
 nwp_interval_minutes:
   ukv: 60
   ecmwf: 60
