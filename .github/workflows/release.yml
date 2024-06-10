@@ -7,6 +7,7 @@ on:
     paths-ignore:
       - "configs.example/**" # ignores all files in configs.example
       - "**/README.md" # ignores all README files
+      - "experiments/**" # ignores all files in experiments directory
 
 jobs:
   release:
