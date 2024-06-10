@@ -1,4 +1,5 @@
 """ Data module for pytorch lightning """
+
 import glob
 
 from ocf_datapipes.batch import BatchKey, batch_to_tensor, stack_np_examples_into_batch

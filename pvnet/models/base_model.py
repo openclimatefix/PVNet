@@ -1,4 +1,5 @@
 """Base model for all PVNet submodels"""
+
 import json
 import logging
 import os

@@ -1,4 +1,5 @@
 """Utils common between Wind and PV datamodules"""
+
 from ocf_datapipes.batch import BatchKey, unstack_np_batch_into_examples
 from torch.utils.data import IterDataPipe, functional_datapipe
 

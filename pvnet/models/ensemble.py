@@ -1,4 +1,5 @@
 """Model which uses mutliple prediction heads"""
+
 from typing import Optional
 
 import torch
