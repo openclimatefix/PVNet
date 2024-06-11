@@ -124,10 +124,10 @@ def train(config: DictConfig) -> Optional[float]:
 
                 # upload configuration up to wandb
                 os.makedirs("./configuration", exist_ok=True)
-                shutil.copyfile(data_config, f"./configuration/data_config.yaml")
-                OmegaConf.save(config, f"./configuration/config.yaml")
-                wandb_logger.experiment.save(f"./configuration/data_config.yaml")
-                wandb_logger.experiment.save(f"./configuration/config.yaml")
+                shutil.copyfile(data_config, "./configuration/data_config.yaml")
+                OmegaConf.save(config, "./configuration/config.yaml")
+                wandb_logger.experiment.save("./configuration/data_config.yaml")
+                wandb_logger.experiment.save("./configuration/config.yaml")
 
                 break
 
