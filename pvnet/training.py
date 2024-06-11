@@ -121,6 +121,14 @@ def train(config: DictConfig) -> Optional[float]:
 
                 assert os.path.isfile(data_config), f"Data config file not found: {data_config}"
                 shutil.copyfile(data_config, f"{callback.dirpath}/data_config.yaml")
+
+                # upload configuration up to wandb
+                OmegaConf.save(config, "./experiment_config.yaml")
+                wandb_logger.experiment.save(
+                    f"{callback.dirpath}/data_config.yaml", callback.dirpath
+                )
+                wandb_logger.experiment.save("./experiment_config.yaml")
+
                 break
 
     should_pretrain = False
