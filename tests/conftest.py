@@ -303,3 +303,12 @@ def multimodal_weighted_quantile_model(multimodal_model_kwargs):
         output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, use_weighted_loss=True
     )
     return model
+
+
+@pytest.fixture()
+def multimodal_quantile_model_ignore_minutes(multimodal_model_kwargs):
+    """Only forecsat second half of the 8 hours"""
+    model = Model(
+        output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, forecast_minutes_ignore=240
+    )
+    return model

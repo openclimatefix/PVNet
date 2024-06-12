@@ -245,7 +245,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
-    """Abtstract base class for PVNet submodels"""
+    """Abstract base class for PVNet submodels"""
 
     def __init__(
         self,
@@ -257,6 +257,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         interval_minutes: int = 30,
         timestep_intervals_to_plot: Optional[list[int]] = None,
         use_weighted_loss: bool = False,
+        forecast_minutes_ignore: Optional[int] = 0,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -270,6 +271,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             interval_minutes: The interval in minutes between each timestep in the data
             timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
             use_weighted_loss: Whether to use a weighted loss function
+            forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
+                For example if set to 60, the model doesnt predict the first 60 minutes
         """
         super().__init__()
 
@@ -292,10 +295,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.forecast_minutes = forecast_minutes
         self.output_quantiles = output_quantiles
         self.interval_minutes = interval_minutes
+        self.forecast_minutes_ignore = forecast_minutes_ignore
 
         # Number of timestemps for 30 minutely data
         self.history_len = history_minutes // interval_minutes
-        self.forecast_len = forecast_minutes // interval_minutes
+        self.forecast_len = (forecast_minutes - forecast_minutes_ignore) // interval_minutes
+        self.forecast_len_ignore = forecast_minutes_ignore // interval_minutes
 
         self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
 
@@ -334,7 +339,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         y_median = y_quantiles[..., idx]
         return y_median
 
-    def _calculate_qauntile_loss(self, y_quantiles, y):
+    def _calculate_quantile_loss(self, y_quantiles, y):
         """Calculate quantile loss.
 
         Note:
@@ -366,7 +371,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         losses = {}
 
         if self.use_quantile_regression:
-            losses["quantile_loss"] = self._calculate_qauntile_loss(y_hat, y)
+            losses["quantile_loss"] = self._calculate_quantile_loss(y_hat, y)
             y_hat = self._quantiles_to_prediction(y_hat)
 
         # calculate mse, mae
