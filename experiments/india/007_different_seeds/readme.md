@@ -2,11 +2,11 @@
 
 Want to see the effect or training a model with different seeds.
 
-We can see that the results for different seeds can vary by 0.5%, 
+We can see that the results for different seeds can vary by 0.5%,
 and some models being better at different time horizons than others
 
 ## Experiments
-- seed 1 - [miszfep5](https://wandb.ai/openclimatefix/india/runs/miszfep5) 
+- seed 1 - [miszfep5](https://wandb.ai/openclimatefix/india/runs/miszfep5)
 - seed 2 - [cxshv2q4](https://wandb.ai/openclimatefix/india/runs/cxshv2q4)
 - seed 3 - [m46wdrr7](https://wandb.ai/openclimatefix/india/runs/m46wdrr7)
 
