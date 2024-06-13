@@ -15,6 +15,7 @@ import wandb
 from pvnet.load_model import get_model_from_checkpoints
 
 wandb_repo = "openclimatefix/pvnet2.1"
+huggingface_repo = "openclimatefix/pvnet_uk_region"
 
 
 def push_to_huggingface(
@@ -66,7 +67,7 @@ def push_to_huggingface(
         data_config=data_config,
         wandb_ids=wandb_ids,
         push_to_hub=push_to_hub,
-        repo_id=wandb_repo if push_to_hub else None,
+        repo_id=huggingface_repo if push_to_hub else None,
     )
 
     if local_path is None:

@@ -143,6 +143,7 @@ class Model(MultimodalBaseModel):
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
         self.interval_minutes = interval_minutes
+        self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
 
         super().__init__(
