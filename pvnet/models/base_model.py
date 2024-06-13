@@ -85,6 +85,7 @@ def minimize_data_config(input_path, output_path, model):
     Args:
         input_path: Path to input datapipes configuration file
         output_path: Location to save the output configuration file
+        model: The PVNet model object
     """
     with open(input_path) as cfg:
         config = yaml.load(cfg, Loader=yaml.FullLoader)
