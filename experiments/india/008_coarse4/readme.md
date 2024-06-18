@@ -1,6 +1,6 @@
 # Coarser data and more examples
 
-We down samples the ECMWF data from 0.05 to 0.2. 
+We down samples the ECMWF data from 0.05 to 0.2.
 In previous experiments we used a 0.1 resolution, as this is the same as the live ECMWF data.
 
 By reducing the resolution we can increase the number of samples we have to train on.
@@ -11,12 +11,12 @@ This is approximately 5 times more samples than the previous experiments.
 
 
 ### b8_s1
-Batche size 8, with 0.2 degree NWP data. 
+Batche size 8, with 0.2 degree NWP data.
 https://wandb.ai/openclimatefix/india/runs/w85hftb6
 
 
 ### b8_s2
-Batch size 8, different seed, with 0.2 degree NWP data. 
+Batch size 8, different seed, with 0.2 degree NWP data.
 https://wandb.ai/openclimatefix/india/runs/k4x1tunj
 
 ### b32_s3
@@ -24,17 +24,17 @@ Batch size 32, with 0.2 degree NWP data. Also kept the learning rate a bit highe
 https://wandb.ai/openclimatefix/india/runs/ktale7pa
 
 ### old
-Old experiment with 0.1 degree NWP data. 
+Old experiment with 0.1 degree NWP data.
 https://wandb.ai/openclimatefix/india/runs/m46wdrr7.
 Note the validation batches are different that the experiments above.
 
-Interesting the GPU memory did not increase much better experiments 2 and 3. 
-Need to check that 32 batches were being passed through. 
+Interesting the GPU memory did not increase much better experiments 2 and 3.
+Need to check that 32 batches were being passed through.
 
 ## Results
 
 The coarsening data does seem to improve the experiments results in the first 10 hours of the forecast.
-DA forecast looks very similar. 
+DA forecast looks very similar.
 
 Still spike results in the individual runs
 
