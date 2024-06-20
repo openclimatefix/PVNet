@@ -33,7 +33,7 @@ https://wandb.ai/openclimatefix/india/runs/sk5ek3pk
 
 
 ### early stopping on MAE/val
-Changing from quantile_loss to MAE/val to stop early on. This should mean the model does more training epochs, and the results we are interested int.  
+Changing from quantile_loss to MAE/val to stop early on. This should mean the model does more training epochs, and the results we are interested int.
 https://wandb.ai/openclimatefix/india/runs/a5nkkzj6
 
 
@@ -48,11 +48,11 @@ Need to check that 32 batches were being passed through.
 ## Results
 
 The coarsening data does seem to improve the experiments results in the first 10 hours of the forecast.
-DA forecast looks very similar. Note the 0 hour forecast has a large amount of variation. 
+DA forecast looks very similar. Note the 0 hour forecast has a large amount of variation.
 
 
 
-Still spike results in the individual runs. 
+Still spike results in the individual runs.
 
 | Timestep | b8_s1 MAE % | b8_s2 MAE % | b32_s3 MAE % | epochs MAE % | small MAE % | mae/val MAE % | old MAE % |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -73,6 +73,5 @@ Still spike results in the individual runs.
 
 ![](mae_step_smooth.png "mae_steps")
 
-I think its worth noting the model traing MAE is around `3`% and the validation MAE is about `7`%, so there is good reason to believe that the model is over fit to the trianing set. 
-It would be good to plot some of the trainin examples, to see if they are less spiky. 
-
+I think its worth noting the model traing MAE is around `3`% and the validation MAE is about `7`%, so there is good reason to believe that the model is over fit to the trianing set.
+It would be good to plot some of the trainin examples, to see if they are less spiky.
