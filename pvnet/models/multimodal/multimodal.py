@@ -168,7 +168,6 @@ class Model(MultimodalBaseModel):
         if self.include_sat:
             # Param checks
             assert sat_history_minutes is not None
-            assert nwp_forecast_minutes is not None
 
             self.sat_sequence_len = (
                 sat_history_minutes - min_sat_delay_minutes
