@@ -1,6 +1,6 @@
 # Coarser data and more examples
 
-We down samples the ECMWF data from 0.05 to 0.2.
+We downsampled the ECMWF data from 0.05 to 0.2.
 In previous experiments we used a 0.1 resolution, as this is the same as the live ECMWF data.
 
 By reducing the resolution we can increase the number of samples we have to train on.
