@@ -2,9 +2,9 @@
 Constructs batches where each batch includes all GSPs and only a single timestamp.
 
 Currently a slightly hacky implementation due to the way the configs are done. This script will use
-the same config file currently set to train the model. In the datamodule config file it is possible 
-to set the batch_output_dir and number of train/val batches, they can also be overriden in the command as 
-shown in the example below.  
+the same config file currently set to train the model. In the datamodule config file it is possible
+to set the batch_output_dir and number of train/val batches, they can also be overriden in the command as
+shown in the example below.
 
 use:
 ```
@@ -164,7 +164,9 @@ def main(config: DictConfig):
     with open(f"{config_dm.batch_output_dir}/datamodule.yaml", "w") as f:
         f.write(OmegaConf.to_yaml(config.datamodule))
 
-    shutil.copyfile(config_dm.configuration, f"{config_dm.batch_output_dir}/data_configuration.yaml")
+    shutil.copyfile(
+        config_dm.configuration, f"{config_dm.batch_output_dir}/data_configuration.yaml"
+    )
 
     dataloader_kwargs = dict(
         shuffle=False,
