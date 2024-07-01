@@ -164,7 +164,9 @@ def main(config: DictConfig):
     with open(f"{config_dm.batch_output_dir}/datamodule.yaml", "w") as f:
         f.write(OmegaConf.to_yaml(config.datamodule))
 
-    shutil.copyfile(config_dm.configuration, f"{config_dm.batch_output_dir}/data_configuration.yaml")
+    shutil.copyfile(
+        config_dm.configuration, f"{config_dm.batch_output_dir}/data_configuration.yaml"
+    )
 
     dataloader_kwargs = dict(
         shuffle=False,
