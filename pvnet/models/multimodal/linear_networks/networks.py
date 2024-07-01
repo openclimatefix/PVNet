@@ -316,7 +316,7 @@ class TabNet(AbstractLinearNetwork):
             virtual_batch_size=virtual_batch_size,
             momentum=momentum,
             mask_type=mask_type,
-            group_attention_matrix=rand(4, in_features)
+            group_attention_matrix=rand(4, in_features),
         )
 
         self.activation = nn.LeakyReLU(negative_slope=0.01)
