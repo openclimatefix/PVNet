@@ -15,7 +15,7 @@ dependencies = [
     "ipykernel",
     "h5netcdf",
     "torch>=2.0.0",
-    "lightning==2.3.0",
+    "pytorch_lightning==2.3.0",
     "torchvision",
     "pytest",
     "pytest-cov",
