@@ -2,7 +2,7 @@
 Constructs batches where each batch includes all GSPs and only a single timestamp.
 
 Currently a slightly hacky implementation due to the way the configs are done. This script will use
-the same config file currently set to train the model. In the datamodule config it is possible 
+the same config file currently set to train the model. In the datamodule config it is possible
 to set the batch_output_dir and number of train/val batches, they can also be overriden in the
 command as shown in the example below.
 
