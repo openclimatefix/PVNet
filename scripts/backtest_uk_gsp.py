@@ -196,10 +196,6 @@ def get_times_datapipe(config_path):
         Datapipe: A Datapipe yielding init-times
     """
 
-    # Set up ID location query object
-    ds_gsp = get_gsp_ds(config_path)
-    GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
-
     # Filter the init-times to times we have all input data for
     available_target_times = get_available_t0_times(
         start_datetime,

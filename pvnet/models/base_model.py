@@ -94,7 +94,7 @@ def minimize_data_config(input_path, output_path, model):
         if not model.include_nwp:
             del config["input_data"]["nwp"]
         else:
-            for nwp_source in list(config["input_data"]["nwp"].keys()):
+            for nwp_source in config["input_data"]["nwp"].keys():
                 nwp_config = config["input_data"]["nwp"][nwp_source]
 
                 if nwp_source not in model.nwp_encoders_dict:
