@@ -13,11 +13,10 @@ import torch
 import torch.nn.functional as F
 import wandb
 import yaml
-from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
+from huggingface_hub import ModelCard, ModelCardData
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-from huggingface_hub.utils._deprecation import _deprecate_positional_args
 from ocf_datapipes.batch import BatchKey
 from ocf_ml_metrics.evaluation.evaluation import evaluation
 
@@ -168,7 +167,6 @@ class PVNetModelHubMixin:
             model_file = os.path.join(model_id, PYTORCH_WEIGHTS_NAME)
             config_file = os.path.join(model_id, CONFIG_NAME)
         else:
-
             # load model file
             model_file = hf_hub_download(
                 repo_id=model_id,
