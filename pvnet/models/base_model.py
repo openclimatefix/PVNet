@@ -180,10 +180,10 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 local_files_only=local_files_only,
             )
 
-        if "config" not in model_kwargs:
-            raise ValueError("Config must be supplied to instantiate model")
+        if "config" in model_kwargs:
+            logger.debug("Removing config from model_kwargs to avoid conflicts with model init.")
+            model_kwargs.update(model_kwargs.pop("config"))
 
-        model_kwargs.update(model_kwargs.pop("config"))
         model = hydra.utils.instantiate(model_kwargs)
 
         state_dict = torch.load(model_file, map_location=torch.device(map_location))
