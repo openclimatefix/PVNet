@@ -168,7 +168,7 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     # Overwrite the GSP data which is already in the datapipes dict
     datapipes_dict["gsp"] = IterableWrapper([ds_fake_gsp])
 
-    # Use create_t0_and_loc_datapipes to get datapipe of init-times
+    # Use create_t0_datapipe to get datapipe of init-times
     t0_datapipe = create_t0_datapipe(
         datapipes_dict,
         configuration=config,
