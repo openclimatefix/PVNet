@@ -54,7 +54,6 @@ from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
 from pvnet.load_model import get_model_from_checkpoints
-from pvnet.utils import GSPLocationLookup
 
 # ------------------------------------------------------------------
 # USER CONFIGURED VARIABLES
