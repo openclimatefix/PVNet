@@ -139,7 +139,7 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     # Pop out the config file
     config = datapipes_dict.pop("config")
 
-    # We are going to abuse the `create_datapipes()` function to find the init-times in
+    # We are going to abuse the `create_t0_datapipe()` function to find the init-times in
     # potential_init_times which we have input data for. To do this, we will feed in some fake GSP
     # data which has the potential_init_times as timestamps. This is a bit hacky but works for now
 
