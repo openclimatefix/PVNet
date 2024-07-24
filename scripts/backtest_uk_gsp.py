@@ -42,11 +42,10 @@ from ocf_datapipes.batch import (
 )
 from ocf_datapipes.config.load import load_yaml_configuration
 from ocf_datapipes.load import OpenGSP
-from ocf_datapipes.training.common import create_t0_and_loc_datapipes
-from ocf_datapipes.training.pvnet import (
-    _get_datapipes_dict,
-    construct_sliced_data_pipeline,
+from ocf_datapipes.training.pvnet_all_gsp import (
+    create_t0_datapipe, construct_sliced_data_pipeline
 )
+from ocf_datapipes.training.common import _get_datapipes_dict
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
 from omegaconf import DictConfig
 
@@ -62,16 +61,16 @@ from pvnet.utils import GSPLocationLookup
 
 # ------------------------------------------------------------------
 # USER CONFIGURED VARIABLES
-output_dir = "/mnt/disks/backtest/test_backtest"
+output_dir = "/mnt/disks/extra_batches/test_backtest"
 
 # Local directory to load the PVNet checkpoint from. By default this should pull the best performing
 # checkpoint on the val set
-model_chckpoint_dir = "/home/jamesfulton/repos/PVNet/checkpoints/kqaknmuc"
+model_chckpoint_dir = "/home/jamesfulton/repos/PVNet/checkpoints/q911tei5"
 
 # Local directory to load the summation model checkpoint from. By default this should pull the best
 # performing checkpoint on the val set. If set to None a simple sum is used instead
 summation_chckpoint_dir = (
-    "/home/jamesfulton/repos/PVNet_summation/checkpoints/pvnet_summation/nw673nw2"
+    "/home/jamesfulton/repos/PVNet_summation/checkpoints/pvnet_summation/73oa4w9t"
 )
 
 # Forecasts will be made for all available init times between these
@@ -144,7 +143,7 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     # Pop out the config file
     config = datapipes_dict.pop("config")
 
-    # We are going to abuse the `create_t0_and_loc_datapipes()` function to find the init-times in
+    # We are going to abuse the `create_datapipes()` function to find the init-times in
     # potential_init_times which we have input data for. To do this, we will feed in some fake GSP
     # data which has the potential_init_times as timestamps. This is a bit hacky but works for now
 
@@ -173,17 +172,14 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     datapipes_dict["gsp"] = IterableWrapper([ds_fake_gsp])
 
     # Use create_t0_and_loc_datapipes to get datapipe of init-times
-    location_pipe, t0_datapipe = create_t0_and_loc_datapipes(
+    t0_datapipe = create_t0_datapipe(
         datapipes_dict,
         configuration=config,
-        key_for_t0="gsp",
         shuffle=False,
     )
 
-    # Create a full list of available init-times. Note that we need to loop over the t0s AND
-    # locations to avoid the torch datapipes buffer overflow but we don't actually use the location
-    available_init_times = [t0 for _, t0 in zip(location_pipe, t0_datapipe)]
-    available_init_times = pd.to_datetime(available_init_times)
+    # Create a full list of available init-times
+    available_init_times = pd.to_datetime([t0 for t0 in t0_datapipe])
 
     logger.info(
         f"{len(available_init_times)} out of {len(potential_init_times)} "
@@ -193,16 +189,14 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     return available_init_times
 
 
-def get_loctimes_datapipes(config_path):
-    """Create location and init-time datapipes
+def get_times_datapipe(config_path):
+    """Create init-time datapipe
 
     Args:
         config_path: Path to data config file
 
     Returns:
-        tuple: A tuple of datapipes
-            - Datapipe yielding locations
-            - Datapipe yielding init-times
+        Datapipe: A Datapipe yielding init-times
     """
 
     # Set up ID location query object
@@ -222,25 +216,13 @@ def get_loctimes_datapipes(config_path):
     # the backtest will end up producing
     available_target_times.to_frame().to_csv(f"{output_dir}/t0_times.csv")
 
-    # Cycle the GSP locations
-    location_pipe = IterableWrapper([[gsp_id_to_loc(gsp_id) for gsp_id in ALL_GSP_IDS]]).repeat(
-        num_t0s
-    )
-
-    # Shard and then unbatch the locations so that each worker will generate all samples for all
-    # GSPs and for a single init-time
-    location_pipe = location_pipe.sharding_filter()
-    location_pipe = location_pipe.unbatch(unbatch_level=1)
-
     # Create times datapipe so each worker receives 317 copies of the same datetime for its batch
-    t0_datapipe = IterableWrapper([[t0 for gsp_id in ALL_GSP_IDS] for t0 in available_target_times])
+    t0_datapipe = IterableWrapper(available_target_times)
     t0_datapipe = t0_datapipe.sharding_filter()
-    t0_datapipe = t0_datapipe.unbatch(unbatch_level=1)
 
-    t0_datapipe = t0_datapipe.set_length(num_t0s * len(ALL_GSP_IDS))
-    location_pipe = location_pipe.set_length(num_t0s * len(ALL_GSP_IDS))
+    t0_datapipe = t0_datapipe.set_length(num_t0s)
 
-    return location_pipe, t0_datapipe
+    return t0_datapipe
 
 
 class ModelPipe:
@@ -375,25 +357,17 @@ def get_datapipe(config_path: str) -> NumpyBatch:
     """
 
     # Construct location and init-time datapipes
-    location_pipe, t0_datapipe = get_loctimes_datapipes(config_path)
-
-    # Get the number of init-times
-    num_batches = len(t0_datapipe) // len(ALL_GSP_IDS)
+    t0_datapipe = get_times_datapipe(config_path)
 
     # Construct sample datapipes
     data_pipeline = construct_sliced_data_pipeline(
         config_path,
-        location_pipe,
         t0_datapipe,
     )
 
-    # Batch so that each worker returns a batch of all locations for a single init-time
-    # Also convert to tensor for model
-    data_pipeline = (
-        data_pipeline.batch(len(ALL_GSP_IDS)).map(stack_np_examples_into_batch).map(batch_to_tensor)
-    )
+    # Convert to tensor for model
+    data_pipeline = data_pipeline.map(batch_to_tensor).set_length(len(t0_datapipe))
 
-    data_pipeline = data_pipeline.set_length(num_batches)
 
     return data_pipeline
 

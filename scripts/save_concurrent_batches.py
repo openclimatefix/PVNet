@@ -36,14 +36,15 @@ from ocf_datapipes.batch import BatchKey, batch_to_tensor, stack_np_examples_int
 from ocf_datapipes.training.common import (
     open_and_return_datapipes,
 )
-from ocf_datapipes.training.pvnet import construct_loctime_pipelines, construct_sliced_data_pipeline
+from ocf_datapipes.training.pvnet_all_gsp import (
+    construct_time_pipeline, construct_sliced_data_pipeline
+)
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
-from pvnet.utils import GSPLocationLookup
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
@@ -61,73 +62,23 @@ class _save_batch_func_factory:
         torch.save(batch, f"{self.batch_dir}/{i:06}.pt")
 
 
-def select_first(x):
-    """Select zeroth element from indexable object"""
-    return x[0]
+def _get_datapipe(config_path, start_time, end_time, n_batches):
 
-
-def _get_loctimes_datapipes(config_path, start_time, end_time, n_batches):
-    # Set up ID location query object
-    ds_gsp = next(
-        iter(
-            open_and_return_datapipes(
-                config_path,
-                use_gsp=True,
-                use_nwp=False,
-                use_pv=False,
-                use_sat=False,
-                use_hrv=False,
-                use_topo=False,
-            )["gsp"]
-        )
-    )
-    gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
-
-    # Cycle the GSP locations
-    location_pipe = IterableWrapper([[gsp_id_to_loc(gsp_id) for gsp_id in range(1, 318)]]).repeat(
-        n_batches
-    )
-
-    # Shard and unbatch so each worker goes through GSP 1-317 for each batch
-    location_pipe = location_pipe.sharding_filter()
-    location_pipe = location_pipe.unbatch(unbatch_level=1)
-
-    # These two datapipes come from an earlier fork and must be iterated through together
-    # despite the fact that we don't want these random locations here
-    random_location_datapipe, t0_datapipe = construct_loctime_pipelines(
+    t0_datapipe = construct_time_pipeline(
         config_path,
         start_time,
         end_time,
     )
 
-    # Iterate through both but select only time
-    t0_datapipe = t0_datapipe.zip(random_location_datapipe).map(select_first)
-
-    # Create times datapipe so we'll get the same time over each batch
     t0_datapipe = t0_datapipe.header(n_batches)
-    t0_datapipe = IterableWrapper([[t0 for gsp_id in range(1, 318)] for t0 in t0_datapipe])
     t0_datapipe = t0_datapipe.sharding_filter()
-    t0_datapipe = t0_datapipe.unbatch(unbatch_level=1)
-
-    return location_pipe, t0_datapipe
-
-
-def _get_datapipe(config_path, start_time, end_time, n_batches):
-    # Open datasets from the config and filter to useable location-time pairs
-
-    location_pipe, t0_datapipe = _get_loctimes_datapipes(
-        config_path, start_time, end_time, n_batches
-    )
-
-    data_pipeline = construct_sliced_data_pipeline(
+    
+    datapipe = construct_sliced_data_pipeline(
         config_path,
-        location_pipe,
         t0_datapipe,
     )
 
-    data_pipeline = data_pipeline.batch(317).map(stack_np_examples_into_batch).map(batch_to_tensor)
-
-    return data_pipeline
+    return datapipe
 
 
 def _save_batches_with_dataloader(batch_pipe, batch_dir, num_batches, dataloader_kwargs):
