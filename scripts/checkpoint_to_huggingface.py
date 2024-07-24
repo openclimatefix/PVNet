@@ -21,7 +21,7 @@ huggingface_repo = "openclimatefix/pvnet_uk_region"
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-    wandb_ids: Optional[list[str]] = None,
+    wandb_ids: list[str] = [],
     local_path: Optional[str] = None,
     push_to_hub: bool = True,
 ):
