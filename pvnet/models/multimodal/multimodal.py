@@ -295,7 +295,7 @@ class Model(MultimodalBaseModel):
 
             # Update num features
             fusion_input_features += 32
-        
+
         if include_gsp_yield_history:
             # Update num features
             fusion_input_features += self.history_len
