@@ -92,10 +92,10 @@ def main(runs: list[str], run_names: list[str]) -> None:
     plt.figure()
     for idx, df in enumerate(dfs):
         plt.plot(column_timesteps, df, label=f"{run_names[idx]}, epoch: {epoch_num[idx]}")
-    plt.legend(fontsize=18)
-    plt.xlabel("Timestep (minutes)", fontsize=18)
-    plt.ylabel("MAE %", fontsize=18)
-    plt.title("MAE % for each timestep", fontsize=24)
+    plt.legend()
+    plt.xlabel("Timestep (minutes)")
+    plt.ylabel("MAE %")
+    plt.title("MAE % for each timestep")
     plt.savefig("mae_per_timestep.png")
     plt.show()
 
@@ -103,10 +103,10 @@ def main(runs: list[str], run_names: list[str]) -> None:
     plt.figure()
     for idx, run_name in enumerate(run_names):
         plt.plot(groups_df[run_name], label=f"{run_name}, epoch: {epoch_num[idx]}")
-    plt.legend(fontsize=18)
-    plt.xlabel("Timestep (minutes)", fontsize=18)
-    plt.ylabel("MAE %", fontsize=18)
-    plt.title("MAE % for each timestep", fontsize=24)
+    plt.legend()
+    plt.xlabel("Timestep (minutes)")
+    plt.ylabel("MAE %")
+    plt.title("MAE % for each timestep")
     plt.savefig("mae_per_timestep.png")
     plt.show()
 
