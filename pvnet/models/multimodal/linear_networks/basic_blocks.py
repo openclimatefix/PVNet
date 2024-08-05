@@ -1,4 +1,5 @@
 """Basic blocks for the lienar networks"""
+
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
