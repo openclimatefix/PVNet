@@ -20,7 +20,7 @@ def main(runs: list[str], run_names: list[str]) -> None:
     for run in runs:
         run = api.run(f"openclimatefix/PROJECT/{run}")
 
-        df = run.history(samples=run.lastHistoryStep+1)
+        df = run.history(samples=run.lastHistoryStep + 1)
         # Get the columns that are in the format 'MAE_horizon/step_<number>/val`
         mae_cols = [col for col in df.columns if "MAE_horizon/step_" in col and "val" in col]
         # Sort them
@@ -121,4 +121,3 @@ if __name__ == "__main__":
     parser.add_argument("--run_names", nargs="+")
     args = parser.parse_args()
     main(args.list_of_runs, args.run_names)
-    
