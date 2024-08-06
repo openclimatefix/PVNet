@@ -7,7 +7,6 @@ python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
 """
 
 import tempfile
-from typing import Optional
 
 import typer
 import wandb
@@ -21,8 +20,8 @@ huggingface_repo = "openclimatefix/pvnet_uk_region"
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-    wandb_ids: list[str] = [],
-    local_path: Optional[str] = None,
+    wandb_ids: list[str] | None = [],
+    local_path: str | None = None,
     push_to_hub: bool = True,
 ):
     """Push a local model to pvnet_v2 huggingface model repo
