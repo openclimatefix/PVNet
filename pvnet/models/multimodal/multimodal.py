@@ -401,6 +401,19 @@ class Model(MultimodalBaseModel):
             sun = self.sun_fc1(sun)
             modes["sun"] = sun
 
+        if self.include_time:
+            time = torch.cat(
+                (
+                    x[BatchKey[f"{self._target_key_name}_date_sin"]],
+                    x[BatchKey[f"{self._target_key_name}_date_cos"]],
+                    x[BatchKey[f"{self._target_key_name}_time_sin"]],
+                    x[BatchKey[f"{self._target_key_name}_time_cos"]],
+                ),
+                dim=1,
+            ).float()
+            time = self.time_fc1(time)
+            modes["time"] = time
+
         out = self.output_network(modes)
 
         if self.use_quantile_regression:
