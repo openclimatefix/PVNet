@@ -242,6 +242,7 @@ class PVNetModelHubMixin:
         data_config: Optional[Union[str, Path]],
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
+        wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
         **kwargs,
@@ -260,9 +261,10 @@ class PVNetModelHubMixin:
                 ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
-                Whether or not to push your model to the Huggingface Hub after saving it.
+                Whether or not to push your model to the HuggingFace Hub after saving it.
+            wandb_repo: Identifier of the repo on wandb.
             wandb_ids: Identifier(s) of the model on wandb.
-            card_template_path: Path to the huggingface model card template. Defaults to card in
+            card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
             kwargs:
                 Additional key word arguments passed along to the
@@ -289,11 +291,20 @@ class PVNetModelHubMixin:
             # Taylor the data config to the model being saved
             minimize_data_config(new_data_config_path, new_data_config_path, self)
 
+        # Get appropriate model card
+        model_name = repo_id.split("/")[1]
+        if model_name == "windnet_india":
+            model_card = "wind_india_model_card_template.md"
+        elif model_name == "pvnet_india":
+            model_card = "pv_india_model_card_template.md"
+        else:
+            model_card = "pv_uk_regional_model_card_template.md"
+
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
         if card_template_path is None:
             card_template_path = (
-                f"{os.path.dirname(os.path.abspath(__file__))}/model_card_template.md"
+                f"{os.path.dirname(os.path.abspath(__file__))}/model_cards/{model_card}"
             )
 
         if isinstance(wandb_ids, str):
@@ -301,7 +312,7 @@ class PVNetModelHubMixin:
 
         wandb_links = ""
         for wandb_id in wandb_ids:
-            link = f"https://wandb.ai/openclimatefix/pvnet2.1/runs/{wandb_id}"
+            link = f"https://wandb.ai/{wandb_repo}/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
         card = ModelCard.from_template(
