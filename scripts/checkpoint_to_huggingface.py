@@ -2,6 +2,8 @@
 
 use:
 python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
+    --huggingface_repo="openclimatefix/pvnet_uk_region" \
+    --wandb_repo="openclimatefix/pvnet2.1"" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
 """
@@ -13,21 +15,22 @@ import wandb
 
 from pvnet.load_model import get_model_from_checkpoints
 
-wandb_repo = "openclimatefix/pvnet2.1"
-huggingface_repo = "openclimatefix/pvnet_uk_region"
-
 
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
+    huggingface_repo: str = "openclimatefix/pvnet_uk_region", # or e.g. openclimatefix/windnet_india
+    wandb_repo: str | None = "openclimatefix/pvnet2.1",
     val_best: bool = True,
     wandb_ids: list[str] | None = [],
     local_path: str | None = None,
     push_to_hub: bool = True,
 ):
-    """Push a local model to pvnet_v2 huggingface model repo
+    """Push a local model to a huggingface model repo
 
     Args:
         checkpoint_dir_paths: Path(s) of the checkpoint directory(ies)
+        huggingface_repo: Name of the HuggingFace repo to push the model to
+        wandb_repo: Name of the wandb repo which has training logs
         val_best: Use best model according to val loss, else last saved model
         wandb_ids: The wandb ID code(s)
         local_path: Where to save the local copy of the model
@@ -64,6 +67,8 @@ def push_to_huggingface(
         model_output_dir,
         config=model_config,
         data_config=data_config,
+        huggingface_repo=huggingface_repo,
+        wandb_repo=wandb_repo,
         wandb_ids=wandb_ids,
         push_to_hub=push_to_hub,
         repo_id=huggingface_repo if push_to_hub else None,
