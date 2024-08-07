@@ -284,11 +284,11 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # Get appropriate model card
         model_name = huggingface_repo.split("/")[1]
         if model_name == "windnet_india":
-            model_card = "windnet_model_card_template.md"
+            model_card = "wind_india_model_card_template.md"
         elif model_name == "pvnet_india":
-            model_card = "pvnet_india_model_card_template.md"
+            model_card = "pv_india_model_card_template.md"
         else:
-            model_card = "model_card_template.md"
+            model_card = "pv_uk_regional_model_card_template.md"
 
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
