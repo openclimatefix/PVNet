@@ -12,7 +12,7 @@
 ## Model Description
 
 <!-- Provide a longer summary of what this model is/does. -->
-This model class uses numerical weather prediction and recent wind power output to forecast the PV power in North West India over the next 48 hours. More information can be found in the model repo [1] and experimental notes [here](https://github.com/openclimatefix/PVNet/tree/main/experiments/india). 
+This model class uses numerical weather prediction and recent wind power output to forecast the PV power in North West India over the next 48 hours. More information can be found in the model repo [1] and experimental notes [here](https://github.com/openclimatefix/PVNet/tree/main/experiments/india).
 
 
 - **Developed by:** openclimatefix

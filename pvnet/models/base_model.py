@@ -282,10 +282,10 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             minimize_data_config(new_data_config_path, new_data_config_path, self)
 
         # Get appropriate model card
-        model_name = huggingface_repo.split('/')[1]
-        if model_name == "windnet_india": 
+        model_name = huggingface_repo.split("/")[1]
+        if model_name == "windnet_india":
             model_card = "windnet_model_card_template.md"
-        elif model_name == "pvnet_india": 
+        elif model_name == "pvnet_india":
             model_card = "pvnet_india_model_card_template.md"
         else:
             model_card = "model_card_template.md"
