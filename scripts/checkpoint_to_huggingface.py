@@ -67,7 +67,6 @@ def push_to_huggingface(
         model_output_dir,
         config=model_config,
         data_config=data_config,
-        huggingface_repo=huggingface_repo,
         wandb_repo=wandb_repo,
         wandb_ids=wandb_ids,
         push_to_hub=push_to_hub,

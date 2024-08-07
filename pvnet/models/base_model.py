@@ -230,7 +230,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         data_config: Optional[Union[str, Path]],
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
-        huggingface_repo: Optional[str] = None,
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
@@ -251,7 +250,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the HuggingFace Hub after saving it.
-            huggingface_repo: Identifier of the repo on HuggingFace.
             wandb_repo: Identifier of the repo on wandb.
             wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
@@ -282,7 +280,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             minimize_data_config(new_data_config_path, new_data_config_path, self)
 
         # Get appropriate model card
-        model_name = huggingface_repo.split("/")[1]
+        model_name = repo_id.split("/")[1]
         if model_name == "windnet_india":
             model_card = "wind_india_model_card_template.md"
         elif model_name == "pvnet_india":
