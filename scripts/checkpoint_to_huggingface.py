@@ -18,7 +18,7 @@ from pvnet.load_model import get_model_from_checkpoints
 
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
-    huggingface_repo: str = "openclimatefix/pvnet_uk_region",  # or e.g. openclimatefix/windnet_india
+    huggingface_repo: str = "openclimatefix/pvnet_uk_region",  # e.g. openclimatefix/windnet_india
     wandb_repo: str | None = "openclimatefix/pvnet2.1",
     val_best: bool = True,
     wandb_ids: list[str] | None = [],
