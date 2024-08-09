@@ -2,8 +2,8 @@
 
 use:
 python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
-    --huggingface_repo="openclimatefix/pvnet_uk_region" \
-    --wandb_repo="openclimatefix/pvnet2.1"" \
+    --huggingface-repo="openclimatefix/pvnet_uk_region" \
+    --wandb-repo="openclimatefix/pvnet2.1"" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
 """
@@ -19,10 +19,10 @@ from pvnet.load_model import get_model_from_checkpoints
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
     huggingface_repo: str = "openclimatefix/pvnet_uk_region",  # e.g. openclimatefix/windnet_india
-    wandb_repo: str | None = "openclimatefix/pvnet2.1",
+    wandb_repo: str = "openclimatefix/pvnet2.1",
     val_best: bool = True,
-    wandb_ids: list[str] | None = [],
-    local_path: str | None = None,
+    wandb_ids: list[str] = [],
+    local_path: str = None,
     push_to_hub: bool = True,
 ):
     """Push a local model to a huggingface model repo

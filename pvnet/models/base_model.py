@@ -93,7 +93,7 @@ def minimize_data_config(input_path, output_path, model):
         if not model.include_nwp:
             del config["input_data"]["nwp"]
         else:
-            for nwp_source in config["input_data"]["nwp"].keys():
+            for nwp_source in list(config["input_data"]["nwp"].keys()):
                 nwp_config = config["input_data"]["nwp"][nwp_source]
 
                 if nwp_source not in model.nwp_encoders_dict:
@@ -234,6 +234,13 @@ class PVNetModelHubMixin:
             )
 
         return data_config_file
+    
+    
+    def _save_pretrained(self, save_directory: Path) -> None:
+        """Save weights from a Pytorch model to a local directory."""
+        model_to_save = self.module if hasattr(self, "module") else self  # type: ignore
+        torch.save(model_to_save.state_dict(), save_directory / PYTORCH_WEIGHTS_NAME)
+        
 
     def save_pretrained(
         self,
