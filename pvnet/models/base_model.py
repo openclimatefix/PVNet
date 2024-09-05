@@ -627,7 +627,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             try:
                 time_utc_key = BatchKey[f"{self._target_key}_time_utc"]
             except Exception as e:
-                raise Exception(f"Failed to find time_utc key for {self._target_key}, {BatchKey._member_map_}, {e}")
+                raise Exception(
+                    f"Failed to find time_utc key for {self._target_key}, {BatchKey._member_map_}, {e}"
+                )
 
             time_utc = batch[time_utc_key][i, -self.forecast_len :].detach().cpu().numpy()
 
