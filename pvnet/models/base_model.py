@@ -1,8 +1,8 @@
 """Base model for all PVNet submodels"""
 import json
 import logging
-import tempfile
 import os
+import tempfile
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -614,9 +614,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         plt.close(fig)
 
     def _log_validation_results(self, batch, y_hat, accum_batch_num):
-        """ Append validation results to self.validation_epoch_results """
+        """Append validation results to self.validation_epoch_results"""
 
-        y = batch[self._target_key][:, -self.forecast_len:, 0]
+        y = batch[self._target_key][:, -self.forecast_len :, 0]
         batch_size = y.shape[0]
 
         for i in range(batch_size):
@@ -624,18 +624,21 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             y_hat_i = y_hat[i].detach().cpu().numpy()
 
             time_utc_key = BatchKey[f"{self._target_key}_time_utc"]
-            time_utc = batch[time_utc_key][i, -self.forecast_len:].detach().cpu().numpy()
+            time_utc = batch[time_utc_key][i, -self.forecast_len :].detach().cpu().numpy()
 
             id_key = BatchKey[f"{self._target_key}_id"]
             ids = batch[id_key][i].detach().cpu().numpy()
 
-            self.validation_epoch_results.append({"y": y_i,
-                                                  "y_hat": y_hat_i,
-                                                  "time_utc": time_utc,
-                                                  "id": ids,
-                                                  "batch_idx": accum_batch_num,
-                                                  "example_idx": i,
-                                                  })
+            self.validation_epoch_results.append(
+                {
+                    "y": y_i,
+                    "y_hat": y_hat_i,
+                    "time_utc": time_utc,
+                    "id": ids,
+                    "batch_idx": accum_batch_num,
+                    "example_idx": i,
+                }
+            )
 
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
@@ -713,7 +716,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 filename = os.path.join(tempdir, f"validation_results.csv_{self.current_epoch}")
                 validation_results_df.to_csv(filename, index=False)
 
-                validation_artifact = wandb.Artifact(f"validation_results_epoch={self.current_epoch}", type="dataset")
+                validation_artifact = wandb.Artifact(
+                    f"validation_results_epoch={self.current_epoch}", type="dataset"
+                )
                 wandb.log_artifact(validation_artifact)
         except Exception as e:
             print("Failed to log validation results to wandb")
