@@ -636,9 +636,9 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     "time_utc": time_utc,
                 }
             )
-            results_df['id'] = target_id
-            results_df['batch_idx'] = accum_batch_num
-            results_df['example_idx'] = i
+            results_df["id"] = target_id
+            results_df["batch_idx"] = accum_batch_num
+            results_df["example_idx"] = i
 
             self.validation_epoch_results.append(results_df)
 
