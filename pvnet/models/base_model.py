@@ -623,22 +623,24 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             y_i = y[i].detach().cpu().numpy()
             y_hat_i = y_hat[i].detach().cpu().numpy()
 
-            time_utc_key = BatchKey[f"{self._target_key}_time_utc"]
+            time_utc_key = getattr(BatchKey, f"{self._target_key}_time_utc")
             time_utc = batch[time_utc_key][i, -self.forecast_len :].detach().cpu().numpy()
 
-            id_key = BatchKey[f"{self._target_key}_id"]
-            ids = batch[id_key][i].detach().cpu().numpy()
+            id_key = getattr(BatchKey, f"{self._target_key}_id")
+            target_id = batch[id_key][i].detach().cpu().numpy()
 
-            self.validation_epoch_results.append(
+            results_df = pd.DataFrame(
                 {
                     "y": y_i,
                     "y_hat": y_hat_i,
                     "time_utc": time_utc,
-                    "id": ids,
-                    "batch_idx": accum_batch_num,
-                    "example_idx": i,
                 }
             )
+            results_df['id'] = target_id
+            results_df['batch_idx'] = accum_batch_num
+            results_df['example_idx'] = i
+
+            self.validation_epoch_results.append(results_df)
 
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
@@ -711,7 +713,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         try:
             # join together validation results, and save to wandb
-            validation_results_df = pd.DataFrame(self.validation_epoch_results)
+            validation_results_df = pd.concat(self.validation_epoch_results)
             with tempfile.TemporaryDirectory() as tempdir:
                 filename = os.path.join(tempdir, f"validation_results.csv_{self.current_epoch}")
                 validation_results_df.to_csv(filename, index=False)
