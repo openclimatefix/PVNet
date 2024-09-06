@@ -621,7 +621,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         y = y.detach().cpu().numpy()
         y_hat = y_hat.detach().cpu().numpy()
         time_utc_key = BatchKey[f"{self._target_key_name}_time_utc"]
-        time_utc = batch[time_utc_key][:, -self.forecast_len:].detach().cpu().numpy()
+        time_utc = batch[time_utc_key][:, -self.forecast_len :].detach().cpu().numpy()
         id_key = BatchKey[f"{self._target_key_name}_id"]
         target_id = batch[id_key].detach().cpu().numpy()
 
