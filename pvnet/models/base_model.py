@@ -618,16 +618,18 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         y = batch[self._target_key][:, -self.forecast_len :, 0]
         batch_size = y.shape[0]
+        y = y.detach().cpu().numpy()
+        y_hat = y_hat.detach().cpu().numpy()
+        time_utc_key = BatchKey[f"{self._target_key_name}_time_utc"]
+        time_utc = batch[time_utc_key][:, -self.forecast_len:].detach().cpu().numpy()
+        id_key = BatchKey[f"{self._target_key_name}_id"]
+        target_id = batch[id_key].detach().cpu().numpy()
 
         for i in range(batch_size):
-            y_i = y[i].detach().cpu().numpy()
-            y_hat_i = y_hat[i].detach().cpu().numpy()
-
-            time_utc_key = BatchKey[f"{self._target_key_name}_time_utc"]
-            time_utc = batch[time_utc_key][i, -self.forecast_len :].detach().cpu().numpy()
-
-            id_key = BatchKey[f"{self._target_key_name}_id"]
-            target_id = batch[id_key][i].detach().cpu().numpy()
+            y_i = y[i]
+            y_hat_i = y_hat[i]
+            time_utc = time_utc[i]
+            target_id = target_id[i]
             if target_id.ndim > 0:
                 target_id = target_id[0]
 
@@ -717,12 +719,14 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # join together validation results, and save to wandb
             validation_results_df = pd.concat(self.validation_epoch_results)
             with tempfile.TemporaryDirectory() as tempdir:
-                filename = os.path.join(tempdir, f"validation_results.csv_{self.current_epoch}")
+                filename = os.path.join(tempdir, f"validation_results_{self.current_epoch}.csv")
                 validation_results_df.to_csv(filename, index=False)
 
+                # make and log wand artifact
                 validation_artifact = wandb.Artifact(
                     f"validation_results_epoch={self.current_epoch}", type="dataset"
                 )
+                validation_artifact.add_file(filename)
                 wandb.log_artifact(validation_artifact)
         except Exception as e:
             print("Failed to log validation results to wandb")
