@@ -621,7 +621,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         y = y.detach().cpu().numpy()
         batch_size = y.shape[0]
 
-        # get truth values, shape (b, forecast_len)
+        # get prediction values, shape (b, forecast_len, quantiles?)
         y_hat = y_hat.detach().cpu().numpy()
 
         # get time_utc, shape (b, forecast_len)
