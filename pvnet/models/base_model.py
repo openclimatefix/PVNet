@@ -639,24 +639,18 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             time_utc_i = time_utc[i]
             target_id_i = target_id[i]
 
-            results_dict = \
-                {
-                    "y": y_i,
-                    "time_utc": time_utc_i,
-                }
+            results_dict = {
+                "y": y_i,
+                "time_utc": time_utc_i,
+            }
             if self.use_quantile_regression:
                 results_dict.update(
-                    {
-                        f"y_quantile_{q}": y_hat_i[:, i]
-                        for i, q in enumerate(self.output_quantiles)
-                    }
+                    {f"y_quantile_{q}": y_hat_i[:, i] for i, q in enumerate(self.output_quantiles)}
                 )
             else:
                 results_dict["y_hat"] = y_hat_i
 
-            results_df = pd.DataFrame(
-                results_dict
-            )
+            results_df = pd.DataFrame(results_dict)
             results_df["id"] = target_id_i
             results_df["batch_idx"] = accum_batch_num
             results_df["example_idx"] = i
