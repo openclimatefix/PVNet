@@ -637,7 +637,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             y_i = y[i]
             if self.use_quantile_regression:
                 idx = self.output_quantiles.index(0.5)
-                y_hat_i = y_hat[i,idx]
+                y_hat_i = y_hat[i, idx]
             else:
                 y_hat_i = y_hat[i]
             time_utc_i = time_utc[i]
