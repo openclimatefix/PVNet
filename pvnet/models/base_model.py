@@ -17,17 +17,21 @@ from huggingface_hub import ModelCard, ModelCardData
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
+
 from ocf_datapipes.batch import BatchKey
+from ocf_datapipes.batch import copy_batch_to_device
+
 from ocf_ml_metrics.evaluation.evaluation import evaluation
 
 from pvnet.models.utils import (
     BatchAccumulator,
     MetricAccumulator,
     PredAccumulator,
-    WeightedLosses,
 )
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
+from pvnet.utils import plot_batch_forecasts
+
+
 
 DATA_CONFIG_NAME = "data_config.yaml"
 
@@ -354,7 +358,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         target_key: str = "gsp",
         interval_minutes: int = 30,
         timestep_intervals_to_plot: Optional[list[int]] = None,
-        use_weighted_loss: bool = False,
         forecast_minutes_ignore: Optional[int] = 0,
     ):
         """Abtstract base class for PVNet submodels.
@@ -368,7 +371,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             target_key: The key of the target variable in the batch
             interval_minutes: The interval in minutes between each timestep in the data
             timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
-            use_weighted_loss: Whether to use a weighted loss function
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
         """
@@ -400,8 +402,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.forecast_len = (forecast_minutes - forecast_minutes_ignore) // interval_minutes
         self.forecast_len_ignore = forecast_minutes_ignore // interval_minutes
 
-        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
-
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key_name)
         self._accumulated_y_hat = PredAccumulator()
@@ -409,14 +409,17 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # Store whether the model should use quantile regression or simply predict the mean
         self.use_quantile_regression = self.output_quantiles is not None
-        self.use_weighted_loss = use_weighted_loss
 
         # Store the number of ouput features that the model should predict for
         if self.use_quantile_regression:
             self.num_output_features = self.forecast_len * len(self.output_quantiles)
         else:
             self.num_output_features = self.forecast_len
-
+    
+    def transfer_batch_to_device(self, batch, device, dataloader_idx):
+        """Method to move custom batches to a given device"""
+        return copy_batch_to_device(batch, device)
+    
     def _quantiles_to_prediction(self, y_quantiles):
         """
         Convert network prediction into a point prediction.
@@ -458,13 +461,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             errors = y - y_quantiles[..., i]
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
         losses = 2 * torch.cat(losses, dim=2)
-        if self.use_weighted_loss:
-            weights = self.weighted_losses.weights.unsqueeze(1).unsqueeze(0).to(y.device)
-            losses = losses * weights
+        
         return losses.mean()
 
     def _calculate_common_losses(self, y, y_hat):
-        """Calculate losses common to train, test, and val"""
+        """Calculate losses common to train, and val"""
 
         losses = {}
 
@@ -476,10 +477,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         mse_loss = F.mse_loss(y_hat, y)
         mae_loss = F.l1_loss(y_hat, y)
 
-        # calculate mse, mae with exp weighted loss
-        mse_exp = self.weighted_losses.get_mse_exp(output=y_hat, target=y)
-        mae_exp = self.weighted_losses.get_mae_exp(output=y_hat, target=y)
-
         # TODO: Compute correlation coef using np.corrcoef(tensor with
         # shape (2, num_timesteps))[0, 1] on each example, and taking
         # the mean across the batch?
@@ -487,8 +484,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             {
                 "MSE": mse_loss,
                 "MAE": mae_loss,
-                "MSE_EXP": mse_exp,
-                "MAE_EXP": mae_exp,
             }
         )
 
@@ -532,12 +527,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # Log persistance loss at each time horizon
         losses.update(self._step_mae_and_mse(y, y_persist, dict_key_root="persistence"))
-        return losses
-
-    def _calculate_test_losses(self, y, y_hat):
-        """Calculate additional test losses"""
-        # No additional test losses
-        losses = {}
         return losses
 
     def _training_accumulate_log(self, batch, batch_idx, losses, y_hat):
@@ -585,7 +574,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -619,8 +608,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def validation_step(self, batch: dict, batch_idx):
         """Run validation step"""
         y_hat = self(batch)
-        # Sensor seems to be in batch, station, time order
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
+        
+        y = batch[self._target_key][:, -self.forecast_len :]
 
         # Expand persistence to be the same shape as y
         losses = self._calculate_common_losses(y, y_hat)
@@ -699,37 +688,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             except Exception as e:
                 print("Failed to log horizon_loss_curve to wandb")
                 print(e)
-
-    def test_step(self, batch, batch_idx):
-        """Run test step"""
-        y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
-
-        losses = self._calculate_common_losses(y, y_hat)
-        losses.update(self._calculate_val_losses(y, y_hat))
-        losses.update(self._calculate_test_losses(y, y_hat))
-        logged_losses = {f"{k}/test": v for k, v in losses.items()}
-
-        self.log_dict(
-            logged_losses,
-            on_step=False,
-            on_epoch=True,
-        )
-
-        if self.use_quantile_regression:
-            y_hat = self._quantiles_to_prediction(y_hat)
-
-        return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)
-
-    def on_test_epoch_end(self, outputs):
-        """Evalauate test results using oc_ml_metrics"""
-        results_df = pd.concat(outputs)
-        # setting model_name="test" gives us keys like "test/mw/forecast_horizon_30_minutes/mae"
-        metrics = evaluation(results_df=results_df, model_name="test", outturn_unit="mw")
-
-        self.log_dict(
-            metrics,
-        )
 
     def configure_optimizers(self):
         """Configure the optimizers using learning rate found with LR finder if used"""
