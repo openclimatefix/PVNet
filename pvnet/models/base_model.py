@@ -1,4 +1,3 @@
-"""Base model for all PVNet submodels"""
 import json
 import logging
 import os
@@ -743,6 +742,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             print("Failed to log validation results to wandb")
             print(e)
 
+        self.validation_epoch_results = []
         horizon_maes_dict = self._horizon_maes.flush()
 
         # Create the horizon accuracy curve
