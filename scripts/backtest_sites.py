@@ -94,7 +94,7 @@ MIN_DAY_ELEVATION = 0
 
 # Add all pv site ids here that you wish to produce forecasts for
 ALL_SITE_IDS = []
-# Need to be in ascending order 
+# Need to be in ascending order
 ALL_SITE_IDS.sort()
 
 # ------------------------------------------------------------------
