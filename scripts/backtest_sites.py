@@ -92,8 +92,10 @@ FREQ_MINS = 30
 # When sun as elevation below this, the forecast is set to zero
 MIN_DAY_ELEVATION = 0
 
-# All pv system ids to produce forecasts for, need to be added in ascending order
+# Add all pv site ids here that you wish to produce forecasts for
 ALL_SITE_IDS = []
+# Need to be in ascending order 
+ALL_SITE_IDS.sort()
 
 # ------------------------------------------------------------------
 # FUNCTIONS
@@ -251,7 +253,8 @@ def get_loctimes_datapipes(config_path):
         unbatch_level=1
     )  # might not need this part since the site datapipe is creating examples
 
-    # Create times datapipe so each worker receives len(ALL_SITE_IDS) copies of the same datetime for its batch
+    # Create times datapipe so each worker receives
+    # len(ALL_SITE_IDS) copies of the same datetime for its batch
     t0_datapipe = IterableWrapper(
         [[t0 for site_id in ALL_SITE_IDS] for t0 in available_target_times]
     )
@@ -301,7 +304,7 @@ class ModelPipe:
         )
 
         # Get effective capacities for this forecast
-        site_capacities = ds_site.nominal_capacity_wp.values
+        site_capacities = self.ds_site.nominal_capacity_wp.values
         # Get the solar elevations. We need to un-normalise these from the values in the batch
         elevation = batch[BatchKey.pv_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
         # We only need elevation mask for forecasted values, not history
