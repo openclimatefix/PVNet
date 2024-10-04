@@ -328,7 +328,6 @@ class ModelPipe:
 
         # Multiply normalised forecasts by capacities and clip negatives
         da_abs_site = da_normed_site.clip(0, None) * site_capacities[:, None, None]
-        da_abs_site = da_abs_site.clip(0, None)
 
         # Apply sundown mask
         da_abs_site = da_abs_site.where(~da_sundown_mask).fillna(0.0)
