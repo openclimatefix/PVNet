@@ -58,18 +58,14 @@ from pvnet.load_model import get_model_from_checkpoints
 from pvnet.utils import SiteLocationLookup
 
 # ------------------------------------------------------------------
-# USER CONFIGURED VARIABLES
+# USER CONFIGURED VARIABLES TO RUN THE SCRIPT
+
+# Directory path to save results
 output_dir = "PLACEHOLDER"
 
 # Local directory to load the PVNet checkpoint from. By default this should pull the best performing
 # checkpoint on the val set
 model_chckpoint_dir = "PLACEHOLDER"
-
-# Local directory to load the summation model checkpoint from. By default this should pull the best
-# performing checkpoint on the val set. If set to None a simple sum is used instead
-# summation_chckpoint_dir = (
-#     "/home/jamesfulton/repos/PVNet_summation/checkpoints/pvnet_summation/nw673nw2"
-# )
 
 # Forecasts will be made for all available init times between these
 start_datetime = "2022-05-08 00:00"
@@ -96,8 +92,10 @@ FREQ_MINS = 30
 # When sun as elevation below this, the forecast is set to zero
 MIN_DAY_ELEVATION = 0
 
-# All pv system ids to produce forecasts for
+# Add all pv site ids here that you wish to produce forecasts for
 ALL_SITE_IDS = []
+# Need to be in ascending order
+ALL_SITE_IDS.sort()
 
 # ------------------------------------------------------------------
 # FUNCTIONS
@@ -255,7 +253,8 @@ def get_loctimes_datapipes(config_path):
         unbatch_level=1
     )  # might not need this part since the site datapipe is creating examples
 
-    # Create times datapipe so each worker receives 317 copies of the same datetime for its batch
+    # Create times datapipe so each worker receives
+    # len(ALL_SITE_IDS) copies of the same datetime for its batch
     t0_datapipe = IterableWrapper(
         [[t0 for site_id in ALL_SITE_IDS] for t0 in available_target_times]
     )
@@ -305,7 +304,7 @@ class ModelPipe:
         )
 
         # Get effective capacities for this forecast
-        # site_capacities = ds_site.nominal_capacity_wp.values
+        site_capacities = self.ds_site.nominal_capacity_wp.values
         # Get the solar elevations. We need to un-normalise these from the values in the batch
         elevation = batch[BatchKey.pv_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
         # We only need elevation mask for forecasted values, not history
@@ -327,18 +326,17 @@ class ModelPipe:
             y_normed_site = model(device_batch).detach().cpu().numpy()
         da_normed_site = preds_to_dataarray(y_normed_site, model, valid_times, ALL_SITE_IDS)
 
-        # TODO fix this step: Multiply normalised forecasts by capacities and clip negatives
-        # For now output normalised by capacity outputs and unnormalise in post processing
-        # da_abs_site = da_normed_site.clip(0, None) * site_capacities[:, None, None]
-        da_normed_site = da_normed_site.clip(0, None)
-        # Apply sundown mask
-        da_normed_site = da_normed_site.where(~da_sundown_mask).fillna(0.0)
+        # Multiply normalised forecasts by capacities and clip negatives
+        da_abs_site = da_normed_site.clip(0, None) * site_capacities[:, None, None]
 
-        da_normed_site = da_normed_site.expand_dims(dim="init_time_utc", axis=0).assign_coords(
+        # Apply sundown mask
+        da_abs_site = da_abs_site.where(~da_sundown_mask).fillna(0.0)
+
+        da_abs_site = da_abs_site.expand_dims(dim="init_time_utc", axis=0).assign_coords(
             init_time_utc=[t0]
         )
 
-        return da_normed_site
+        return da_abs_site
 
 
 def get_datapipe(config_path: str) -> NumpyBatch:
