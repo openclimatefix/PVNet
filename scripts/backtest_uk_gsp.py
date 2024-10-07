@@ -38,14 +38,11 @@ from ocf_datapipes.batch import (
     NumpyBatch,
     batch_to_tensor,
     copy_batch_to_device,
-    stack_np_examples_into_batch,
 )
 from ocf_datapipes.config.load import load_yaml_configuration
 from ocf_datapipes.load import OpenGSP
-from ocf_datapipes.training.pvnet_all_gsp import (
-    create_t0_datapipe, construct_sliced_data_pipeline
-)
 from ocf_datapipes.training.common import _get_datapipes_dict
+from ocf_datapipes.training.pvnet_all_gsp import construct_sliced_data_pipeline, create_t0_datapipe
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
 from omegaconf import DictConfig
 
@@ -201,7 +198,7 @@ def get_times_datapipe(config_path):
 
     # Set up ID location query object
     ds_gsp = get_gsp_ds(config_path)
-    gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
+    GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
 
     # Filter the init-times to times we have all input data for
     available_target_times = get_available_t0_times(
@@ -367,7 +364,6 @@ def get_datapipe(config_path: str) -> NumpyBatch:
 
     # Convert to tensor for model
     data_pipeline = data_pipeline.map(batch_to_tensor).set_length(len(t0_datapipe))
-
 
     return data_pipeline
 
