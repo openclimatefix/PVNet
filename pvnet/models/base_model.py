@@ -735,7 +735,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
                 # make and log wand artifact
                 validation_artifact = wandb.Artifact(
-                    f"validation_results_epoch={self.current_epoch}", type="dataset"
+                    f"validation_results_epoch_{self.current_epoch}", type="dataset"
                 )
                 validation_artifact.add_file(filename)
                 wandb.log_artifact(validation_artifact)
