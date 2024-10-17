@@ -23,6 +23,7 @@ try:
 except RuntimeError:
     pass
 
+import json
 import logging
 import os
 import sys
@@ -32,6 +33,8 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+from huggingface_hub import hf_hub_download
+from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from ocf_datapipes.batch import (
     BatchKey,
     NumpyBatch,
@@ -56,10 +59,6 @@ from tqdm import tqdm
 
 from pvnet.load_model import get_model_from_checkpoints
 from pvnet.utils import SiteLocationLookup
-
-import json
-from huggingface_hub import hf_hub_download
-from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 
 # ------------------------------------------------------------------
 # USER CONFIGURED VARIABLES TO RUN THE SCRIPT
@@ -109,7 +108,7 @@ ALL_SITE_IDS.sort()
 # FUNCTIONS
 
 
-@functional_datapipe('pad_forward_pv')
+@functional_datapipe("pad_forward_pv")
 class PadForwardPVIterDataPipe(IterDataPipe):
     """
     Pads forecast pv. Sun position is calculated based off of pv time index
@@ -128,8 +127,8 @@ class PadForwardPVIterDataPipe(IterDataPipe):
         """Iter"""
 
         for xr_data in self.pv_dp:
-            t0 = xr_data.time_utc.data[int(xr_data.attrs['t0_idx'])]
-            pv_step = np.timedelta64(xr_data.attrs['sample_period_duration'])
+            t0 = xr_data.time_utc.data[int(xr_data.attrs["t0_idx"])]
+            pv_step = np.timedelta64(xr_data.attrs["sample_period_duration"])
             t_end = t0 + self.forecast_duration + pv_step
             time_idx = np.arange(xr_data.time_utc.data[0], t_end, pv_step)
             yield xr_data.reindex(time_utc=time_idx, fill_value=-1)
@@ -424,8 +423,8 @@ def get_datapipe(config_path: str) -> NumpyBatch:
     )
 
     config = load_yaml_configuration(config_path)
-    data_pipeline['pv'] = data_pipeline['pv'].pad_forward_pv(
-        forecast_duration=np.timedelta64(config.input_data.pv.forecast_minutes, 'm')
+    data_pipeline["pv"] = data_pipeline["pv"].pad_forward_pv(
+        forecast_duration=np.timedelta64(config.input_data.pv.forecast_minutes, "m")
     )
 
     data_pipeline = DictDatasetIterDataPipe(
