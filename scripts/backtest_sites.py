@@ -479,8 +479,8 @@ def main(config: DictConfig):
     # Load the PVNet model
     if model_chckpoint_dir:
         model, *_ = get_model_from_checkpoints([model_chckpoint_dir], val_best=True)
-    elif model_id:
-        model = load_model_from_hf(model_id, revision, token)
+    elif hf_model_id:
+        model = load_model_from_hf(hf_model_id, hf_revision, hf_token)
     else:
         raise ValueError("Provide a model checkpoint or a HuggingFace model")
 
