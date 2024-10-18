@@ -111,7 +111,9 @@ ALL_SITE_IDS.sort()
 @functional_datapipe("pad_forward_pv")
 class PadForwardPVIterDataPipe(IterDataPipe):
     """
-    Pads forecast pv. Sun position is calculated based off of pv time index
+    Pads forecast pv. 
+    
+    Sun position is calculated based off of pv time index
     and for t0's close to end of pv data can have wrong shape as pv starts
     to run out of data to slice for the forecast part.
     """
@@ -135,6 +137,10 @@ class PadForwardPVIterDataPipe(IterDataPipe):
 
 
 def load_model_from_hf(model_id: str, revision: str, token: str):
+
+"""
+Loads model from HuggingFace
+"""
     model_file = hf_hub_download(
         repo_id=model_id,
         filename=PYTORCH_WEIGHTS_NAME,
