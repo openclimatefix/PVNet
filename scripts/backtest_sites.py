@@ -111,8 +111,8 @@ ALL_SITE_IDS.sort()
 @functional_datapipe("pad_forward_pv")
 class PadForwardPVIterDataPipe(IterDataPipe):
     """
-    Pads forecast pv. 
-    
+    Pads forecast pv.
+
     Sun position is calculated based off of pv time index
     and for t0's close to end of pv data can have wrong shape as pv starts
     to run out of data to slice for the forecast part.
