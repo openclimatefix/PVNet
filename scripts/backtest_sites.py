@@ -137,7 +137,6 @@ class PadForwardPVIterDataPipe(IterDataPipe):
 
 
 def load_model_from_hf(model_id: str, revision: str, token: str):
-
     """
     Loads model from HuggingFace
     """
