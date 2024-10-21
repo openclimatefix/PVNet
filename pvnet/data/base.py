@@ -1,4 +1,5 @@
 """ Data module for pytorch lightning """
+
 from datetime import datetime
 
 from lightning.pytorch import LightningDataModule
