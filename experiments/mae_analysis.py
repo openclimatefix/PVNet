@@ -113,7 +113,7 @@ def main(project: str, runs: list[str], run_names: list[str]) -> None:
     plt.legend()
     plt.xlabel("Timestep (minutes)")
     plt.ylabel("MAE %")
-    plt.title("MAE % for each timestep")
+    plt.title("MAE % for each grouped timestep")
     plt.savefig("mae_per_grouped_timestep.png")
     plt.show()
 
