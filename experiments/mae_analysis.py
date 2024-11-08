@@ -15,7 +15,7 @@ def main(project: str, runs: list[str], run_names: list[str]) -> None:
     """
     Compare MAE values for multiple model forecasts for 48 hour horizon with 15 minute granularity
 
-     Args:
+    Args:
             project: name of W&B project
             runs: W&B ids of runs
             run_names: user specified names for runs
@@ -95,10 +95,12 @@ def main(project: str, runs: list[str], run_names: list[str]) -> None:
     for idx, df in enumerate(dfs):
         print(f"{run_names[idx]}: {df.mean()*100:0.3f}")
 
-     # Plot the error per timestep
+    # Plot the error per timestep
     plt.figure()
     for idx, df in enumerate(dfs):
-        plt.plot(column_timesteps, df, label=f"{run_names[idx]}, epoch: {epoch_num[idx]}", linestyle='-')
+        plt.plot(
+            column_timesteps, df, label=f"{run_names[idx]}, epoch: {epoch_num[idx]}", linestyle="-"
+        )
     plt.legend()
     plt.xlabel("Timestep (minutes)")
     plt.ylabel("MAE %")
@@ -109,7 +111,12 @@ def main(project: str, runs: list[str], run_names: list[str]) -> None:
     # Plot the error per grouped timestep
     plt.figure()
     for idx, run_name in enumerate(run_names):
-        plt.plot(groups_df[run_name], label=f"{run_name}, epoch: {epoch_num[idx]}", marker='o', linestyle='-')
+        plt.plot(
+            groups_df[run_name],
+            label=f"{run_name}, epoch: {epoch_num[idx]}",
+            marker="o",
+            linestyle="-",
+        )
     plt.legend()
     plt.xlabel("Timestep (minutes)")
     plt.ylabel("MAE %")
