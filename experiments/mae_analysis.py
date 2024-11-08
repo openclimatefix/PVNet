@@ -1,5 +1,6 @@
 """
-Script to generate analysis of MAE values for multiple model forecasts for 48 hour horizon with 15 minute granularity
+Script to generate analysis of MAE values for multiple model forecasts
+for 48 hour horizon with 15 minute granularity
 
 """
 
