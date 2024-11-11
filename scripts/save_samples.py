@@ -53,6 +53,10 @@ from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDat
 
 from pvnet.utils import print_config
 
+import dask 
+
+dask.config.set(scheduler="threads", num_workers=4)
+
 
 # ------- filter warning and set up config  -------
 
