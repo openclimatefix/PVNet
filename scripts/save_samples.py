@@ -20,40 +20,37 @@ python save_samples.py \
 ```
 if wanting to override these values for example
 """
-    
+
 # Ensure this block of code runs only in the main process to avoid issues with worker processes.
 if __name__ == "__main__":
     import torch.multiprocessing as mp
-    
-    # Set the start method for torch multiprocessing. Choose either "forkserver" or "spawn" to be 
-    # compatible with dask's multiprocessing. 
+
+    # Set the start method for torch multiprocessing. Choose either "forkserver" or "spawn" to be
+    # compatible with dask's multiprocessing.
     mp.set_start_method("forkserver")
-    
-    # Set the sharing strategy to 'file_system' to handle file descriptor limitations. This is 
-    # important because libraries like Zarr may open many files, which can exhaust the file 
+
+    # Set the sharing strategy to 'file_system' to handle file descriptor limitations. This is
+    # important because libraries like Zarr may open many files, which can exhaust the file
     # descriptor limit if too many workers are used.
-    mp.set_sharing_strategy('file_system')
+    mp.set_sharing_strategy("file_system")
 
 
-import os
-import sys
-import shutil
 import logging
+import os
+import shutil
+import sys
 import warnings
 
+import dask
 import hydra
+import torch
+from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-import torch
-from torch.utils.data import Dataset, DataLoader
-
-from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
-
 from pvnet.utils import print_config
-
-import dask 
 
 dask.config.set(scheduler="threads", num_workers=4)
 
@@ -71,6 +68,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 class SaveFuncFactory:
     """Factory for creating a function to save a sample to disk."""
+
     def __init__(self, save_dir: str, renewable: str = "pv"):
         self.save_dir = save_dir
         self.renewable = renewable
@@ -86,22 +84,22 @@ class SaveFuncFactory:
 
 def get_dataset(config_path: str, start_time: str, end_time: str, renewable: str = "pv") -> Dataset:
     """Get the dataset for the given renewable type."""
-    if renewable== "pv":
-            dataset_cls = PVNetUKRegionalDataset
+    if renewable == "pv":
+        dataset_cls = PVNetUKRegionalDataset
     elif renewable in ["wind", "pv_india", "pv_site"]:
         raise NotImplementedError
     else:
         raise ValueError(f"Unknown renewable: {renewable}")
-    
+
     return dataset_cls(config_path, start_time=start_time, end_time=end_time)
 
 
 def save_samples_with_dataloader(
-        dataset: Dataset, 
-        save_dir: str, 
-        num_samples: int, 
-        dataloader_kwargs: dict, 
-        renewable: str = "pv"
+    dataset: Dataset,
+    save_dir: str,
+    num_samples: int,
+    dataloader_kwargs: dict,
+    renewable: str = "pv",
 ) -> None:
     """Save samples from a dataset using a dataloader."""
     save_func = SaveFuncFactory(save_dir, renewable=renewable)
@@ -124,7 +122,7 @@ def main(config: DictConfig) -> None:
 
     # Set up directory
     os.makedirs(config_dm.sample_output_dir, exist_ok=False)
-    
+
     # Copy across configs which define the samples into the new sample directory
     with open(f"{config_dm.sample_output_dir}/datamodule.yaml", "w") as f:
         f.write(OmegaConf.to_yaml(config_dm))
@@ -141,29 +139,29 @@ def main(config: DictConfig) -> None:
         batch_sampler=None,
         num_workers=config_dm.num_workers,
         collate_fn=None,
-        pin_memory=False, # Only using CPU to prepare samples so pinning is not beneficial
+        pin_memory=False,  # Only using CPU to prepare samples so pinning is not beneficial
         drop_last=False,
         timeout=0,
         worker_init_fn=None,
         prefetch_factor=config_dm.prefetch_factor,
-        persistent_workers=False, # Not needed since we only enter the dataloader loop once
+        persistent_workers=False,  # Not needed since we only enter the dataloader loop once
     )
 
     if config_dm.num_val_samples > 0:
         print("----- Saving val samples -----")
-        
+
         val_output_dir = f"{config_dm.sample_output_dir}/val"
-        
+
         # Make directory for val samples
         os.mkdir(val_output_dir)
-        
-        # Get the dataset 
+
+        # Get the dataset
         val_dataset = get_dataset(
             config_dm.configuration,
             *config_dm.val_period,
             renewable=config.renewable,
         )
-            
+
         # Save samples
         save_samples_with_dataloader(
             dataset=val_dataset,
@@ -172,24 +170,24 @@ def main(config: DictConfig) -> None:
             dataloader_kwargs=dataloader_kwargs,
             renewable=config.renewable,
         )
-        
+
         del val_dataset
 
     if config_dm.num_train_samples > 0:
         print("----- Saving train samples -----")
-        
+
         train_output_dir = f"{config_dm.sample_output_dir}/train"
-        
+
         # Make directory for train samples
         os.mkdir(train_output_dir)
-        
-        # Get the dataset 
+
+        # Get the dataset
         train_dataset = get_dataset(
             config_dm.configuration,
             *config_dm.train_period,
             renewable=config.renewable,
         )
-            
+
         # Save samples
         save_samples_with_dataloader(
             dataset=train_dataset,
@@ -198,7 +196,7 @@ def main(config: DictConfig) -> None:
             dataloader_kwargs=dataloader_kwargs,
             renewable=config.renewable,
         )
-        
+
         del train_dataset
 
     print("----- Saving complete -----")

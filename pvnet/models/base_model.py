@@ -18,11 +18,7 @@ from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-
-from ocf_datapipes.batch import BatchKey
-from ocf_datapipes.batch import copy_batch_to_device
-
-from ocf_ml_metrics.evaluation.evaluation import evaluation
+from ocf_datapipes.batch import BatchKey, copy_batch_to_device
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -31,8 +27,6 @@ from pvnet.models.utils import (
 )
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import plot_batch_forecasts
-
-
 
 DATA_CONFIG_NAME = "data_config.yaml"
 
@@ -239,13 +233,11 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             )
 
         return data_config_file
-    
-    
+
     def _save_pretrained(self, save_directory: Path) -> None:
         """Save weights from a Pytorch model to a local directory."""
         model_to_save = self.module if hasattr(self, "module") else self  # type: ignore
         torch.save(model_to_save.state_dict(), save_directory / PYTORCH_WEIGHTS_NAME)
-        
 
     def save_pretrained(
         self,
@@ -416,14 +408,14 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             self.num_output_features = self.forecast_len * len(self.output_quantiles)
         else:
             self.num_output_features = self.forecast_len
-        
+
         # save all validation results to array, so we can save these to weights n biases
         self.validation_epoch_results = []
 
     def transfer_batch_to_device(self, batch, device, dataloader_idx):
         """Method to move custom batches to a given device"""
         return copy_batch_to_device(batch, device)
-    
+
     def _quantiles_to_prediction(self, y_quantiles):
         """
         Convert network prediction into a point prediction.
@@ -465,7 +457,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             errors = y - y_quantiles[..., i]
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
         losses = 2 * torch.cat(losses, dim=2)
-        
+
         return losses.mean()
 
     def _calculate_common_losses(self, y, y_hat):
@@ -659,7 +651,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
 
         y_hat = self(batch)
-        
+
         y = batch[self._target_key][:, -self.forecast_len :]
 
         if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:

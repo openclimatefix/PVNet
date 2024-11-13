@@ -1,15 +1,11 @@
 """ Data module for pytorch lightning """
-from datetime import datetime
 from glob import glob
 
-from lightning.pytorch import LightningDataModule
-from torch.utils.data import Dataset, DataLoader
 import torch
-
-from ocf_datapipes.batch import batch_to_tensor, stack_np_examples_into_batch, NumpyBatch
-from ocf_data_sampler.torch_datasets.pvnet_uk_regional import (
-    PVNetUKRegionalDataset
-)
+from lightning.pytorch import LightningDataModule
+from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_datapipes.batch import NumpyBatch, batch_to_tensor, stack_np_examples_into_batch
+from torch.utils.data import DataLoader, Dataset
 
 
 def fill_nans_in_arrays(batch):
@@ -29,30 +25,28 @@ def fill_nans_in_arrays(batch):
     return batch
 
 
-
 class NumpybatchPremadeSamplesDataset(Dataset):
     """Dataset to load NumpyBatch samples"""
-    
+
     def __init__(self, sample_dir):
         """Dataset to load NumpyBatch samples
-        
+
         Args:
             sample_dir: Path to the directory of pre-saved samples.
         """
         self.sample_paths = glob(f"{sample_dir}/*.pt")
-        
-        
+
     def __len__(self):
         return len(self.sample_paths)
-    
+
     def __getitem__(self, idx):
         return fill_nans_in_arrays(torch.load(self.sample_paths[idx]))
-    
+
 
 def collate_fn(samples: list[NumpyBatch]):
     """Convert a list of NumpyBatch samples to a tensor batch"""
     return batch_to_tensor(stack_np_examples_into_batch(samples))
-        
+
 
 class DataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
@@ -64,9 +58,8 @@ class DataModule(LightningDataModule):
         batch_size: int = 16,
         num_workers: int = 0,
         prefetch_factor: int | None = None,
-        train_period: list[str|None] = [None, None],
-        val_period: list[str|None] = [None, None],
-        
+        train_period: list[str | None] = [None, None],
+        val_period: list[str | None] = [None, None],
     ):
         """Datamodule for training pvnet architecture.
 
@@ -84,7 +77,6 @@ class DataModule(LightningDataModule):
 
         """
         super().__init__()
-
 
         if not ((sample_dir is not None) ^ (configuration is not None)):
             raise ValueError("Exactly one of `sample_dir` or `configuration` must be set.")
@@ -118,7 +110,7 @@ class DataModule(LightningDataModule):
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
         return NumpybatchPremadeSamplesDataset(split_dir)
-        
+
     def train_dataloader(self) -> DataLoader:
         """Construct train dataloader"""
         if self.sample_dir is not None:
@@ -126,7 +118,7 @@ class DataModule(LightningDataModule):
         else:
             dataset = self._get_streamed_samples_dataset(*self.train_period)
         return DataLoader(dataset, shuffle=True, **self._common_dataloader_kwargs)
-    
+
     def val_dataloader(self) -> DataLoader:
         """Construct val dataloader"""
         if self.sample_dir is not None:
@@ -134,5 +126,3 @@ class DataModule(LightningDataModule):
         else:
             dataset = self._get_streamed_samples_dataset(*self.val_period)
         return DataLoader(dataset, shuffle=False, **self._common_dataloader_kwargs)
-
-    
