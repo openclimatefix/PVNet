@@ -4,7 +4,6 @@ from ocf_datapipes.batch.batches import BatchKey, NWPBatchKey
 
 
 def test_model_forward(multimodal_model, sample_batch):
-
     y = multimodal_model(sample_batch)
 
     # check output is the correct shape

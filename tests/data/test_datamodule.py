@@ -31,6 +31,7 @@ def test_wind_init():
         batch_dir="tests/data/sample_batches",
     )
 
+
 @pytest.mark.skip(reason="Has not been updated for ocf-data-sampler yet")
 def test_wind_init_with_nwp_filter():
     dm = WindDataModule(
@@ -98,7 +99,7 @@ def test_iter_multiprocessing():
         served_batches += 1
 
         # Stop once we've got 2 batches
-        if served_batches==2:
+        if served_batches == 2:
             break
 
     # Make sure we've served 2 batches

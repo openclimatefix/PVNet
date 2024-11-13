@@ -122,7 +122,6 @@ def sample_train_val_datamodule():
             prefetch_factor=None,
             train_period=[None, None],
             val_period=[None, None],
-            
         )
         yield dm
 
@@ -189,7 +188,7 @@ def model_minutes_kwargs():
 def encoder_model_kwargs():
     # Used to test encoder model on satellite data
     kwargs = dict(
-        sequence_length=7, # 30 minutes of 5 minutely satellite data = 7 time steps
+        sequence_length=7,  # 30 minutes of 5 minutely satellite data = 7 time steps
         image_size_pixels=24,
         in_channels=11,
         out_features=128,
@@ -246,7 +245,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
             ),
         },
         add_image_embedding_channel=True,
-        # ocf-data-sampler doesn't supprt PV site inputs yet 
+        # ocf-data-sampler doesn't supprt PV site inputs yet
         pv_encoder=None,
         output_network=dict(
             _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
