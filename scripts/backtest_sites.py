@@ -23,6 +23,7 @@ try:
 except RuntimeError:
     pass
 
+import json
 import logging
 import os
 import sys
@@ -32,6 +33,8 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+from huggingface_hub import hf_hub_download
+from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from ocf_datapipes.batch import (
     BatchKey,
     NumpyBatch,
@@ -50,7 +53,7 @@ from ocf_datapipes.training.pvnet_site import (
 )
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, IterDataPipe, functional_datapipe
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
@@ -58,18 +61,18 @@ from pvnet.load_model import get_model_from_checkpoints
 from pvnet.utils import SiteLocationLookup
 
 # ------------------------------------------------------------------
-# USER CONFIGURED VARIABLES
+# USER CONFIGURED VARIABLES TO RUN THE SCRIPT
+
+# Directory path to save results
 output_dir = "PLACEHOLDER"
 
 # Local directory to load the PVNet checkpoint from. By default this should pull the best performing
 # checkpoint on the val set
 model_chckpoint_dir = "PLACEHOLDER"
 
-# Local directory to load the summation model checkpoint from. By default this should pull the best
-# performing checkpoint on the val set. If set to None a simple sum is used instead
-# summation_chckpoint_dir = (
-#     "/home/jamesfulton/repos/PVNet_summation/checkpoints/pvnet_summation/nw673nw2"
-# )
+hf_revision = None
+hf_token = None
+hf_model_id = None
 
 # Forecasts will be made for all available init times between these
 start_datetime = "2022-05-08 00:00"
@@ -96,18 +99,96 @@ FREQ_MINS = 30
 # When sun as elevation below this, the forecast is set to zero
 MIN_DAY_ELEVATION = 0
 
-# All pv system ids to produce forecasts for
+# Add all pv site ids here that you wish to produce forecasts for
 ALL_SITE_IDS = []
+# Need to be in ascending order
+ALL_SITE_IDS.sort()
 
 # ------------------------------------------------------------------
 # FUNCTIONS
+
+
+@functional_datapipe("pad_forward_pv")
+class PadForwardPVIterDataPipe(IterDataPipe):
+    """
+    Pads forecast pv.
+
+    Sun position is calculated based off of pv time index
+    and for t0's close to end of pv data can have wrong shape as pv starts
+    to run out of data to slice for the forecast part.
+    """
+
+    def __init__(
+        self,
+        pv_dp: IterDataPipe,
+        forecast_duration: np.timedelta64,
+        history_duration: np.timedelta64,
+        time_resolution_minutes: np.timedelta64,
+    ):
+        """Init"""
+
+        super().__init__()
+        self.pv_dp = pv_dp
+        self.forecast_duration = forecast_duration
+        self.history_duration = history_duration
+        self.time_resolution_minutes = time_resolution_minutes
+
+        self.min_seq_length = history_duration // time_resolution_minutes
+
+    def __iter__(self):
+        """Iter"""
+
+        for xr_data in self.pv_dp:
+            t_end = (
+                xr_data.time_utc.data[0]
+                + self.history_duration
+                + self.forecast_duration
+                + self.time_resolution_minutes
+            )
+            time_idx = np.arange(xr_data.time_utc.data[0], t_end, self.time_resolution_minutes)
+
+            if len(xr_data.time_utc.data) < self.min_seq_length:
+                raise ValueError("Not enough PV data to predict")
+
+            yield xr_data.reindex(time_utc=time_idx, fill_value=-1)
+
+
+def load_model_from_hf(model_id: str, revision: str, token: str):
+    """
+    Loads model from HuggingFace
+    """
+
+    model_file = hf_hub_download(
+        repo_id=model_id,
+        filename=PYTORCH_WEIGHTS_NAME,
+        revision=revision,
+        token=token,
+    )
+
+    # load config file
+    config_file = hf_hub_download(
+        repo_id=model_id,
+        filename=CONFIG_NAME,
+        revision=revision,
+        token=token,
+    )
+
+    with open(config_file, "r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    model = hydra.utils.instantiate(config)
+
+    state_dict = torch.load(model_file, map_location=torch.device("cuda"))
+    model.load_state_dict(state_dict)  # type: ignore
+    model.eval()  # type: ignore
+
+    return model
 
 
 def preds_to_dataarray(preds, model, valid_times, site_ids):
     """Put numpy array of predictions into a dataarray"""
 
     if model.use_quantile_regression:
-        output_labels = model.output_quantiles
         output_labels = [f"forecast_mw_plevel_{int(q*100):02}" for q in model.output_quantiles]
         output_labels[output_labels.index("forecast_mw_plevel_50")] = "forecast_mw"
     else:
@@ -255,7 +336,8 @@ def get_loctimes_datapipes(config_path):
         unbatch_level=1
     )  # might not need this part since the site datapipe is creating examples
 
-    # Create times datapipe so each worker receives 317 copies of the same datetime for its batch
+    # Create times datapipe so each worker receives
+    # len(ALL_SITE_IDS) copies of the same datetime for its batch
     t0_datapipe = IterableWrapper(
         [[t0 for site_id in ALL_SITE_IDS] for t0 in available_target_times]
     )
@@ -305,7 +387,7 @@ class ModelPipe:
         )
 
         # Get effective capacities for this forecast
-        # site_capacities = ds_site.nominal_capacity_wp.values
+        site_capacities = self.ds_site.nominal_capacity_wp.values
         # Get the solar elevations. We need to un-normalise these from the values in the batch
         elevation = batch[BatchKey.pv_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
         # We only need elevation mask for forecasted values, not history
@@ -327,18 +409,17 @@ class ModelPipe:
             y_normed_site = model(device_batch).detach().cpu().numpy()
         da_normed_site = preds_to_dataarray(y_normed_site, model, valid_times, ALL_SITE_IDS)
 
-        # TODO fix this step: Multiply normalised forecasts by capacities and clip negatives
-        # For now output normalised by capacity outputs and unnormalise in post processing
-        # da_abs_site = da_normed_site.clip(0, None) * site_capacities[:, None, None]
-        da_normed_site = da_normed_site.clip(0, None)
-        # Apply sundown mask
-        da_normed_site = da_normed_site.where(~da_sundown_mask).fillna(0.0)
+        # Multiply normalised forecasts by capacities and clip negatives
+        da_abs_site = da_normed_site.clip(0, None) * site_capacities[:, None, None]
 
-        da_normed_site = da_normed_site.expand_dims(dim="init_time_utc", axis=0).assign_coords(
-            init_time_utc=[t0]
+        # Apply sundown mask
+        da_abs_site = da_abs_site.where(~da_sundown_mask).fillna(0.0)
+
+        da_abs_site = da_abs_site.expand_dims(dim="init_time_utc", axis=0).assign_coords(
+            init_time_utc=np.array([t0], dtype="datetime64[ns]")
         )
 
-        return da_normed_site
+        return da_abs_site
 
 
 def get_datapipe(config_path: str) -> NumpyBatch:
@@ -362,6 +443,13 @@ def get_datapipe(config_path: str) -> NumpyBatch:
         config_path,
         location_pipe,
         t0_datapipe,
+    )
+
+    config = load_yaml_configuration(config_path)
+    data_pipeline["pv"] = data_pipeline["pv"].pad_forward_pv(
+        forecast_duration=np.timedelta64(config.input_data.pv.forecast_minutes, "m"),
+        history_duration=np.timedelta64(config.input_data.pv.history_minutes, "m"),
+        time_resolution_minutes=np.timedelta64(config.input_data.pv.time_resolution_minutes, "m"),
     )
 
     data_pipeline = DictDatasetIterDataPipe(
@@ -414,7 +502,13 @@ def main(config: DictConfig):
     # Create a dataloader for the concurrent batches and use multiprocessing
     dataloader = DataLoader(batch_pipe, **dataloader_kwargs)
     # Load the PVNet model
-    model, *_ = get_model_from_checkpoints([model_chckpoint_dir], val_best=True)
+    if model_chckpoint_dir:
+        model, *_ = get_model_from_checkpoints([model_chckpoint_dir], val_best=True)
+    elif hf_model_id:
+        model = load_model_from_hf(hf_model_id, hf_revision, hf_token)
+    else:
+        raise ValueError("Provide a model checkpoint or a HuggingFace model")
+
     model = model.eval().to(device)
 
     # Create object to make predictions for each input batch
@@ -428,13 +522,13 @@ def main(config: DictConfig):
 
             t0 = ds_abs_all.init_time_utc.values[0]
 
-            # Save the predictioons
+            # Save the predictions
             filename = f"{output_dir}/{t0}.nc"
             ds_abs_all.to_netcdf(filename)
 
             pbar.update()
         except Exception as e:
-            print(f"Exception {e} at {i}")
+            print(f"Exception {e} at batch {i}")
             pass
 
     # Close down
