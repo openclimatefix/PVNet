@@ -38,14 +38,11 @@ from ocf_datapipes.batch import (
     NumpyBatch,
     batch_to_tensor,
     copy_batch_to_device,
-    stack_np_examples_into_batch,
 )
 from ocf_datapipes.config.load import load_yaml_configuration
 from ocf_datapipes.load import OpenGSP
-from ocf_datapipes.training.pvnet_all_gsp import (
-    create_t0_datapipe, construct_sliced_data_pipeline
-)
 from ocf_datapipes.training.common import _get_datapipes_dict
+from ocf_datapipes.training.pvnet_all_gsp import construct_sliced_data_pipeline, create_t0_datapipe
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
 from omegaconf import DictConfig
 
@@ -57,7 +54,6 @@ from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
 
 from pvnet.load_model import get_model_from_checkpoints
-from pvnet.utils import GSPLocationLookup
 
 # ------------------------------------------------------------------
 # USER CONFIGURED VARIABLES
@@ -143,7 +139,7 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     # Pop out the config file
     config = datapipes_dict.pop("config")
 
-    # We are going to abuse the `create_datapipes()` function to find the init-times in
+    # We are going to abuse the `create_t0_datapipe()` function to find the init-times in
     # potential_init_times which we have input data for. To do this, we will feed in some fake GSP
     # data which has the potential_init_times as timestamps. This is a bit hacky but works for now
 
@@ -171,7 +167,7 @@ def get_available_t0_times(start_datetime, end_datetime, config_path):
     # Overwrite the GSP data which is already in the datapipes dict
     datapipes_dict["gsp"] = IterableWrapper([ds_fake_gsp])
 
-    # Use create_t0_and_loc_datapipes to get datapipe of init-times
+    # Use create_t0_datapipe to get datapipe of init-times
     t0_datapipe = create_t0_datapipe(
         datapipes_dict,
         configuration=config,
@@ -198,10 +194,6 @@ def get_times_datapipe(config_path):
     Returns:
         Datapipe: A Datapipe yielding init-times
     """
-
-    # Set up ID location query object
-    ds_gsp = get_gsp_ds(config_path)
-    gsp_id_to_loc = GSPLocationLookup(ds_gsp.x_osgb, ds_gsp.y_osgb)
 
     # Filter the init-times to times we have all input data for
     available_target_times = get_available_t0_times(
@@ -367,7 +359,6 @@ def get_datapipe(config_path: str) -> NumpyBatch:
 
     # Convert to tensor for model
     data_pipeline = data_pipeline.map(batch_to_tensor).set_length(len(t0_datapipe))
-
 
     return data_pipeline
 

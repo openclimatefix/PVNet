@@ -32,19 +32,16 @@ import warnings
 import hydra
 import numpy as np
 import torch
-from ocf_datapipes.batch import BatchKey, batch_to_tensor, stack_np_examples_into_batch
-from ocf_datapipes.training.common import (
-    open_and_return_datapipes,
-)
+from ocf_datapipes.batch import BatchKey, batch_to_tensor
 from ocf_datapipes.training.pvnet_all_gsp import (
-    construct_time_pipeline, construct_sliced_data_pipeline
+    construct_sliced_data_pipeline,
+    construct_time_pipeline,
 )
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader
 from torch.utils.data.datapipes.iter import IterableWrapper
 from tqdm import tqdm
-
 
 warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
@@ -63,7 +60,6 @@ class _save_batch_func_factory:
 
 
 def _get_datapipe(config_path, start_time, end_time, n_batches):
-
     t0_datapipe = construct_time_pipeline(
         config_path,
         start_time,
@@ -72,11 +68,11 @@ def _get_datapipe(config_path, start_time, end_time, n_batches):
 
     t0_datapipe = t0_datapipe.header(n_batches)
     t0_datapipe = t0_datapipe.sharding_filter()
-    
+
     datapipe = construct_sliced_data_pipeline(
         config_path,
         t0_datapipe,
-    )
+    ).map(batch_to_tensor)
 
     return datapipe
 
