@@ -6,7 +6,6 @@ from typing import Optional
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import pylab
 import rich.syntax
@@ -16,7 +15,6 @@ from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from ocf_datapipes.batch import BatchKey
 from ocf_datapipes.utils import Location
-from ocf_datapipes.utils.geospatial import osgb_to_lon_lat
 from omegaconf import DictConfig, OmegaConf
 
 

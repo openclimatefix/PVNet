@@ -5,7 +5,6 @@ general:
 input_data:
   default_forecast_minutes: 2880
   default_history_minutes: 60
-  data_source_which_defines_geospatial_locations: "wind"
   nwp:
     ecmwf:
       # Path to ECMWF NWP data in zarr format
@@ -64,7 +63,6 @@ input_data:
       - label: india
         wind_filename: /mnt/storage_ssd_4tb/india_wind_data.nc
         wind_metadata_filename: /mnt/storage_ssd_4tb/india_wind_metadata.csv
-    get_center: true
     n_wind_systems_per_example: 1
     #start_datetime: "2021-01-01 00:00:00"
     #end_datetime: "2024-01-01 00:00:00"
@@ -72,7 +70,6 @@ input_data:
     #sensor_files_groups:
     #    - label: meteomatics
     sensor_filename: "/mnt/storage_b/nwp/meteomatics/nw_india/wind*.zarr.zip"
-    get_center: false
     history_minutes: 60
     forecast_minutes: 2880
     #n_sensor_systems_per_example: 26
