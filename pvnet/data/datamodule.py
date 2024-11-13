@@ -12,24 +12,6 @@ from ocf_data_sampler.torch_datasets.pvnet_uk_regional import (
 )
 
 
-def fill_nans_in_arrays(batch):
-    """Fills all NaN values in each np.ndarray in the batch dictionary with zeros.
-
-    Operation is performed in-place on the batch.
-    """
-    for k, v in batch.items():
-        if isinstance(v, torch.Tensor):
-            if torch.isnan(v).any():
-                batch[k] = torch.nan_to_num(v, nan=0.0)
-
-        # Recursion is included to reach NWP arrays in subdict
-        elif isinstance(v, dict):
-            fill_nans_in_arrays(v)
-
-    return batch
-
-
-
 class NumpybatchPremadeSamplesDataset(Dataset):
     """Dataset to load NumpyBatch samples"""
     
@@ -46,7 +28,7 @@ class NumpybatchPremadeSamplesDataset(Dataset):
         return len(self.sample_paths)
     
     def __getitem__(self, idx):
-        return fill_nans_in_arrays(torch.load(self.sample_paths[idx]))
+        return torch.load(self.sample_paths[idx])
     
 
 def collate_fn(samples: list[NumpyBatch]):

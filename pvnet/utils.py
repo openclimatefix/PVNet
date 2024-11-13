@@ -265,7 +265,7 @@ def plot_batch_forecasts(
     y_id_key = BatchKey[f"{key_to_plot}_id"]
     BatchKey[f"{key_to_plot}_t0_idx"]
     time_utc_key = BatchKey[f"{key_to_plot}_time_utc"]
-    y = batch[y_key][:, :].cpu().numpy()  # Select the one it is trained on
+    y = batch[y_key].cpu().numpy()  # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()
     # Select between the timesteps in timesteps to plot
     plotting_name = key_to_plot.upper()

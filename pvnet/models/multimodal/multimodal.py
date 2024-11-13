@@ -318,7 +318,7 @@ class Model(MultimodalBaseModel):
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
+                id = x[BatchKey[f"{self._target_key_name}_id"]].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -335,7 +335,7 @@ class Model(MultimodalBaseModel):
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
+                    id = x[BatchKey[f"{self._target_key_name}_id"]].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
@@ -362,7 +362,7 @@ class Model(MultimodalBaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey[f"{self._target_key_name}_id"]][:].int()
+            id = x[BatchKey[f"{self._target_key_name}_id"]].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
