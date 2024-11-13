@@ -605,7 +605,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """Append validation results to self.validation_epoch_results"""
 
         # get truth values, shape (b, forecast_len)
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :]
         y = y.detach().cpu().numpy()
         batch_size = y.shape[0]
 

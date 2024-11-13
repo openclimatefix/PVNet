@@ -377,16 +377,6 @@ class Model(MultimodalBaseModel):
                 # This needs to be a Batch as input
                 modes["wind"] = self.wind_encoder(x_tmp)
 
-        # *********************** Sensor Data ************************************
-        if self.include_sensor:
-            if self._target_key_name != "sensor":
-                modes["sensor"] = self.sensor_encoder(x)
-            else:
-                x_tmp = x.copy()
-                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len + 1]
-                # This needs to be a Batch as input
-                modes["sensor"] = self.sensor_encoder(x_tmp)
-
         if self.include_sun:
             sun = torch.cat(
                 (

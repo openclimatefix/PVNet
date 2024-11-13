@@ -33,5 +33,5 @@ class Model(BaseModel):
     def forward(self, x: dict):
         """Run model forward on dict batch of data"""
         # Returns a single value at all steps
-        y_hat = torch.zeros_like(x[BatchKey.gsp][:, : self.forecast_len, 0]) + self._value
+        y_hat = torch.zeros_like(x[BatchKey.gsp][:, : self.forecast_len]) + self._value
         return y_hat

@@ -1,0 +1,18 @@
+_target_: pvnet.data.datamodule.DataModule
+configuration: /home/jamesfulton/repos/PVNet/configs/datamodule/configuration/gcp_configuration.yaml
+num_workers: 160
+prefetch_factor: 1
+batch_size: 8
+train_period:
+- null
+- '2022-05-07'
+val_period:
+- '2023-01-01'
+- '2023-05-08'
+test_period:
+- '2022-05-08'
+- '2023-05-08'
+seed: ${seed}
+sample_output_dir: /mnt/disks/extra_batches/samples_with_simvp_sat_pred
+num_train_samples: 1600000
+num_val_samples: 64000
