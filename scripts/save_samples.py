@@ -70,16 +70,18 @@ class SaveFuncFactory:
     """Factory for creating a function to save a sample to disk."""
 
     def __init__(self, save_dir: str, renewable: str = "pv"):
+        """Factory for creating a function to save a sample to disk."""
         self.save_dir = save_dir
         self.renewable = renewable
 
     def __call__(self, sample, sample_num: int):
+        """Save a sample to disk"""
         if self.renewable == "pv":
             torch.save(sample, f"{self.save_dir}/{sample_num:08}.pt")
-        elif renewable in ["wind", "pv_india", "pv_site"]:
+        elif self.renewable in ["wind", "pv_india", "pv_site"]:
             raise NotImplementedError
         else:
-            raise ValueError(f"Unknown renewable: {renewable}")
+            raise ValueError(f"Unknown renewable: {self.renewable}")
 
 
 def get_dataset(config_path: str, start_time: str, end_time: str, renewable: str = "pv") -> Dataset:
