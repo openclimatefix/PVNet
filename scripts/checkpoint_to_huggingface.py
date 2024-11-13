@@ -3,7 +3,7 @@
 use:
 python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
     --huggingface-repo="openclimatefix/pvnet_uk_region" \
-    --wandb-repo="openclimatefix/pvnet2.1"" \
+    --wandb-repo="openclimatefix/pvnet2.1" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
 """
