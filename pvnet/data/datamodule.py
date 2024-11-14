@@ -26,7 +26,7 @@ class NumpybatchPremadeSamplesDataset(Dataset):
         return torch.load(self.sample_paths[idx])
 
 
-def collate_fn(samples: list[NumpyBatch]):
+def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
     """Convert a list of NumpyBatch samples to a tensor batch"""
     return batch_to_tensor(stack_np_examples_into_batch(samples))
 
