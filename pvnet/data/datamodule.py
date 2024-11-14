@@ -4,7 +4,7 @@ from glob import glob
 import torch
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
-from ocf_datapipes.batch import NumpyBatch, batch_to_tensor, stack_np_examples_into_batch
+from ocf_datapipes.batch import NumpyBatch, TensorBatch, batch_to_tensor, stack_np_examples_into_batch
 from torch.utils.data import DataLoader, Dataset
 
 
