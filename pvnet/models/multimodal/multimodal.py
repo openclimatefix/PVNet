@@ -71,7 +71,6 @@ class Model(MultimodalBaseModel):
         num_embeddings: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
-        use_weighted_loss: Optional[bool] = False,
         forecast_minutes_ignore: Optional[int] = 0,
     ):
         """Neural network which combines information from different sources.
@@ -133,7 +132,6 @@ class Model(MultimodalBaseModel):
             adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
                 the model to use. This allows us to overprepare batches and slice from them for the
                 data we need for a model run.
-            use_weighted_loss: Whether to use a weighted loss function
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
         """
@@ -160,7 +158,6 @@ class Model(MultimodalBaseModel):
             target_key=target_key,
             interval_minutes=interval_minutes,
             timestep_intervals_to_plot=timestep_intervals_to_plot,
-            use_weighted_loss=use_weighted_loss,
             forecast_minutes_ignore=forecast_minutes_ignore,
         )
 
@@ -321,7 +318,7 @@ class Model(MultimodalBaseModel):
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
+                id = x[BatchKey[f"{self._target_key_name}_id"]].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -338,7 +335,7 @@ class Model(MultimodalBaseModel):
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
+                    id = x[BatchKey[f"{self._target_key_name}_id"]].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
@@ -365,7 +362,7 @@ class Model(MultimodalBaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
+            id = x[BatchKey[f"{self._target_key_name}_id"]].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
@@ -379,16 +376,6 @@ class Model(MultimodalBaseModel):
                 x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len + 1]
                 # This needs to be a Batch as input
                 modes["wind"] = self.wind_encoder(x_tmp)
-
-        # *********************** Sensor Data ************************************
-        if self.include_sensor:
-            if self._target_key_name != "sensor":
-                modes["sensor"] = self.sensor_encoder(x)
-            else:
-                x_tmp = x.copy()
-                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len + 1]
-                # This needs to be a Batch as input
-                modes["sensor"] = self.sensor_encoder(x_tmp)
 
         if self.include_sun:
             sun = torch.cat(

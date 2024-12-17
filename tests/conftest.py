@@ -106,25 +106,22 @@ def sample_train_val_datamodule():
 
         file_n = 0
 
-        for file in glob.glob("tests/test_data/sample_batches/train/*.pt"):
-            batch = torch.load(file)
+        for file_n, file in enumerate(glob.glob("tests/test_data/presaved_samples/train/*.pt")):
+            sample = torch.load(file)
 
             for i in range(n_duplicates):
                 # Save fopr both train and val
-                torch.save(batch, f"{tmpdirname}/train/{file_n:06}.pt")
-                torch.save(batch, f"{tmpdirname}/val/{file_n:06}.pt")
-
-                file_n += 1
+                torch.save(sample, f"{tmpdirname}/train/{file_n:06}.pt")
+                torch.save(sample, f"{tmpdirname}/val/{file_n:06}.pt")
 
         dm = DataModule(
             configuration=None,
+            sample_dir=f"{tmpdirname}",
             batch_size=2,
             num_workers=0,
             prefetch_factor=None,
             train_period=[None, None],
             val_period=[None, None],
-            test_period=[None, None],
-            batch_dir=f"{tmpdirname}",
         )
         yield dm
 
@@ -132,14 +129,13 @@ def sample_train_val_datamodule():
 @pytest.fixture()
 def sample_datamodule():
     dm = DataModule(
+        sample_dir="tests/test_data/presaved_samples",
         configuration=None,
         batch_size=2,
         num_workers=0,
         prefetch_factor=None,
         train_period=[None, None],
         val_period=[None, None],
-        test_period=[None, None],
-        batch_dir="tests/test_data/sample_batches",
     )
     return dm
 
@@ -157,9 +153,10 @@ def sample_satellite_batch(sample_batch):
 
 
 @pytest.fixture()
-def sample_pv_batch(sample_batch):
-    pv_data = sample_batch[BatchKey.pv]
-    return pv_data
+def sample_pv_batch():
+    # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
+    # old batches. For now we use the old batches to test the site encoder models
+    return torch.load("tests/test_data/presaved_batches/train/000000.pt")
 
 
 @pytest.fixture()
@@ -191,7 +188,7 @@ def model_minutes_kwargs():
 def encoder_model_kwargs():
     # Used to test encoder model on satellite data
     kwargs = dict(
-        sequence_length=(90 - 30) // 5 + 1,
+        sequence_length=7,  # 30 minutes of 5 minutely satellite data = 7 time steps
         image_size_pixels=24,
         in_channels=11,
         out_features=128,
@@ -240,7 +237,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
             "ukv": dict(
                 _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
                 _partial_=True,
-                in_channels=2,
+                in_channels=11,
                 out_features=128,
                 number_of_conv3d_layers=6,
                 conv3d_channels=32,
@@ -248,15 +245,8 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
             ),
         },
         add_image_embedding_channel=True,
-        pv_encoder=dict(
-            _target_=pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork,
-            _partial_=True,
-            num_sites=349,
-            out_features=40,
-            num_heads=4,
-            kdim=40,
-            id_embed_dim=20,
-        ),
+        # ocf-data-sampler doesn't supprt PV site inputs yet
+        pv_encoder=None,
         output_network=dict(
             _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
             _partial_=True,
@@ -268,11 +258,10 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
         embedding_dim=16,
         include_sun=True,
         include_gsp_yield_history=True,
-        sat_history_minutes=90,
+        sat_history_minutes=30,
         nwp_history_minutes={"ukv": 120},
         nwp_forecast_minutes={"ukv": 480},
-        pv_history_minutes=180,
-        min_sat_delay_minutes=30,
+        min_sat_delay_minutes=0,
     )
 
     kwargs.update(model_minutes_kwargs)
@@ -294,14 +283,6 @@ def multimodal_model(multimodal_model_kwargs):
 @pytest.fixture()
 def multimodal_quantile_model(multimodal_model_kwargs):
     model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
-    return model
-
-
-@pytest.fixture()
-def multimodal_weighted_quantile_model(multimodal_model_kwargs):
-    model = Model(
-        output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, use_weighted_loss=True
-    )
     return model
 
 
