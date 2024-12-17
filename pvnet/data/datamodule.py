@@ -94,7 +94,9 @@ class DataModule(LightningDataModule):
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
         if self.configuration.renewable == "pv":
-            return PVNetUKRegionalDataset(self.configuration, start_time=start_time, end_time=end_time)
+            return PVNetUKRegionalDataset(
+                self.configuration, start_time=start_time, end_time=end_time
+            )
         elif self.configuration.renewable in ["wind", "pv_india", "pv_site"]:
             return SitesDataset(self.configuration, start_time=start_time, end_time=end_time)
         else:
