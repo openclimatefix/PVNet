@@ -44,7 +44,7 @@ import warnings
 import dask
 import hydra
 import torch
-from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_data_sampler.torch_datasets import PVNetUKRegionalDataset, SitesDataset
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader, Dataset
@@ -79,7 +79,7 @@ class SaveFuncFactory:
         if self.renewable == "pv":
             torch.save(sample, f"{self.save_dir}/{sample_num:08}.pt")
         elif self.renewable in ["wind", "pv_india", "pv_site"]:
-            raise NotImplementedError
+            sample.to_netcdf(f"{self.save_dir}/{sample_num:08}.nc", mode="w", engine="h5netcdf")
         else:
             raise ValueError(f"Unknown renewable: {self.renewable}")
 
@@ -89,7 +89,7 @@ def get_dataset(config_path: str, start_time: str, end_time: str, renewable: str
     if renewable == "pv":
         dataset_cls = PVNetUKRegionalDataset
     elif renewable in ["wind", "pv_india", "pv_site"]:
-        raise NotImplementedError
+        dataset_cls = SitesDataset
     else:
         raise ValueError(f"Unknown renewable: {renewable}")
 

@@ -6,17 +6,13 @@ configuration: "PLACEHOLDER.yaml"
 num_workers: 20
 prefetch_factor: 2
 batch_size: 8
-batch_output_dir: "PLACEHOLDER"
-num_train_batches: 2
-num_val_batches: 1
-
+sample_output_dir: "PLACEHOLDER"
+num_train_samples: 2
+num_val_samples: 1
 
 train_period:
   - null
   - "2022-05-07"
 val_period:
-  - "2022-05-08"
-  - "2023-05-08"
-test_period:
   - "2022-05-08"
   - "2023-05-08"

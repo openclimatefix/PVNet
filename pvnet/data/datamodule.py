@@ -3,7 +3,7 @@ from glob import glob
 
 import torch
 from lightning.pytorch import LightningDataModule
-from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_data_sampler.torch_datasets import PVNetUKRegionalDataset, SitesDataset
 from ocf_datapipes.batch import (
     NumpyBatch,
     TensorBatch,
@@ -93,7 +93,12 @@ class DataModule(LightningDataModule):
         )
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
-        return PVNetUKRegionalDataset(self.configuration, start_time=start_time, end_time=end_time)
+        if self.configuration.renewable == "pv":
+            return PVNetUKRegionalDataset(self.configuration, start_time=start_time, end_time=end_time)
+        elif self.configuration.renewable in ["wind", "pv_india", "pv_site"]:
+            return SitesDataset(self.configuration, start_time=start_time, end_time=end_time)
+        else:
+            raise ValueError(f"Unknown renewable: {self.configuration.renewable}")
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
