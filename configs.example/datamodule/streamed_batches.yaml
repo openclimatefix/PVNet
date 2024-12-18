@@ -2,6 +2,7 @@ _target_: pvnet.data.datamodule.DataModule
 # Path to the data configuration yaml file. You can find examples in the configuration subdirectory
 # in configs.example/datamodule/configuration
 # Use the full local path such as: /FULL/PATH/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
+
 configuration: "PLACEHOLDER.yaml"
 num_workers: 20
 prefetch_factor: 2
@@ -16,3 +17,4 @@ train_period:
 val_period:
   - "2022-05-08"
   - "2023-05-08"
+
