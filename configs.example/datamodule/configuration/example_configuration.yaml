@@ -1,6 +1,6 @@
 general:
-  description: Example config for producing PVNet samples for a reneweble generation site
-  name: site_example_config
+  description: Example config for producing PVNet samples
+  name: example_config
 
 input_data:
 
