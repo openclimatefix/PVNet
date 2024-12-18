@@ -60,6 +60,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "mahdilamb",
+      "name": "Mahdi Lamb",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4696915?v=4",
+      "profile": "https://github.com/mahdilamb",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
