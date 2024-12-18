@@ -60,6 +60,12 @@ input_data:
         - v10 # 10-metre V component of wind speed
         - v100 # 100-metre V component of wind speed
         - v200 # 200-metre V component of wind speed
+      # The following channels are accumulated and need to be diffed
+      accum_channels:
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - sr # direct solar radiation
+        - duvrs # downwards UV radiation at surface
       image_size_pixels_height: 24
       image_size_pixels_width: 24
       dropout_timedeltas_minutes: [-360]
