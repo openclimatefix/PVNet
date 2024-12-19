@@ -14,7 +14,6 @@ from datetime import timedelta
 
 import pvnet
 from pvnet.data.datamodule import DataModule
-from pvnet.data.wind_datamodule import WindDataModule
 
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
@@ -158,21 +157,21 @@ def sample_pv_batch():
     # old batches. For now we use the old batches to test the site encoder models
     return torch.load("tests/test_data/presaved_batches/train/000000.pt")
 
-
-@pytest.fixture()
-def sample_wind_batch():
-    dm = WindDataModule(
-        configuration=None,
-        batch_size=2,
-        num_workers=0,
-        prefetch_factor=None,
-        train_period=[None, None],
-        val_period=[None, None],
-        test_period=[None, None],
-        batch_dir="tests/test_data/sample_wind_batches",
-    )
-    batch = next(iter(dm.train_dataloader()))
-    return batch
+# TODO update this test once we add the loading logic for the Site dataset
+# @pytest.fixture()
+# def sample_wind_batch():
+#     dm = WindDataModule(
+#         configuration=None,
+#         batch_size=2,
+#         num_workers=0,
+#         prefetch_factor=None,
+#         train_period=[None, None],
+#         val_period=[None, None],
+#         test_period=[None, None],
+#         batch_dir="tests/test_data/sample_wind_batches",
+#     )
+#     batch = next(iter(dm.train_dataloader()))
+#     return batch
 
 
 @pytest.fixture()
