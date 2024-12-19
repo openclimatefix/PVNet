@@ -41,6 +41,7 @@ def test_singleattentionnetwork_forward(sample_pv_batch, site_encoder_model_kwar
         batch_size=8,
     )
 
+
 # TODO once we have updated the sample batches for sites include this test
 # def test_singleattentionnetwork_forward_4d(sample_wind_batch, site_encoder_sensor_model_kwargs):
 #     _test_model_forward(
