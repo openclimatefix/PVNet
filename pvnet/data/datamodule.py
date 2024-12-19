@@ -100,7 +100,9 @@ class DataModule(LightningDataModule):
         elif self.configuration.renewable == "site":
             return SitesDataset(self.configuration, start_time=start_time, end_time=end_time)
         else:
-            raise ValueError(f"Unknown renewable: {self.configuration.renewable}, renewable value should either be uk_pv or site")
+            raise ValueError(
+                f"Unknown renewable: {self.configuration.renewable}, renewable value should either be uk_pv or site"
+            )
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
