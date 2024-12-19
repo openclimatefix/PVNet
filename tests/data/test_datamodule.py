@@ -12,6 +12,7 @@ def test_init():
         val_period=[None, None],
     )
 
+
 def test_iter():
     dm = DataModule(
         configuration=None,
@@ -48,4 +49,5 @@ def test_iter_multiprocessing():
     # Make sure we've served 2 batches
     assert served_batches == 2
 
-# TODO add test cases with some netcdfs premade samples 
+
+# TODO add test cases with some netcdfs premade samples
