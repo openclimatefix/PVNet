@@ -101,8 +101,8 @@ class DataModule(LightningDataModule):
             return SitesDataset(self.configuration, start_time=start_time, end_time=end_time)
         else:
             raise ValueError(
-                f"Unknown renewable: {self.configuration.renewable},
-                  renewable value should either be uk_pv or site"
+                f"Unknown renewable: {self.configuration.renewable}, "
+                "renewable value should either be uk_pv or site"
             )
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
