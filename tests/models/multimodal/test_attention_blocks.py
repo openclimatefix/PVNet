@@ -7,7 +7,6 @@ Tests each attention block - verifying initialisation, forward pass, gradients a
 
 import torch
 import pytest
-from torch.optim import SGD
 from pvnet.models.multimodal.attention_blocks import MultiheadAttention, CrossModalAttention, SelfAttention
 
 
