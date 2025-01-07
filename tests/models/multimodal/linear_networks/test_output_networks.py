@@ -15,7 +15,6 @@ from pvnet.models.multimodal.linear_networks.output_networks import DynamicOutpu
 # Fixture config
 @pytest.fixture
 def config():
-    """Test configuration parameters."""
     return {
         'in_features': 128,
         'out_features': 10,
@@ -28,7 +27,6 @@ def config():
 
 @pytest.fixture
 def inputs():
-    """Fixture for input tensor."""
     return torch.ones(16, 128)
 
 
