@@ -96,6 +96,7 @@ class DynamicFusionModule(AbstractFusionBlock):
         if use_residual:
             self.layer_norm = nn.LayerNorm(hidden_dim)
             
+
     def compute_modality_weights(
         self,
         attended_features: torch.Tensor,
@@ -111,13 +112,16 @@ class DynamicFusionModule(AbstractFusionBlock):
         weights = self.weight_network(attended_features)
         
         if mask is not None:
+            # Reshape mask to match weights dimension
+            mask = mask.unsqueeze(-1)
             weights = weights.masked_fill(~mask, 0.0)
         
         # Normalise weights
         weights = weights / (weights.sum(dim=1, keepdim=True) + 1e-9)
         
         return weights
-        
+
+
     def forward(
         self,
         features: Dict[str, torch.Tensor],
