@@ -174,23 +174,26 @@ class DynamicFusionModule(AbstractFusionBlock):
             
         return fused_features
 
+#########################################################################################################
+# URGENT FIX OF CLASS BELOW AND RE RUN TESTING !!!
+#########################################################################################################
+
 
 class ModalityGating(AbstractFusionBlock):
-
-    """ Modality gating mechanism definition """
     def __init__(
         self,
         feature_dims: Dict[str, int],
         hidden_dim: int = 256,
         dropout: float = 0.1
     ):
-        # Initialisation of modality gating module
         super().__init__()
         self.feature_dims = feature_dims
+        self.hidden_dim = hidden_dim
         
         # Create gate networks for each modality
         self.gate_networks = nn.ModuleDict({
             name: nn.Sequential(
+                # Use the actual feature dimension as input size
                 nn.Linear(dim, hidden_dim),
                 nn.ReLU(),
                 nn.Dropout(dropout),
@@ -205,14 +208,17 @@ class ModalityGating(AbstractFusionBlock):
         self,
         features: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-
         # Forward pass for modality gating
         gated_features = {}
         
-        #  Gate value and subsequent application
+        # Gate value computation and application
         for name, feat in features.items():
-            if feat is not None and self.feature_dims.get(name, 0) > 0:
-                gate = self.gate_networks[name](feat)
-                gated_features[name] = feat * gate
+            if feat is not None and name in self.gate_networks:
+                # Ensure input tensor has correct shape
+                if len(feat.shape) == 2:
+                    gate = self.gate_networks[name](feat)
+                    gated_features[name] = feat * gate
+                else:
+                    raise ValueError(f"Expected 2D tensor for {name}, got shape {feat.shape}")
                 
         return gated_features
