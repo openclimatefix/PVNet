@@ -2,10 +2,10 @@
 from glob import glob
 
 import torch
-from pvnet.data.base_datamodule import BaseDataModule
 from ocf_data_sampler.torch_datasets import PVNetUKRegionalDataset
-
 from torch.utils.data import Dataset
+
+from pvnet.data.base_datamodule import BaseDataModule
 
 
 class NumpySamplePremadeSamplesDataset(Dataset):
@@ -61,13 +61,11 @@ class UKRegionalDataModule(BaseDataModule):
             num_workers=num_workers,
             prefetch_factor=prefetch_factor,
             train_period=train_period,
-            val_period=val_period
+            val_period=val_period,
         )
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
-        return PVNetUKRegionalDataset(
-            self.configuration, start_time=start_time, end_time=end_time
-        )
+        return PVNetUKRegionalDataset(self.configuration, start_time=start_time, end_time=end_time)
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"

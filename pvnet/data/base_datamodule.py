@@ -1,15 +1,11 @@
 """ Data module for pytorch lightning """
-from glob import glob
 from lightning.pytorch import LightningDataModule
+from ocf_data_sampler.numpy_sample.collate import stack_np_examples_into_batch
 from ocf_datapipes.batch import (
     NumpyBatch,
     TensorBatch,
     batch_to_tensor,
 )
-from ocf_data_sampler.numpy_sample.collate import (
-    stack_np_examples_into_batch
-)
-
 from torch.utils.data import DataLoader, Dataset
 
 

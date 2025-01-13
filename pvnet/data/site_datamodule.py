@@ -1,11 +1,11 @@
 """ Data module for pytorch lightning """
 from glob import glob
 
-from pvnet.data.base_datamodule import BaseDataModule
-from ocf_data_sampler.torch_datasets.site import SitesDataset, convert_netcdf_to_numpy_sample
-
-from torch.utils.data import Dataset
 import xarray as xr
+from ocf_data_sampler.torch_datasets.site import SitesDataset, convert_netcdf_to_numpy_sample
+from torch.utils.data import Dataset
+
+from pvnet.data.base_datamodule import BaseDataModule
 
 
 class NetcdfPreMadeSamplesDataset(Dataset):
@@ -32,6 +32,7 @@ class NetcdfPreMadeSamplesDataset(Dataset):
         # convert to numpy
         sample = convert_netcdf_to_numpy_sample(ds)
         return sample
+
 
 class SiteDataModule(BaseDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
@@ -68,12 +69,12 @@ class SiteDataModule(BaseDataModule):
             num_workers=num_workers,
             prefetch_factor=prefetch_factor,
             train_period=train_period,
-            val_period=val_period
+            val_period=val_period,
         )
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
         return SitesDataset(self.configuration, start_time=start_time, end_time=end_time)
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
-       split_dir = f"{self.sample_dir}/{subdir}"
-       return NetcdfPreMadeSamplesDataset(split_dir)
+        split_dir = f"{self.sample_dir}/{subdir}"
+        return NetcdfPreMadeSamplesDataset(split_dir)
