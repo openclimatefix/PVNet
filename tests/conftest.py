@@ -13,7 +13,7 @@ from ocf_datapipes.batch import BatchKey
 from datetime import timedelta
 
 import pvnet
-from pvnet.data.datamodule import DataModule
+from pvnet.data.uk_regional_datamodule import UKRegionalDataModule
 
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
@@ -113,7 +113,7 @@ def sample_train_val_datamodule():
                 torch.save(sample, f"{tmpdirname}/train/{file_n:06}.pt")
                 torch.save(sample, f"{tmpdirname}/val/{file_n:06}.pt")
 
-        dm = DataModule(
+        dm = UKRegionalDataModule(
             configuration=None,
             sample_dir=f"{tmpdirname}",
             batch_size=2,
@@ -127,7 +127,7 @@ def sample_train_val_datamodule():
 
 @pytest.fixture()
 def sample_datamodule():
-    dm = DataModule(
+    dm = UKRegionalDataModule(
         sample_dir="tests/test_data/presaved_samples",
         configuration=None,
         batch_size=2,

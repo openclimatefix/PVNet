@@ -1,43 +1,25 @@
 """ Data module for pytorch lightning """
 from glob import glob
-
-import torch
 from lightning.pytorch import LightningDataModule
-from ocf_data_sampler.torch_datasets import PVNetUKRegionalDataset, SitesDataset
 from ocf_datapipes.batch import (
     NumpyBatch,
     TensorBatch,
     batch_to_tensor,
-    stack_np_examples_into_batch,
 )
+from ocf_data_sampler.numpy_sample.collate import (
+    stack_np_examples_into_batch
+)
+
 from torch.utils.data import DataLoader, Dataset
 
 
-class NumpybatchPremadeSamplesDataset(Dataset):
-    """Dataset to load NumpyBatch samples"""
-
-    def __init__(self, sample_dir):
-        """Dataset to load NumpyBatch samples
-
-        Args:
-            sample_dir: Path to the directory of pre-saved samples.
-        """
-        self.sample_paths = glob(f"{sample_dir}/*.pt")
-
-    def __len__(self):
-        return len(self.sample_paths)
-
-    def __getitem__(self, idx):
-        return torch.load(self.sample_paths[idx])
-
-
 def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
-    """Convert a list of NumpyBatch samples to a tensor batch"""
+    """Convert a list of NumpySample samples to a tensor batch"""
     return batch_to_tensor(stack_np_examples_into_batch(samples))
 
 
-class DataModule(LightningDataModule):
-    """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
+class BaseDataModule(LightningDataModule):
+    """Base Datamodule for training pvnet and using pvnet pipeline in ocf-data-sampler."""
 
     def __init__(
         self,
@@ -49,12 +31,12 @@ class DataModule(LightningDataModule):
         train_period: list[str | None] = [None, None],
         val_period: list[str | None] = [None, None],
     ):
-        """Datamodule for training pvnet architecture.
+        """Base Datamodule for training pvnet architecture.
 
         Can also be used with pre-made batches if `sample_dir` is set.
 
         Args:
-            configuration: Path to datapipe configuration file.
+            configuration: Path to ocf-data-sampler configuration file.
             sample_dir: Path to the directory of pre-saved samples. Cannot be used together with
                 `configuration` or '[train/val]_period'.
             batch_size: Batch size.
@@ -93,21 +75,10 @@ class DataModule(LightningDataModule):
         )
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
-        if self.configuration.renewable == "uk_pv":
-            return PVNetUKRegionalDataset(
-                self.configuration, start_time=start_time, end_time=end_time
-            )
-        elif self.configuration.renewable == "site":
-            return SitesDataset(self.configuration, start_time=start_time, end_time=end_time)
-        else:
-            raise ValueError(
-                f"Unknown renewable: {self.configuration.renewable}, "
-                "renewable value should either be uk_pv or site"
-            )
+        raise NotImplementedError
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
-        split_dir = f"{self.sample_dir}/{subdir}"
-        return NumpybatchPremadeSamplesDataset(split_dir)
+        raise NotImplementedError
 
     def train_dataloader(self) -> DataLoader:
         """Construct train dataloader"""
