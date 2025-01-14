@@ -157,6 +157,7 @@ def sample_pv_batch():
     # old batches. For now we use the old batches to test the site encoder models
     return torch.load("tests/test_data/presaved_batches/train/000000.pt")
 
+
 @pytest.fixture()
 def sample_wind_batch():
     dm = SiteDataModule(
