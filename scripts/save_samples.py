@@ -84,7 +84,9 @@ class SaveFuncFactory:
             raise ValueError(f"Unknown renewable: {self.renewable}")
 
 
-def get_dataset(config_path: str, start_time: str, end_time: str, renewable: str = "pv_uk") -> Dataset:
+def get_dataset(
+    config_path: str, start_time: str, end_time: str, renewable: str = "pv_uk"
+) -> Dataset:
     """Get the dataset for the given renewable type."""
     if renewable == "pv_uk":
         dataset_cls = PVNetUKRegionalDataset
