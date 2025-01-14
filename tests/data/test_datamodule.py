@@ -1,8 +1,8 @@
-from pvnet.data.uk_regional_datamodule import UKRegionalDataModule
+from pvnet.data.uk_regional_datamodule import DataModule
 
 
 def test_init():
-    dm = UKRegionalDataModule(
+    dm = DataModule(
         configuration=None,
         sample_dir="tests/test_data/presaved_samples",
         batch_size=2,
@@ -14,7 +14,7 @@ def test_init():
 
 
 def test_iter():
-    dm = UKRegionalDataModule(
+    dm = DataModule(
         configuration=None,
         sample_dir="tests/test_data/presaved_samples",
         batch_size=2,
@@ -28,7 +28,7 @@ def test_iter():
 
 
 def test_iter_multiprocessing():
-    dm = UKRegionalDataModule(
+    dm = DataModule(
         configuration=None,
         sample_dir="tests/test_data/presaved_samples",
         batch_size=1,

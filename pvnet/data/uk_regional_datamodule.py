@@ -2,17 +2,22 @@
 from glob import glob
 
 import torch
-from ocf_data_sampler.torch_datasets import PVNetUKRegionalDataset
-from torch.utils.data import Dataset
+from lightning.pytorch import LightningDataModule
+from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_datapipes.batch import (
+    NumpyBatch,
+    TensorBatch,
+    batch_to_tensor,
+    stack_np_examples_into_batch,
+)
+from torch.utils.data import DataLoader, Dataset
 
-from pvnet.data.base_datamodule import BaseDataModule
 
-
-class NumpySamplePremadeSamplesDataset(Dataset):
-    """Dataset to load NumpySample samples"""
+class NumpybatchPremadeSamplesDataset(Dataset):
+    """Dataset to load NumpyBatch samples"""
 
     def __init__(self, sample_dir):
-        """Dataset to load NumpySample samples
+        """Dataset to load NumpyBatch samples
 
         Args:
             sample_dir: Path to the directory of pre-saved samples.
@@ -26,7 +31,12 @@ class NumpySamplePremadeSamplesDataset(Dataset):
         return torch.load(self.sample_paths[idx])
 
 
-class UKRegionalDataModule(BaseDataModule):
+def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
+    """Convert a list of NumpyBatch samples to a tensor batch"""
+    return batch_to_tensor(stack_np_examples_into_batch(samples))
+
+
+class DataModule(LightningDataModule):
     """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
 
     def __init__(
@@ -54,14 +64,32 @@ class UKRegionalDataModule(BaseDataModule):
             val_period: Date range filter for val dataloader.
 
         """
-        super().__init__(
-            configuration=configuration,
-            sample_dir=sample_dir,
+        super().__init__()
+
+        if not ((sample_dir is not None) ^ (configuration is not None)):
+            raise ValueError("Exactly one of `sample_dir` or `configuration` must be set.")
+
+        if sample_dir is not None:
+            if any([period != [None, None] for period in [train_period, val_period]]):
+                raise ValueError("Cannot set `(train/val)_period` with presaved samples")
+
+        self.configuration = configuration
+        self.sample_dir = sample_dir
+        self.train_period = train_period
+        self.val_period = val_period
+
+        self._common_dataloader_kwargs = dict(
             batch_size=batch_size,
+            sampler=None,
+            batch_sampler=None,
             num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=False,
+            drop_last=False,
+            timeout=0,
+            worker_init_fn=None,
             prefetch_factor=prefetch_factor,
-            train_period=train_period,
-            val_period=val_period,
+            persistent_workers=False,
         )
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
@@ -69,4 +97,20 @@ class UKRegionalDataModule(BaseDataModule):
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
-        return NumpySamplePremadeSamplesDataset(split_dir)
+        return NumpybatchPremadeSamplesDataset(split_dir)
+
+    def train_dataloader(self) -> DataLoader:
+        """Construct train dataloader"""
+        if self.sample_dir is not None:
+            dataset = self._get_premade_samples_dataset("train")
+        else:
+            dataset = self._get_streamed_samples_dataset(*self.train_period)
+        return DataLoader(dataset, shuffle=True, **self._common_dataloader_kwargs)
+
+    def val_dataloader(self) -> DataLoader:
+        """Construct val dataloader"""
+        if self.sample_dir is not None:
+            dataset = self._get_premade_samples_dataset("val")
+        else:
+            dataset = self._get_streamed_samples_dataset(*self.val_period)
+        return DataLoader(dataset, shuffle=False, **self._common_dataloader_kwargs)
