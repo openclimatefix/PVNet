@@ -1,6 +1,6 @@
 """ Data module for pytorch lightning """
 from lightning.pytorch import LightningDataModule
-from ocf_data_sampler.numpy_sample.collate import stack_np_examples_into_batch
+from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
 from ocf_datapipes.batch import (
     NumpyBatch,
     TensorBatch,
@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 
 def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
     """Convert a list of NumpySample samples to a tensor batch"""
-    return batch_to_tensor(stack_np_examples_into_batch(samples))
+    return batch_to_tensor(stack_np_samples_into_batch(samples))
 
 
 class BaseDataModule(LightningDataModule):
