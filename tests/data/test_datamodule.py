@@ -50,6 +50,7 @@ def test_iter_multiprocessing():
     # Make sure we've served 2 batches
     assert served_batches == 2
 
+
 def test_site_init_sample_dir():
     dm = SiteDataModule(
         configuration=None,
@@ -60,6 +61,7 @@ def test_site_init_sample_dir():
         val_period=[None, None],
         sample_dir="tests/test_data/sample_site_batches",
     )
+
 
 def test_site_init_config():
     dm = SiteDataModule(
