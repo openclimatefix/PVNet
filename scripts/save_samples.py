@@ -69,26 +69,26 @@ logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 class SaveFuncFactory:
     """Factory for creating a function to save a sample to disk."""
 
-    def __init__(self, save_dir: str, renewable: str = "pv"):
+    def __init__(self, save_dir: str, renewable: str = "pv_uk"):
         """Factory for creating a function to save a sample to disk."""
         self.save_dir = save_dir
         self.renewable = renewable
 
     def __call__(self, sample, sample_num: int):
         """Save a sample to disk"""
-        if self.renewable == "pv":
+        if self.renewable == "pv_uk":
             torch.save(sample, f"{self.save_dir}/{sample_num:08}.pt")
-        elif self.renewable in ["wind", "pv_india", "pv_site"]:
+        elif self.renewable == "site":
             sample.to_netcdf(f"{self.save_dir}/{sample_num:08}.nc", mode="w", engine="h5netcdf")
         else:
             raise ValueError(f"Unknown renewable: {self.renewable}")
 
 
-def get_dataset(config_path: str, start_time: str, end_time: str, renewable: str = "pv") -> Dataset:
+def get_dataset(config_path: str, start_time: str, end_time: str, renewable: str = "pv_uk") -> Dataset:
     """Get the dataset for the given renewable type."""
-    if renewable == "pv":
+    if renewable == "pv_uk":
         dataset_cls = PVNetUKRegionalDataset
-    elif renewable in ["wind", "pv_india", "pv_site"]:
+    elif renewable == "site":
         dataset_cls = SitesDataset
     else:
         raise ValueError(f"Unknown renewable: {renewable}")
@@ -101,7 +101,7 @@ def save_samples_with_dataloader(
     save_dir: str,
     num_samples: int,
     dataloader_kwargs: dict,
-    renewable: str = "pv",
+    renewable: str = "pv_uk",
 ) -> None:
     """Save samples from a dataset using a dataloader."""
     save_func = SaveFuncFactory(save_dir, renewable=renewable)
