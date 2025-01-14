@@ -1,4 +1,5 @@
-from pvnet.data.uk_regional_datamodule import DataModule
+from pvnet.data import DataModule, SiteDataModule
+import os
 
 
 def test_init():
@@ -49,5 +50,24 @@ def test_iter_multiprocessing():
     # Make sure we've served 2 batches
     assert served_batches == 2
 
+def test_site_init_sample_dir():
+    dm = SiteDataModule(
+        configuration=None,
+        batch_size=2,
+        num_workers=0,
+        prefetch_factor=None,
+        train_period=[None, None],
+        val_period=[None, None],
+        sample_dir="tests/test_data/sample_site_batches",
+    )
 
-# TODO add test cases with some netcdfs premade samples
+def test_site_init_config():
+    dm = SiteDataModule(
+        configuration=f"{os.path.dirname(os.path.abspath(__file__))}/test_data/sample_site_batches/data_configuration.yaml",
+        batch_size=2,
+        num_workers=0,
+        prefetch_factor=None,
+        train_period=[None, None],
+        val_period=[None, None],
+        sample_dir=None,
+    )

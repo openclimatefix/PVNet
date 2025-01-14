@@ -168,7 +168,7 @@ def sample_wind_batch():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        batch_dir="tests/test_data/sample_wind_batches",
+        batch_dir="tests/test_data/sample_site_batches",
     )
     batch = next(iter(dm.train_dataloader()))
     return batch
