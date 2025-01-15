@@ -4,6 +4,8 @@
 Output networks for dynamic multimodal fusion
 
 Defined DynamicOutputNetwork and QuantileOutputNetwork fundamentally hanlde output requirements of architecture
+
+These networks process fused multimodal representations to generate outputs
 """
 
 
@@ -19,6 +21,7 @@ from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearN
 class DynamicOutputNetwork(AbstractLinearNetwork):
     """ Dynamic output network definition """
     
+    # Input ant output dimension specified here
     def __init__(
         self,
         in_features: int,
@@ -34,17 +37,21 @@ class DynamicOutputNetwork(AbstractLinearNetwork):
         # Initialisation of dynamic output network
         super().__init__(in_features=in_features, out_features=out_features)
         
+        # Default hidden architecture
         if hidden_dims is None:
             hidden_dims = [in_features * 2, in_features]
             
         if any(dim <= 0 for dim in hidden_dims):
             raise ValueError("hidden_dims must be positive")
             
-        # Construction of network layers
+        # Construction of network layers - config
         self.use_layer_norm = use_layer_norm
         self.use_residual = use_residual
         self.quantile_output = quantile_output
         self.num_forecast_steps = num_forecast_steps
+
+        # Construction of hidden layers
+        # Sequence: Linear → LayerNorm → ReLU → Dropout
         self.layers = nn.ModuleList()
         prev_dim = in_features
         
@@ -57,7 +64,7 @@ class DynamicOutputNetwork(AbstractLinearNetwork):
             if use_layer_norm:
                 layer_block.append(nn.LayerNorm(dim))
                 
-            # Activation and dropout
+            # Non linearity / regularisation
             layer_block.extend([
                 nn.ReLU(),
                 nn.Dropout(dropout)
@@ -67,6 +74,7 @@ class DynamicOutputNetwork(AbstractLinearNetwork):
             prev_dim = dim
             
         # Output layer definition
+        # Projection for quantile preds over timesteps or standard
         if quantile_output and num_forecast_steps:
             final_out_features = out_features * num_forecast_steps
         else:
@@ -101,6 +109,7 @@ class DynamicOutputNetwork(AbstractLinearNetwork):
 
         # Forward pass for dynamic output network
         # Handle dict input
+        # Concatenate multimodal inputs if dict provided
         if isinstance(x, dict):
             x = torch.cat(list(x.values()), dim=-1)
             
@@ -131,6 +140,7 @@ class DynamicOutputNetwork(AbstractLinearNetwork):
 class QuantileOutputNetwork(DynamicOutputNetwork):
     """ Output network for quantile regression """
     
+    # Defines input dimension, quantity of quantiles and forecast steps
     def __init__(
         self,
         in_features: int,
