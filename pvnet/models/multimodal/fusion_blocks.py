@@ -6,6 +6,8 @@ Fusion blocks for dynamic multimodal fusion implementation
 Definition of foundational fusion mechanisms; DynamicFusionModule and ModalityGating
 
 Aformentioned fusion blocks apply dynamic attention, weighted combinations and / or gating mechanisms for feature learning
+
+Summararily, this enables dynamic feature learning through attention based weighting and modality specific gating
 """
 
 
@@ -31,6 +33,11 @@ class AbstractFusionBlock(nn.Module, ABC):
 
 
 class DynamicFusionModule(AbstractFusionBlock):
+
+    """ Implementation of dynamic multimodal fusion through cross attention and weighted combination """
+
+    # Input dimension specified and common embedding dimension
+    # Quantity of attention heads also specified
     def __init__(
         self,
         feature_dims: Dict[str, int],
@@ -40,12 +47,10 @@ class DynamicFusionModule(AbstractFusionBlock):
         fusion_method: str = "weighted_sum",
         use_residual: bool = True
     ):
-        nn.Module.__init__(self)
+        super().__init__()
         
-        if hidden_dim <= 0:
-            raise ValueError("hidden_dim must be positive")
-        if num_heads <= 0:
-            raise ValueError("num_heads must be positive")
+        if hidden_dim <= 0 or num_heads <= 0:
+            raise ValueError("hidden_dim and num_heads must be positive")
             
         self.feature_dims = feature_dims
         self.hidden_dim = hidden_dim
@@ -55,7 +60,7 @@ class DynamicFusionModule(AbstractFusionBlock):
         if fusion_method not in ["weighted_sum", "concat"]:
             raise ValueError(f"Invalid fusion method: {fusion_method}")
         
-        # Projections
+        # Projections - modality specific
         self.projections = nn.ModuleDict({
             name: nn.Sequential(
                 nn.Linear(dim, hidden_dim),
@@ -67,14 +72,14 @@ class DynamicFusionModule(AbstractFusionBlock):
             if dim > 0
         })
         
-        # Attention
+        # Attention - cross modal
         self.cross_attention = MultiheadAttention(
             embed_dim=hidden_dim,
             num_heads=num_heads,
             dropout=dropout
         )
         
-        # Weight network
+        # Weight computation network definition
         self.weight_network = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -96,8 +101,10 @@ class DynamicFusionModule(AbstractFusionBlock):
             self.layer_norm = nn.LayerNorm(hidden_dim)
             
     def _validate_features(self, features: Dict[str, torch.Tensor]) -> None:
+        """ Validates input feature dimensions and sequence lengths """
+
         if not features:
-            raise ValueError("Empty features dictionary")
+            raise ValueError("Empty features dict")
             
         seq_length = None
         for name, feat in features.items():
@@ -107,32 +114,26 @@ class DynamicFusionModule(AbstractFusionBlock):
             if seq_length is None:
                 seq_length = feat.size(1)
             elif feat.size(1) != seq_length:
-                raise ValueError("All modalities must have the same sequence length")
+                raise ValueError("All modalities must have same sequence length")
 
     def compute_modality_weights(
         self,
         features: torch.Tensor,
         modality_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        """Compute weights for each feature.
-        
-        Args:
-            features: [batch_size, seq_len, hidden_dim] tensor
-            modality_mask: Optional attention mask
-            
-        Returns:
-            [batch_size, seq_len, 1] tensor of weights
-        """
-        # Compute weights for each feature
-        flat_features = features.reshape(-1, features.size(-1))  # [B*S, H]
-        weights = self.weight_network(flat_features)  # [B*S, 1]
-        weights = weights.reshape(features.size(0), features.size(1), 1)  # [B, S, 1]
+
+        """ Computation of attention weights for each feature """
+
+        batch_size, seq_len = features.size(0), features.size(1)
+        flat_features = features.reshape(-1, features.size(-1))
+        weights = self.weight_network(flat_features)
+        weights = weights.reshape(batch_size, seq_len, 1)
         
         if modality_mask is not None:
-            modality_mask = modality_mask.unsqueeze(-1)  # [B, S, 1]
-            weights = weights.masked_fill(~modality_mask, 0.0)
+            weights = weights.reshape(batch_size, -1, 1)[:, :modality_mask.size(1), :]
+            weights = weights.masked_fill(~modality_mask.unsqueeze(-1), 0.0)
             
-        # Normalize weights
+        # Normalisation of weights
         weights = weights / (weights.sum(dim=1, keepdim=True) + 1e-9)
         return weights
 
@@ -141,15 +142,9 @@ class DynamicFusionModule(AbstractFusionBlock):
         features: Dict[str, torch.Tensor],
         modality_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        """Forward pass
-        
-        Args:
-            features: Dict of [batch_size, seq_len, feature_dim] tensors
-            modality_mask: Optional attention mask
-            
-        Returns:
-            [batch_size, hidden_dim] tensor if seq_len=1, else [batch_size, seq_len, hidden_dim]
-        """
+
+        """ Forward pass for dynamic fusion """
+
         self._validate_features(features)
         
         batch_size = next(iter(features.values())).size(0)
@@ -167,44 +162,64 @@ class DynamicFusionModule(AbstractFusionBlock):
         if not projected_features:
             raise ValueError("No valid features after projection")
             
-        # Stack and apply attention
-        feature_stack = torch.stack(projected_features, dim=2)  # [B, S, M, H]
+        # Stack features
+        feature_stack = torch.stack(projected_features, dim=1)
         
-        # Cross attention
-        attended_features = self.cross_attention(
-            feature_stack, feature_stack, feature_stack
-        )  # [B, S, M, H]
+        # Apply cross attention
+        attended_features = []
+        for i in range(feature_stack.size(1)):
+            query = feature_stack[:, i]
+            key_value = feature_stack[:, [j for j in range(feature_stack.size(1)) if j != i]]
+            if key_value.size(1) > 0:
+                attended = self.cross_attention(query, key_value.reshape(-1, seq_len, self.hidden_dim), 
+                                            key_value.reshape(-1, seq_len, self.hidden_dim))
+                attended_features.append(attended)
+            else:
+                attended_features.append(query)
+                
+        # Average across modalities
+        attended_features = torch.stack(attended_features, dim=1)
+        attended_avg = attended_features.mean(dim=1)
         
-        # Average across modalities first
-        attended_avg = attended_features.mean(dim=2)  # [B, S, H]
+        # Mask attended features to match
+        if modality_mask is not None:
+            # Create binary mask matching sequence length
+            seq_mask = torch.zeros((batch_size, seq_len), device=attended_avg.device).bool()
+            seq_mask[:, :modality_mask.size(1)] = modality_mask
+            
+            # Compute weights on masked features
+            weights = self.compute_modality_weights(attended_avg, seq_mask)
+            weights = weights.unsqueeze(1).expand(-1, attended_features.size(1), -1, 1)
+        else:
+            weights = self.compute_modality_weights(attended_avg)
+            weights = weights.unsqueeze(1).expand(-1, attended_features.size(1), -1, 1)
         
-        # Compute weights on averaged features
-        weights = self.compute_modality_weights(attended_avg, modality_mask)  # [B, S, 1]
-        
-        # Apply weights
-        weighted_features = attended_features * weights.unsqueeze(2)  # [B, S, M, H]
+        # Application of weighted features
+        weighted_features = attended_features * weights
         
         if self.fusion_method == "weighted_sum":
-            # Sum across modalities
-            fused = weighted_features.sum(dim=2)  # [B, S, H]
+            fused = weighted_features.sum(dim=1)
         else:
-            # Concatenate modalities
-            concat = weighted_features.reshape(batch_size, seq_len, -1)  # [B, S, M*H]
-            fused = self.output_projection(concat)  # [B, S, H]
+            concat = weighted_features.reshape(batch_size, seq_len, -1)
+            fused = self.output_projection(concat)
             
-        # Apply residual if needed    
+        # Application of residual
         if self.use_residual:
-            residual = feature_stack.mean(dim=2)  # [B, S, H]
+            residual = feature_stack.mean(dim=1)
             fused = self.layer_norm(fused + residual)
             
-        # Remove sequence dimension if length is 1    
-        if seq_len == 1:
-            fused = fused.squeeze(1)
+        # Collapse sequence dimension for output
+        fused = fused.mean(dim=1)
             
         return fused
 
 
+
+
 class ModalityGating(AbstractFusionBlock):
+    """ Implementation of modality specific gating mechanism """
+
+    # Input and hidden dimension definition
     def __init__(
         self,
         feature_dims: Dict[str, int],
@@ -219,7 +234,7 @@ class ModalityGating(AbstractFusionBlock):
         self.feature_dims = feature_dims
         self.hidden_dim = hidden_dim
         
-        # Create gate networks for each modality
+        # Define gate networks for each modality
         self.gate_networks = nn.ModuleDict({
             name: nn.Sequential(
                 nn.Linear(dim, hidden_dim),
@@ -233,9 +248,10 @@ class ModalityGating(AbstractFusionBlock):
         })
 
     def _validate_features(self, features: Dict[str, torch.Tensor]) -> None:
+        """ Validation helper for input feature dict """
 
         if not features:
-            raise ValueError("Empty features dictionary")
+            raise ValueError("Empty features dict")
         for name, feat in features.items():
             if feat is None:
                 raise ValueError(f"None tensor for modality: {name}")
@@ -246,25 +262,21 @@ class ModalityGating(AbstractFusionBlock):
         features: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
 
-        self._validate_features(features)
+        """ Application of modality specific gating """
 
+        self._validate_features(features)
         gated_features = {}
         
         for name, feat in features.items():
             if feat is not None and name in self.gate_networks:
-                # Handle 3D tensors (batch_size, sequence_length, feature_dim)
                 batch_size, seq_len, feat_dim = feat.shape
-                
-                # Reshape to (batch_size * seq_len, feature_dim)
-                flat_feat = feat.reshape(-1, feat_dim)
-                
-                # Compute gates
-                gate = self.gate_networks[name](flat_feat)
-                
-                # Reshape gates back to match input
+
+                # Gate computation sequence 
+                flat_feat = feat.reshape(-1, feat_dim)                
+                gate = self.gate_networks[name](flat_feat)                
                 gate = gate.reshape(batch_size, seq_len, 1)
                 
-                # Apply gating
+                # Application of gating
                 gated_features[name] = feat * gate
                 
         return gated_features
