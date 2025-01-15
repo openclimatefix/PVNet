@@ -17,7 +17,7 @@ from torch import nn
 
 
 class AbstractAttentionBlock(nn.Module, ABC):
-    """ Abstract attention base class definition """
+    """ Abstract attention base class definition - for all derived attention mechanisms """
 
     # Forward pass
     @abstractmethod
@@ -33,9 +33,16 @@ class AbstractAttentionBlock(nn.Module, ABC):
 
 # Splits input into multiple heads - scales attention scores for stability
 class MultiheadAttention(AbstractAttentionBlock):
-    """ Multihead attention implementation / definition """
+    """
+    Multihead attention implementation / definition
+
+    Scaled dot-product attention: softmax(QKᵀ/√d_k)V
+    
+    Parallel attention heads permit model to jointly 'attend' information from different representation subspaces
+    """
 
     # Initialisation of multihead attention 
+    # Total embedding dimension and quantity of parallel attention heads
     def __init__(
         self,
         embed_dim: int,
@@ -52,6 +59,7 @@ class MultiheadAttention(AbstractAttentionBlock):
         self.head_dim = embed_dim // num_heads
         self.scale = self.head_dim ** -0.5
         
+        # Linear projections
         self.q_proj = nn.Linear(embed_dim, embed_dim)
         self.k_proj = nn.Linear(embed_dim, embed_dim)
         self.v_proj = nn.Linear(embed_dim, embed_dim)
@@ -70,7 +78,8 @@ class MultiheadAttention(AbstractAttentionBlock):
 
         batch_size = query.shape[0]
         
-        # Projection and reshape - define attention scores
+        # Projection and reshape - define attention 
+        # [batch_size, seq_len, embed_dim] → [batch_size, num_heads, seq_len, head_dim]
         q = self.q_proj(query).view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
         k = self.k_proj(key).view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
         v = self.v_proj(value).view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)        
@@ -79,10 +88,12 @@ class MultiheadAttention(AbstractAttentionBlock):
         if mask is not None:
             scores = scores.masked_fill(mask == 0, float('-inf'))
         
-        # Attention weights and subsequent output
+        # Attention weights and subsequent output / weighted aggregation
         attn_weights = F.softmax(scores, dim=-1)
         attn_weights = self.dropout(attn_weights)
         attn_output = torch.matmul(attn_weights, v)
+
+        # Reshape: [batch_size, num_heads, seq_len, head_dim] → [batch_size, seq_len, embed_dim]
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.embed_dim)
         
         return self.out_proj(attn_output)
@@ -92,7 +103,8 @@ class MultiheadAttention(AbstractAttentionBlock):
 class CrossModalAttention(AbstractAttentionBlock):
     """ CrossModal attention - interaction between multiple modalities """
 
-    # Initialisation of CrossModal attention 
+    # Initialisation of CrossModal attention
+    # Total embedding dimension and quantity of parallel attention heads
     def __init__(
         self,
         embed_dim: int,
@@ -103,6 +115,8 @@ class CrossModalAttention(AbstractAttentionBlock):
 
         super().__init__()
         self.num_modalities = num_modalities
+
+        # Parallel attention blocks for each modality
         self.attention_blocks = nn.ModuleList([
             MultiheadAttention(embed_dim, num_heads, dropout=dropout)
             for _ in range(num_modalities)
@@ -122,17 +136,18 @@ class CrossModalAttention(AbstractAttentionBlock):
 
         for i, key in enumerate(modality_keys):
             query = modalities[key]
-            # Combine other modalities as key-value pairs
+
+            # Combine other modalities as key-value pairs - concatenate
             other_modalities = [modalities[k] for k in modality_keys if k != key]
             if other_modalities:
                 key_value = torch.cat(other_modalities, dim=1)
                 
-                # Apply attention block for this modality
+                # Apply attention block for this modality - cross-modal
                 attn_output = self.attention_blocks[i](query, key_value, key_value, mask)
                 attn_output = self.dropout(attn_output)
                 updated_modalities[key] = self.layer_norms[i](query + attn_output)
             else:
-                # If no other modalities, pass through
+                # If no other modalities - pass through
                 updated_modalities[key] = query
 
         return updated_modalities
@@ -143,6 +158,7 @@ class SelfAttention(AbstractAttentionBlock):
     """ SelfAttention block for singular modality """
 
     # Initialisation of self attention 
+    # Total embedding dimension and quantity of parallel attention heads
     def __init__(
         self,
         embed_dim: int,
@@ -162,6 +178,7 @@ class SelfAttention(AbstractAttentionBlock):
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
 
+        # Self attention
         attn_output = self.attention(x, x, x, mask)
         attn_output = self.dropout(attn_output)
         return self.layer_norm(x + attn_output)
