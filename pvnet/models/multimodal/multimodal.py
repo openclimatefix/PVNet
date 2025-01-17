@@ -43,7 +43,6 @@ class Model(MultimodalBaseModel):
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         site_encoder: Optional[AbstractPVSitesEncoder] = None,
-        wind_encoder: Optional[AbstractPVSitesEncoder] = None,
         sensor_encoder: Optional[AbstractPVSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
@@ -57,7 +56,6 @@ class Model(MultimodalBaseModel):
         nwp_forecast_minutes: Optional[DictConfig] = None,
         nwp_history_minutes: Optional[DictConfig] = None,
         site_history_minutes: Optional[int] = None,
-        wind_history_minutes: Optional[int] = None,
         sensor_history_minutes: Optional[int] = None,
         sensor_forecast_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
@@ -67,7 +65,6 @@ class Model(MultimodalBaseModel):
         site_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
-        wind_interval_minutes: int = 15,
         num_embeddings: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
@@ -115,9 +112,6 @@ class Model(MultimodalBaseModel):
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
             interval_minutes: The interval between each sample of the target data
-            wind_interval_minutes: The interval between each sample of the wind data
-            wind_encoder: Encoder for wind data
-            wind_history_minutes: Length of recent wind data used as input.
             nwp_interval_minutes: Dictionary of the intervals between each sample of the NWP
                 data for each source
             site_interval_minutes: The interval between each sample of the PV data
@@ -142,7 +136,6 @@ class Model(MultimodalBaseModel):
         self.include_site = site_encoder is not None
         self.include_sun = include_sun
         self.include_time = include_time
-        self.include_wind = wind_encoder is not None
         self.include_sensor = sensor_encoder is not None
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
@@ -236,19 +229,6 @@ class Model(MultimodalBaseModel):
 
             # Update num features
             fusion_input_features += self.site_encoder.out_features
-
-        if self.include_wind:
-            if wind_history_minutes is None:
-                wind_history_minutes = history_minutes
-
-            self.wind_encoder = wind_encoder(
-                sequence_length=wind_history_minutes // wind_interval_minutes + 1,
-                target_key_to_use=self._target_key_name,
-                input_key_to_use="wind",
-            )
-
-            # Update num features
-            fusion_input_features += self.wind_encoder.out_features
 
         if self.include_sensor:
             if sensor_history_minutes is None:
@@ -349,9 +329,7 @@ class Model(MultimodalBaseModel):
                 # Target is PV, so only take the history
                 # Copy batch
                 x_tmp = x.copy()
-                print(x_tmp['site'].shape, 'Site SHAPE!!!! BEFORE SITE ENCODING!')
                 x_tmp["site"] = x_tmp["site"][:, : self.history_len + 1]
-                print(x_tmp['site'].shape, 'Site SHAPE!!!! AFTER HIST LEN TRUNCATION!')
                 modes["site"] = self.site_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
@@ -361,22 +339,11 @@ class Model(MultimodalBaseModel):
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             modes["gsp"] = gsp_history
 
-        # ********************** Embedding of GSP ID ********************
+        # ********************** Embedding of GSP/Site ID ********************
         if self.embedding_dim:
             id = x[f"{self._target_key_name}_id"].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
-
-        # *********************** Wind Data ************************************
-        if self.include_wind:
-            if self._target_key_name != "wind":
-                modes["wind"] = self.wind_encoder(x)
-            else:
-                # Have to be its own Batch format
-                x_tmp = x.copy()
-                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len + 1]
-                # This needs to be a Batch as input
-                modes["wind"] = self.wind_encoder(x_tmp)
 
         if self.include_sun:
             sun = torch.cat(

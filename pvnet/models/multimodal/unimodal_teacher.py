@@ -142,10 +142,10 @@ class Model(MultimodalBaseModel):
 
                 fusion_input_features += self.sat_encoder.out_features
 
-            elif mode == "pv":
+            elif mode == "site":
                 self.include_pv = True
-                self.pv_encoder = mode_student_model.pv_encoder
-                fusion_input_features += self.pv_encoder.out_features
+                self.site_encoder = mode_student_model.site_encoder
+                fusion_input_features += self.site_encoder.out_features
 
             elif mode.startswith("nwp"):
                 nwp_source = mode.removeprefix("nwp/")
@@ -241,8 +241,8 @@ class Model(MultimodalBaseModel):
 
             # *********************** PV Data *************************************
             # Add site-level PV yield
-            if mode == "pv":
-                modes[mode] = teacher_model.pv_encoder(x)
+            if mode == "site":
+                modes[mode] = teacher_model.site_encoder(x)
 
         return modes
 
@@ -284,13 +284,13 @@ class Model(MultimodalBaseModel):
 
         # *********************** PV Data *************************************
         # Add site-level PV yield
-        if self.include_pv:
-            if self._target_key_name != "pv":
-                modes["pv"] = self.pv_encoder(x)
+        if self.include_site:
+            if self._target_key_name != "site":
+                modes["site"] = self.site_encoder(x)
             else:
                 # Target is PV, so only take the history
                 pv_history = x[BatchKey.pv][:, : self.history_len].float()
-                modes["pv"] = self.pv_encoder(pv_history)
+                modes["site"] = self.site_encoder(pv_history)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
@@ -400,10 +400,10 @@ class Model(MultimodalBaseModel):
                     config[key] = model_config[key]
                 sources.append("sat")
 
-            elif mode == "pv":
-                for key in ["pv_encoder", "pv_history_minutes"]:
+            elif mode == "site":
+                for key in ["site_encoder", "site_history_minutes"]:
                     config[key] = model_config[key]
-                sources.append("pv")
+                sources.append("site")
 
         del config["mode_teacher_dict"]
 
@@ -414,8 +414,8 @@ class Model(MultimodalBaseModel):
             multimodal_model.sat_encoder.load_state_dict(self.sat_encoder.state_dict())
         if "nwp" in sources:
             multimodal_model.nwp_encoders_dict.load_state_dict(self.nwp_encoders_dict.state_dict())
-        if "pv" in sources:
-            multimodal_model.pv_encoder.load_state_dict(self.pv_encoder.state_dict())
+        if "site" in sources:
+            multimodal_model.site_encoder.load_state_dict(self.site_encoder.state_dict())
 
         multimodal_model.output_network.load_state_dict(self.output_network.state_dict())
 

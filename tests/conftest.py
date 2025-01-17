@@ -245,7 +245,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
         },
         add_image_embedding_channel=True,
         # ocf-data-sampler doesn't supprt PV site inputs yet
-        pv_encoder=None,
+        site_encoder=None,
         output_network=dict(
             _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
             _partial_=True,
