@@ -100,21 +100,46 @@ class DynamicFusionModule(AbstractFusionBlock):
         if use_residual:
             self.layer_norm = nn.LayerNorm(hidden_dim)
             
+    # def _validate_features(self, features: Dict[str, torch.Tensor]) -> None:
+    #     """ Validates input feature dimensions and sequence lengths """
+
+    #     if not features:
+    #         raise ValueError("Empty features dict")
+            
+    #     seq_length = None
+    #     for name, feat in features.items():
+    #         if feat is None:
+    #             raise ValueError(f"None tensor for modality: {name}")
+                
+    #         if seq_length is None:
+    #             seq_length = feat.size(1)
+    #         elif feat.size(1) != seq_length:
+    #             raise ValueError("All modalities must have same sequence length")
+
     def _validate_features(self, features: Dict[str, torch.Tensor]) -> None:
         """ Validates input feature dimensions and sequence lengths """
-
-        if not features:
+        
+        # Handle case where features might be a single tensor or empty
+        if not isinstance(features, dict) or not features:
+            if isinstance(features, torch.Tensor):
+                return  # Skip validation for single tensor
             raise ValueError("Empty features dict")
-            
-        seq_length = None
+        
+        # Collect feature lengths for features with 2D+ tensors
+        multi_dim_features = {}
         for name, feat in features.items():
             if feat is None:
                 raise ValueError(f"None tensor for modality: {name}")
-                
-            if seq_length is None:
-                seq_length = feat.size(1)
-            elif feat.size(1) != seq_length:
-                raise ValueError("All modalities must have same sequence length")
+            
+            # Only consider features with more than 1 dimension
+            if feat.ndim > 1:
+                multi_dim_features[name] = feat.size(1)
+        
+        # If more than one unique length, raise an error
+        feature_lengths = set(multi_dim_features.values())
+        if len(feature_lengths) > 1:
+            raise ValueError(f"All modalities must have same sequence length. Current lengths: {multi_dim_features}")
+
 
     def compute_modality_weights(
         self,
@@ -212,8 +237,6 @@ class DynamicFusionModule(AbstractFusionBlock):
         fused = fused.mean(dim=1)
             
         return fused
-
-
 
 
 class ModalityGating(AbstractFusionBlock):

@@ -1,11 +1,8 @@
 # multimodal_dynamic.py
 
-"""
-Dynamic fusion model definition
-"""
-
 from collections import OrderedDict
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Tuple, Any, Union
+import logging
 
 import torch
 from torch import nn
@@ -14,33 +11,22 @@ from omegaconf import DictConfig
 
 import pvnet
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
-from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
+from pvnet.models.multimodal.encoders.dynamic_encoder import DynamicFusionEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
 from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.models.multimodal.fusion_blocks import DynamicFusionModule
-from pvnet.models.multimodal.attention_blocks import CrossModalAttention
 
+logger = logging.getLogger(__name__)
 
 class Model(MultimodalBaseModel):
-    """
-    Architecture summarised as follows:
-
-    - Each modality encoded separately
-    - Cross modal attention - early feature interaction
-    - Dynamic weighting - modality importance
-    - Weighted combination - final fused representation
-    """
-
     name = "dynamic_fusion"
 
     def __init__(
         self,
         output_network: AbstractLinearNetwork,
-        output_quantiles: Optional[list[float]] = None,
-        nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
-        sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
+        output_quantiles: Optional[List[float]] = None,
+        nwp_encoders_dict: Optional[Dict] = None,
         pv_encoder: Optional[AbstractPVSitesEncoder] = None,
         wind_encoder: Optional[AbstractPVSitesEncoder] = None,
         sensor_encoder: Optional[AbstractPVSitesEncoder] = None,
@@ -52,12 +38,9 @@ class Model(MultimodalBaseModel):
         fusion_hidden_dim: int = 256,
         num_fusion_heads: int = 8,
         fusion_dropout: float = 0.1,
-        use_cross_attention: bool = True,
         fusion_method: str = "weighted_sum",
         forecast_minutes: int = 30,
         history_minutes: int = 60,
-        sat_history_minutes: Optional[int] = None,
-        min_sat_delay_minutes: Optional[int] = 30,
         nwp_forecast_minutes: Optional[DictConfig] = None,
         nwp_history_minutes: Optional[DictConfig] = None,
         pv_history_minutes: Optional[int] = None,
@@ -69,29 +52,47 @@ class Model(MultimodalBaseModel):
         interval_minutes: int = 30,
         nwp_interval_minutes: Optional[DictConfig] = None,
         pv_interval_minutes: int = 5,
-        sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
         wind_interval_minutes: int = 15,
         num_embeddings: Optional[int] = 318,
-        timestep_intervals_to_plot: Optional[list[int]] = None,
+        timestep_intervals_to_plot: Optional[List[int]] = None,
         adapt_batches: Optional[bool] = False,
         use_weighted_loss: Optional[bool] = False,
         forecast_minutes_ignore: Optional[int] = 0,
     ):
+        nn.Module.__init__(self)
         
-        self.include_gsp_yield_history = include_gsp_yield_history
-        self.include_sat = sat_encoder is not None
         self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
         self.include_time = include_time
         self.include_wind = wind_encoder is not None
         self.include_sensor = sensor_encoder is not None
-        self.embedding_dim = embedding_dim
-        self.add_image_embedding_channel = add_image_embedding_channel
-        self.interval_minutes = interval_minutes
-        self.min_sat_delay_minutes = min_sat_delay_minutes
-        self.adapt_batches = adapt_batches
+        self.include_gsp_yield_history = include_gsp_yield_history
+
+        if self.include_nwp:
+            self.nwp_encoders_dict = nwp_encoders_dict
+        if self.include_pv:
+            self.pv_encoder = pv_encoder
+        if self.include_wind:
+            self.wind_encoder = wind_encoder
+        if self.include_sensor:
+            self.sensor_encoder = sensor_encoder
+
+        self._validate_inputs(
+            fusion_hidden_dim=fusion_hidden_dim,
+            num_fusion_heads=num_fusion_heads,
+            fusion_method=fusion_method,
+            nwp_encoders_dict=nwp_encoders_dict,
+            nwp_forecast_minutes=nwp_forecast_minutes,
+            nwp_history_minutes=nwp_history_minutes,
+            pv_encoder=pv_encoder,
+            pv_history_minutes=pv_history_minutes
+        )
+        
+        self._num_output_features = 1
+        if output_quantiles:
+            self._num_output_features = len(output_quantiles)       
 
         super().__init__(
             history_minutes=history_minutes,
@@ -105,141 +106,35 @@ class Model(MultimodalBaseModel):
             forecast_minutes_ignore=forecast_minutes_ignore,
         )
 
-        feature_dims = {}
-
-        if self.include_sat:
-            assert sat_history_minutes is not None
-            
-            self.sat_sequence_len = (
-                sat_history_minutes - min_sat_delay_minutes
-            ) // sat_interval_minutes + 1
-            
-            self.sat_encoder = sat_encoder(
-                sequence_length=self.sat_sequence_len,
-                in_channels=sat_encoder.keywords["in_channels"] + add_image_embedding_channel,
-            )
-            if add_image_embedding_channel:
-                self.sat_embed = ImageEmbedding(
-                    num_embeddings, self.sat_sequence_len, self.sat_encoder.image_size_pixels
-                )
-                
-            feature_dims["sat"] = self.sat_encoder.out_features
-
-        if self.include_nwp:
-            assert nwp_forecast_minutes is not None
-            assert nwp_history_minutes is not None
-            
-            assert set(nwp_encoders_dict.keys()) == set(nwp_forecast_minutes.keys())
-            assert set(nwp_encoders_dict.keys()) == set(nwp_history_minutes.keys())
-
-            if nwp_interval_minutes is None:
-                nwp_interval_minutes = dict.fromkeys(nwp_encoders_dict.keys(), 60)
-
-            self.nwp_encoders_dict = torch.nn.ModuleDict()
-            if add_image_embedding_channel:
-                self.nwp_embed_dict = torch.nn.ModuleDict()
-
-            for nwp_source in nwp_encoders_dict.keys():
-                nwp_sequence_len = (
-                    nwp_history_minutes[nwp_source] // nwp_interval_minutes[nwp_source]
-                    + nwp_forecast_minutes[nwp_source] // nwp_interval_minutes[nwp_source]
-                    + 1
-                )
-
-                self.nwp_encoders_dict[nwp_source] = nwp_encoders_dict[nwp_source](
-                    sequence_length=nwp_sequence_len,
-                    in_channels=(
-                        nwp_encoders_dict[nwp_source].keywords["in_channels"]
-                        + add_image_embedding_channel
-                    ),
-                )
-                if add_image_embedding_channel:
-                    self.nwp_embed_dict[nwp_source] = ImageEmbedding(
-                        num_embeddings,
-                        nwp_sequence_len,
-                        self.nwp_encoders_dict[nwp_source].image_size_pixels,
-                    )
-                    
-                feature_dims[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source].out_features
-
-        if self.include_pv:
-            assert pv_history_minutes is not None
-            
-            self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // pv_interval_minutes + 1,
-                target_key_to_use=self._target_key_name,
-                input_key_to_use="pv",
-            )
-            
-            feature_dims["pv"] = self.pv_encoder.out_features
-
-        if self.include_wind:
-            if wind_history_minutes is None:
-                wind_history_minutes = history_minutes
-
-            self.wind_encoder = wind_encoder(
-                sequence_length=wind_history_minutes // wind_interval_minutes + 1,
-                target_key_to_use=self._target_key_name,
-                input_key_to_use="wind",
-            )
-            
-            feature_dims["wind"] = self.wind_encoder.out_features
-
-        if self.include_sensor:
-            if sensor_history_minutes is None:
-                sensor_history_minutes = history_minutes
-            if sensor_forecast_minutes is None:
-                sensor_forecast_minutes = forecast_minutes
-
-            self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes
-                + sensor_forecast_minutes // sensor_interval_minutes
-                + 1,
-                target_key_to_use=self._target_key_name,
-                input_key_to_use="sensor",
-            )
-            
-            feature_dims["sensor"] = self.sensor_encoder.out_features
-
-        if self.embedding_dim:
-            self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
-            feature_dims["embedding"] = embedding_dim
-
-        if self.include_sun:
-            self.sun_fc1 = nn.Linear(
-                in_features=2 * (self.forecast_len + self.forecast_len_ignore + self.history_len + 1),
-                out_features=16,
-            )
-            feature_dims["sun"] = 16
-
-        if self.include_time:
-            self.time_fc1 = nn.Linear(
-                in_features=4 * (self.forecast_len + self.forecast_len_ignore + self.history_len + 1),
-                out_features=32,
-            )
-            feature_dims["time"] = 32
-
-        if include_gsp_yield_history:
-            feature_dims["gsp"] = self.history_len
-
-        self.fusion_module = DynamicFusionModule(
-            feature_dims=feature_dims,
-            hidden_dim=fusion_hidden_dim,
-            num_heads=num_fusion_heads,
-            dropout=fusion_dropout,
-            fusion_method=fusion_method,
-            use_residual=True
+        self._initialize_model_config(
+            include_gsp_yield_history=include_gsp_yield_history,
+            nwp_encoders_dict=nwp_encoders_dict,
+            pv_encoder=pv_encoder,
+            include_sun=include_sun,
+            include_time=include_time,
+            wind_encoder=wind_encoder,
+            sensor_encoder=sensor_encoder,
+            embedding_dim=embedding_dim,
+            add_image_embedding_channel=add_image_embedding_channel,
+            interval_minutes=interval_minutes,
+            adapt_batches=adapt_batches,
+            fusion_hidden_dim=fusion_hidden_dim
         )
 
-        if use_cross_attention:
-            self.cross_attention = CrossModalAttention(
-                embed_dim=fusion_hidden_dim,
-                num_heads=num_fusion_heads,
-                dropout=fusion_dropout,
-                num_modalities=len(feature_dims)
-            )
-        else:
-            self.cross_attention = None
+        modality_channels = self._setup_modality_channels(
+            num_embeddings=num_embeddings,
+            nwp_interval_minutes=nwp_interval_minutes,
+            nwp_forecast_minutes=nwp_forecast_minutes,
+            nwp_history_minutes=nwp_history_minutes
+        )
+
+        self.encoder = self._initialize_fusion_encoder(
+            modality_channels=modality_channels,
+            fusion_hidden_dim=fusion_hidden_dim,
+            num_fusion_heads=num_fusion_heads,
+            fusion_dropout=fusion_dropout,
+            fusion_method=fusion_method
+        )
 
         self.output_network = output_network(
             in_features=fusion_hidden_dim,
@@ -247,97 +142,207 @@ class Model(MultimodalBaseModel):
         )
 
         self.save_hyperparameters()
+        logger.info(f"Initialized {self.name} model with {len(modality_channels)} modalities")
 
-    def forward(self, x):
+    def _validate_inputs(self, **kwargs):
+        if kwargs['fusion_hidden_dim'] <= 0:
+            raise ValueError("fusion_hidden_dim must be positive")
+        if kwargs['num_fusion_heads'] <= 0:
+            raise ValueError("num_fusion_heads must be positive")
+        if kwargs['fusion_method'] not in ["weighted_sum", "concat"]:
+            raise ValueError(f"Invalid fusion method: {kwargs['fusion_method']}")
+            
+        if kwargs['nwp_encoders_dict']:
+            if kwargs['nwp_forecast_minutes'] is None:
+                raise ValueError("nwp_forecast_minutes required when using NWP encoders")
+            if kwargs['nwp_history_minutes'] is None:
+                raise ValueError("nwp_history_minutes required when using NWP encoders")
+                
+        if kwargs['pv_encoder'] is not None and kwargs['pv_history_minutes'] is None:
+            raise ValueError("pv_history_minutes required when using PV encoder")
 
+    def _initialize_model_config(self, **kwargs):
+        config_params = {
+            k: v for k, v in kwargs.items() 
+            if not k.startswith('include_')
+        }
+        
+        for key, value in config_params.items():
+            setattr(self, key, value)
+        
+        if isinstance(kwargs.get('nwp_encoders_dict'), dict):
+            self.nwp_encoders_dict = kwargs['nwp_encoders_dict']
+        else:
+            self.nwp_encoders_dict = {}
+
+    def _setup_modality_channels(self, **kwargs) -> Dict[str, int]:
+        modality_channels = {}
+        
+        if self.embedding_dim:
+            modality_channels["embedding"] = self.embedding_dim
+            
+        if self.include_nwp:
+            self._setup_nwp_channels(modality_channels, **kwargs)
+            
+        self._add_additional_channels(modality_channels)
+        
+        return modality_channels
+
+    def _setup_nwp_channels(self, modality_channels: Dict[str, int], **kwargs):
+        nwp_interval_minutes = kwargs.get('nwp_interval_minutes')
+        if nwp_interval_minutes is None:
+            nwp_interval_minutes = dict.fromkeys(self.nwp_encoders_dict.keys(), 60)
+
+        for nwp_source, encoder in self.nwp_encoders_dict.items():
+            nwp_sequence_len = (
+                kwargs['nwp_history_minutes'][nwp_source] // nwp_interval_minutes[nwp_source]
+                + kwargs['nwp_forecast_minutes'][nwp_source] // nwp_interval_minutes[nwp_source]
+                + 1
+            )
+            nwp_channels = encoder.keywords["in_channels"]
+            if self.add_image_embedding_channel:
+                nwp_channels += 1
+                self.nwp_embed_dict[nwp_source] = ImageEmbedding(
+                    kwargs['num_embeddings'],
+                    nwp_sequence_len,
+                    encoder.image_size_pixels,
+                )
+            modality_channels[f"nwp/{nwp_source}"] = nwp_channels
+
+    def _add_additional_channels(self, modality_channels: Dict[str, int]):
+        if self.include_pv:
+            modality_channels["pv"] = self.pv_encoder.keywords.get("num_sites", 1)
+        if self.include_wind:
+            modality_channels["wind"] = self.wind_encoder.keywords.get("num_sites", 1)
+        if self.include_sensor:
+            modality_channels["sensor"] = self.sensor_encoder.keywords.get("num_sites", 1)
+        if self.include_sun:
+            modality_channels["sun"] = self.fusion_hidden_dim
+        if self.include_time:
+            modality_channels["time"] = self.fusion_hidden_dim
+        if self.include_gsp_yield_history:
+            modality_channels["gsp"] = self.history_len
+
+    def _initialize_fusion_encoder(self, modality_channels: Dict[str, int], fusion_hidden_dim: int,
+                                 num_fusion_heads: int, fusion_dropout: float, fusion_method: str) -> DynamicFusionEncoder:
+        modality_encoders = {}
+        
+        if self.include_nwp:
+            for nwp_source, encoder in self.nwp_encoders_dict.items():
+                modality_encoders[f"nwp/{nwp_source}"] = {
+                    "image_size_pixels": encoder.image_size_pixels,
+                }
+        
+        if self.include_pv and self.pv_encoder:
+            modality_encoders["pv"] = {
+                "num_sites": self.pv_encoder.keywords.get("num_sites", 1)
+            }
+
+        return DynamicFusionEncoder(
+            sequence_length=self.history_len,
+            image_size_pixels=224,
+            modality_channels=modality_channels,
+            out_features=self.num_output_features,
+            modality_encoders=modality_encoders,
+            cross_attention={'num_heads': num_fusion_heads, 'dropout': fusion_dropout},
+            modality_gating={'dropout': fusion_dropout},
+            dynamic_fusion={'fusion_method': fusion_method, 'use_residual': True},
+            hidden_dim=fusion_hidden_dim,
+            num_heads=num_fusion_heads,
+            dropout=fusion_dropout
+        )
+
+    def forward(self, x: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
-        encoded_features = OrderedDict()
-
-        if self.include_sat:
-            sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
-            sat_data = torch.swapaxes(sat_data, 1, 2).float()
-
-            if self.add_image_embedding_channel:
-                id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
-                sat_data = self.sat_embed(sat_data, id)
-            encoded_features["sat"] = self.sat_encoder(sat_data)
+        inputs = {}
 
         if self.include_nwp:
-            for nwp_source in self.nwp_encoders_dict:
-                nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
-                nwp_data = torch.swapaxes(nwp_data, 1, 2)
-                nwp_data = torch.clip(nwp_data, min=-50, max=50)
-
-                if self.add_image_embedding_channel:
-                    id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
-                    nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
-
-                encoded_features[f"nwp/{nwp_source}"] = self.nwp_encoders_dict[nwp_source](nwp_data)
+            self._process_nwp_data(x, inputs)
 
         if self.include_pv:
-            if self._target_key_name != "pv":
-                encoded_features["pv"] = self.pv_encoder(x)
-            else:
-                x_tmp = x.copy()
-                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len + 1]
-                encoded_features["pv"] = self.pv_encoder(x_tmp)
+            inputs["pv"] = x[BatchKey.pv][:, :self.history_len + 1]
 
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
-            encoded_features["gsp"] = gsp_history.reshape(gsp_history.shape[0], -1)
+            inputs["gsp"] = x[BatchKey.gsp][:, :self.history_len].float()
 
         if self.embedding_dim:
             id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
-            encoded_features["embedding"] = self.embed(id)
+            inputs["embedding"] = self.embed(id)
 
         if self.include_wind:
-            if self._target_key_name != "wind":
-                encoded_features["wind"] = self.wind_encoder(x)
-            else:
-                x_tmp = x.copy()
-                x_tmp[BatchKey.wind] = x_tmp[BatchKey.wind][:, : self.history_len + 1]
-                encoded_features["wind"] = self.wind_encoder(x_tmp)
+            inputs["wind"] = x[BatchKey.wind][:, :self.history_len + 1]
 
         if self.include_sensor:
-            if self._target_key_name != "sensor":
-                encoded_features["sensor"] = self.sensor_encoder(x)
-            else:
-                x_tmp = x.copy()
-                x_tmp[BatchKey.sensor] = x_tmp[BatchKey.sensor][:, : self.history_len + 1]
-                encoded_features["sensor"] = self.sensor_encoder(x_tmp)
+            inputs["sensor"] = x[BatchKey.sensor][:, :self.history_len + 1]
 
         if self.include_sun:
-            sun = torch.cat(
-                (
-                    x[BatchKey[f"{self._target_key_name}_solar_azimuth"]],
-                    x[BatchKey[f"{self._target_key_name}_solar_elevation"]],
-                ),
-                dim=1,
-            ).float()
-            encoded_features["sun"] = self.sun_fc1(sun)
-
+            sun_features = self._prepare_sun_features(x)
+            inputs["sun"] = self.sun_fc1(sun_features)
 
         if self.include_time:
-            time = torch.cat(
-                (
-                    x[f"{self._target_key_name}_date_sin"],
-                    x[f"{self._target_key_name}_date_cos"],
-                    x[f"{self._target_key_name}_time_sin"],
-                    x[f"{self._target_key_name}_time_cos"],
-                ),
-                dim=1,
-            ).float()
-            encoded_features["time"] = self.time_fc1(time)
+            time_features = self._prepare_time_features(x)
+            inputs["time"] = self.time_fc1(time_features)
 
-        if self.cross_attention is not None and len(encoded_features) > 1:
-            encoded_features = self.cross_attention(encoded_features)
-
-        fused_features = self.fusion_module(encoded_features)
-        out = self.output_network(fused_features)
+        encoded_features = self.encoder(inputs)
+        output = self.output_network(encoded_features)
 
         if self.use_quantile_regression:
-            out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
+            output = output.reshape(output.shape[0], self.forecast_len, len(self.output_quantiles))
 
-        return out
+        return output, encoded_features
+
+    def _process_nwp_data(self, x: Dict[str, torch.Tensor], inputs: Dict[str, torch.Tensor]):
+        for nwp_source, nwp_encoder in self.nwp_encoders_dict.items():
+            nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
+            nwp_data = torch.swapaxes(nwp_data, 1, 2)
+            nwp_data = torch.clip(nwp_data, min=-50, max=50)
+
+            if self.add_image_embedding_channel:
+                id = x[BatchKey[f"{self._target_key_name}_id"]][:, 0].int()
+                nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
+                
+            inputs[f"nwp/{nwp_source}"] = nwp_data
+
+    def _adapt_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        adapted_batch = {}
+        for key, value in batch.items():
+            if isinstance(value, (torch.Tensor, dict)):
+                adapted_batch[key] = value
+            else:
+                try:
+                    adapted_batch[key] = torch.tensor(value)
+                except:
+                    adapted_batch[key] = value
+        return adapted_batch
+
+    def _preprocess_features(self, x: torch.Tensor, modality: str) -> torch.Tensor:
+        if modality == "nwp":
+            return torch.clip(torch.swapaxes(x, 1, 2), min=-50, max=50)
+        return x.float()
+
+    def _prepare_time_features(self, x: Dict[str, torch.Tensor]) -> torch.Tensor:
+        return torch.cat((
+            x[f"{self._target_key_name}_date_sin"],
+            x[f"{self._target_key_name}_date_cos"],
+            x[f"{self._target_key_name}_time_sin"],
+            x[f"{self._target_key_name}_time_cos"],
+        ), dim=1).float()
+
+    def _prepare_sun_features(self, x: Dict[str, torch.Tensor]) -> torch.Tensor:
+        return torch.cat((
+            x[BatchKey[f"{self._target_key_name}_solar_azimuth"]],
+            x[BatchKey[f"{self._target_key_name}_solar_elevation"]],
+        ), dim=1).float()
+
+    def configure_optimizers(self):
+        return self.optimizer.configure_optimizers(self.parameters())
+
+    @property
+    def num_output_features(self) -> int:
+        return self._num_output_features
+
+    @num_output_features.setter 
+    def num_output_features(self, value: int):
+        self._num_output_features = value
