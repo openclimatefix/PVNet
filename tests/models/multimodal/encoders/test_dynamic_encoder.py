@@ -337,7 +337,7 @@ def test_input_noise_robustness(minimal_config, minimal_inputs, noise_level):
 
     encoder = create_encoder(minimal_config)
     
-    # Add controlled noise to inputs
+    # Add noise to inputs
     noisy_inputs = {
         k: v + noise_level * torch.randn_like(v)
         for k, v in minimal_inputs.items()
