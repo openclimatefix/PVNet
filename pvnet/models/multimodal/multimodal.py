@@ -42,7 +42,7 @@ class Model(MultimodalBaseModel):
         output_quantiles: Optional[list[float]] = None,
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
-        pv_encoder: Optional[AbstractPVSitesEncoder] = None,
+        site_encoder: Optional[AbstractPVSitesEncoder] = None,
         wind_encoder: Optional[AbstractPVSitesEncoder] = None,
         sensor_encoder: Optional[AbstractPVSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
@@ -56,7 +56,7 @@ class Model(MultimodalBaseModel):
         min_sat_delay_minutes: Optional[int] = 30,
         nwp_forecast_minutes: Optional[DictConfig] = None,
         nwp_history_minutes: Optional[DictConfig] = None,
-        pv_history_minutes: Optional[int] = None,
+        site_history_minutes: Optional[int] = None,
         wind_history_minutes: Optional[int] = None,
         sensor_history_minutes: Optional[int] = None,
         sensor_forecast_minutes: Optional[int] = None,
@@ -64,7 +64,7 @@ class Model(MultimodalBaseModel):
         target_key: str = "gsp",
         interval_minutes: int = 30,
         nwp_interval_minutes: Optional[DictConfig] = None,
-        pv_interval_minutes: int = 5,
+        site_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
         wind_interval_minutes: int = 15,
@@ -91,7 +91,7 @@ class Model(MultimodalBaseModel):
                 encode the NWP data from 4D into a 1D feature vector from different sources.
             sat_encoder: A partially instantiated pytorch Module class used to encode the satellite
                 data from 4D into a 1D feature vector.
-            pv_encoder: A partially instantiated pytorch Module class used to encode the site-level
+            site_encoder: A partially instantiated pytorch Module class used to encode the site-level
                 PV data from 2D into a 1D feature vector.
             add_image_embedding_channel: Add a channel to the NWP and satellite data with the
                 embedding of the GSP ID.
@@ -110,7 +110,7 @@ class Model(MultimodalBaseModel):
                 `forecast_minutes` if not provided.
             nwp_history_minutes: Period of historical NWP forecast used as input. Defaults to
                 `history_minutes` if not provided.
-            pv_history_minutes: Length of recent site-level PV data used as
+            site_history_minutes: Length of recent site-level PV data used as
             input. Defaults to `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
@@ -120,7 +120,7 @@ class Model(MultimodalBaseModel):
             wind_history_minutes: Length of recent wind data used as input.
             nwp_interval_minutes: Dictionary of the intervals between each sample of the NWP
                 data for each source
-            pv_interval_minutes: The interval between each sample of the PV data
+            site_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
             num_embeddings: The number of dimensions to use for the image embedding
@@ -139,7 +139,7 @@ class Model(MultimodalBaseModel):
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = sat_encoder is not None
         self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
-        self.include_pv = pv_encoder is not None
+        self.include_site = site_encoder is not None
         self.include_sun = include_sun
         self.include_time = include_time
         self.include_wind = wind_encoder is not None
@@ -225,17 +225,17 @@ class Model(MultimodalBaseModel):
                 # Update num features
                 fusion_input_features += self.nwp_encoders_dict[nwp_source].out_features
 
-        if self.include_pv:
-            assert pv_history_minutes is not None
+        if self.include_site:
+            assert site_history_minutes is not None
 
-            self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // pv_interval_minutes + 1,
+            self.site_encoder = site_encoder(
+                sequence_length=site_history_minutes // site_interval_minutes + 1,
                 target_key_to_use=self._target_key_name,
-                input_key_to_use="pv",
+                input_key_to_use="site",
             )
 
             # Update num features
-            fusion_input_features += self.pv_encoder.out_features
+            fusion_input_features += self.site_encoder.out_features
 
         if self.include_wind:
             if wind_history_minutes is None:
@@ -318,7 +318,7 @@ class Model(MultimodalBaseModel):
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x[BatchKey[f"{self._target_key_name}_id"]].int()
+                id = x[f"{self._target_key_name}_id"].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -327,31 +327,32 @@ class Model(MultimodalBaseModel):
             # Loop through potentially many NMPs
             for nwp_source in self.nwp_encoders_dict:
                 # shape: batch_size, seq_len, n_chans, height, width
-                nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
+                nwp_data = x["nwp"][nwp_source]["nwp"].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
-
                 # Some NWP variables can overflow into NaNs when normalised if they have extreme
                 # tails
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey[f"{self._target_key_name}_id"]].int()
+                    id = x[f"{self._target_key_name}_id"].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
                 modes[f"nwp/{nwp_source}"] = nwp_out
 
-        # *********************** PV Data *************************************
+        # *********************** Site Data *************************************
         # Add site-level PV yield
-        if self.include_pv:
-            if self._target_key_name != "pv":
-                modes["pv"] = self.pv_encoder(x)
+        if self.include_site:
+            if self._target_key_name != "site":
+                modes["site"] = self.site_encoder(x)
             else:
                 # Target is PV, so only take the history
                 # Copy batch
                 x_tmp = x.copy()
-                x_tmp[BatchKey.pv] = x_tmp[BatchKey.pv][:, : self.history_len + 1]
-                modes["pv"] = self.pv_encoder(x_tmp)
+                print(x_tmp['site'].shape, 'Site SHAPE!!!! BEFORE SITE ENCODING!')
+                x_tmp["site"] = x_tmp["site"][:, : self.history_len + 1]
+                print(x_tmp['site'].shape, 'Site SHAPE!!!! AFTER HIST LEN TRUNCATION!')
+                modes["site"] = self.site_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
@@ -362,7 +363,7 @@ class Model(MultimodalBaseModel):
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey[f"{self._target_key_name}_id"]].int()
+            id = x[f"{self._target_key_name}_id"].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
@@ -380,8 +381,8 @@ class Model(MultimodalBaseModel):
         if self.include_sun:
             sun = torch.cat(
                 (
-                    x[BatchKey[f"{self._target_key_name}_solar_azimuth"]],
-                    x[BatchKey[f"{self._target_key_name}_solar_elevation"]],
+                    x[f"{self._target_key_name}_solar_azimuth"],
+                    x[f"{self._target_key_name}_solar_elevation"],
                 ),
                 dim=1,
             ).float()
@@ -391,10 +392,10 @@ class Model(MultimodalBaseModel):
         if self.include_time:
             time = torch.cat(
                 (
-                    x[BatchKey[f"{self._target_key_name}_date_sin"]],
-                    x[BatchKey[f"{self._target_key_name}_date_cos"]],
-                    x[BatchKey[f"{self._target_key_name}_time_sin"]],
-                    x[BatchKey[f"{self._target_key_name}_time_cos"]],
+                    x[f"{self._target_key_name}_date_sin"],
+                    x[f"{self._target_key_name}_date_cos"],
+                    x[f"{self._target_key_name}_time_sin"],
+                    x[f"{self._target_key_name}_time_cos"],
                 ),
                 dim=1,
             ).float()

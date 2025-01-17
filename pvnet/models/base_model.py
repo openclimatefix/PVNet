@@ -371,7 +371,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         self._optimizer = optimizer
         self._target_key_name = target_key
-        self._target_key = BatchKey[f"{target_key}"]
+        self._target_key = f"{target_key}"
         if timestep_intervals_to_plot is not None:
             for interval in timestep_intervals_to_plot:
                 assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(
@@ -613,11 +613,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         y_hat = y_hat.detach().cpu().numpy()
 
         # get time_utc, shape (b, forecast_len)
-        time_utc_key = BatchKey[f"{self._target_key_name}_time_utc"]
+        time_utc_key = f"{self._target_key_name}_time_utc"
         time_utc = batch[time_utc_key][:, -self.forecast_len :].detach().cpu().numpy()
 
         # get target id and change from (b,1) to (b,)
-        id_key = BatchKey[f"{self._target_key_name}_id"]
+        id_key = f"{self._target_key_name}_id"
         target_id = batch[id_key].detach().cpu().numpy()
         target_id = target_id.squeeze()
 
