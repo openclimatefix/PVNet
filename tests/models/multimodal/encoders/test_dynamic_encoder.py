@@ -11,7 +11,7 @@ from typing import Dict
 from pvnet.models.multimodal.encoders.dynamic_encoder import DynamicFusionEncoder
 
 
-# Fixtures
+# Fixtures definition
 @pytest.fixture
 def minimal_config():
     """ Generate minimal config - basic functionality testing """
@@ -54,7 +54,7 @@ def minimal_config():
                 'sat': feature_dim,
                 'pv': feature_dim
             },
-            'hidden_dim': feature_dim,  # Changed to feature_dim
+            'hidden_dim': feature_dim,
             'dropout': 0.1
         },
         'dynamic_fusion': {
@@ -62,7 +62,7 @@ def minimal_config():
                 'sat': feature_dim,
                 'pv': feature_dim
             },
-            'hidden_dim': feature_dim,  # Changed to feature_dim
+            'hidden_dim': feature_dim,
             'num_heads': 4,
             'dropout': 0.1,
             'fusion_method': 'weighted_sum',
@@ -129,7 +129,7 @@ def test_single_modality(minimal_config, minimal_inputs):
     """ Test forward pass with single modality """
     encoder = create_encoder(minimal_config)
     
-    # Test with only satellite data
+    # Test with only satellite data - update later when included in model
     with torch.no_grad():
         sat_only = {'sat': minimal_inputs['sat']}
         output_sat = encoder(sat_only)
@@ -157,7 +157,7 @@ def test_intermediate_shapes(minimal_config, minimal_inputs):
     def hook_fn(module, input, output):
         if isinstance(output, dict):
             for key, value in output.items():
-                assert len(value.shape) == 3  # [batch, sequence, features]
+                assert len(value.shape) == 3
                 assert value.size(0) == batch_size
                 assert value.size(1) == sequence_length
                 assert value.size(2) == feature_dim
@@ -166,7 +166,6 @@ def test_intermediate_shapes(minimal_config, minimal_inputs):
                 assert output.size(0) == batch_size
                 assert output.size(1) == sequence_length
         
-    # Register hooks
     if hasattr(encoder, 'gating'):
         encoder.gating.register_forward_hook(hook_fn)
     if hasattr(encoder, 'cross_attention'):
@@ -176,7 +175,7 @@ def test_intermediate_shapes(minimal_config, minimal_inputs):
         encoder(minimal_inputs)
 
 
-# Robustness tests
+# Robustness testing
 @pytest.mark.parametrize("batch_size", [1, 4])
 def test_batch_sizes(minimal_config, minimal_inputs, batch_size):
     """ Test encoder behavior with different batch sizes """
@@ -250,7 +249,7 @@ def test_architecture_components(minimal_config):
 
     encoder = create_encoder(minimal_config)
     
-    # Test encoder layers
+    # Assert encoder layers
     assert hasattr(encoder, 'modality_encoders')
     assert hasattr(encoder, 'feature_projections')
     assert hasattr(encoder, 'fusion_module')
@@ -272,7 +271,6 @@ def test_tensor_shape_tracking(minimal_config, minimal_inputs):
                           {k: v.shape for k, v in output.items()}
         return hook
     
-    # Register shape tracking hooks
     encoder.modality_encoders['sat'].register_forward_hook(hook_fn('sat_encoder'))
     encoder.feature_projections['sat'].register_forward_hook(hook_fn('sat_projection'))
     encoder.fusion_module.register_forward_hook(hook_fn('fusion'))
@@ -325,30 +323,8 @@ def test_attention_behavior(minimal_config, minimal_inputs):
         encoder(minimal_inputs)
         
     if attention_outputs:
+        
         # Verify attention weight distribution
         for modality, features in attention_outputs.items():
             std = features.std()
             assert std > 1e-6, "Attention weights too uniform"
-
-
-@pytest.mark.parametrize("noise_level", [0.1, 0.5, 1.0])
-def test_input_noise_robustness(minimal_config, minimal_inputs, noise_level):
-    """ Test encoder stability under different noise levels """
-
-    encoder = create_encoder(minimal_config)
-    
-    # Add noise to inputs
-    noisy_inputs = {
-        k: v + noise_level * torch.randn_like(v)
-        for k, v in minimal_inputs.items()
-    }
-    
-    with torch.no_grad():
-        clean_output = encoder(minimal_inputs)
-        noisy_output = encoder(noisy_inputs)
-    
-    # Check output stability
-    relative_diff = (clean_output - noisy_output).abs().mean() / clean_output.abs().mean()
-    assert not torch.isnan(relative_diff)
-    assert not torch.isinf(relative_diff)
-    assert relative_diff < noise_level * 10

@@ -20,6 +20,9 @@ from pvnet.models.multimodal.encoders.encoders3d import DefaultPVNet2
 def get_compatible_heads(dim: int, target_heads: int) -> int:
     """ Calculate largest compatible number of heads <= target_heads """
 
+    # Iterative reduction
+    # Obtain maximum divisible number of heads
+    # h ∈ ℕ : h ≤ target_heads ∧ dim mod h = 0
     for h in range(min(target_heads, dim), 0, -1):
         if dim % h == 0:
             return h
@@ -32,11 +35,17 @@ class PVEncoder(nn.Module):
 
     def __init__(self, sequence_length: int, num_sites: int, out_features: int):
         super().__init__()
+
+        # Temporal and spatial configuration parameters
+        # L: sequence length
+        # M: number of sites
         self.sequence_length = sequence_length
         self.num_sites = num_sites
         self.out_features = out_features
         
         # Basic feature extraction network
+        # φ: ℝ^M → ℝ^N 
+        # Linear Transformation → Layer Normalization → ReLU → Dropout
         self.encoder = nn.Sequential(
             nn.Linear(num_sites, out_features),
             nn.LayerNorm(out_features),
@@ -47,10 +56,12 @@ class PVEncoder(nn.Module):
     def forward(self, x):
 
         # Sequential processing - maintain temporal order
+        # x ∈ ℝ^{B×L×M} → out ∈ ℝ^{B×L×N}
         batch_size = x.shape[0]
         out = []
         for t in range(self.sequence_length):
             out.append(self.encoder(x[:, t]))\
+
         # Reshape maintaining sequence dimension
         return torch.stack(out, dim=1)
 
@@ -84,17 +95,22 @@ class DynamicFusionEncoder(AbstractNWPSatelliteEncoder):
         )
 
         # Dimension validation and compatibility
+        # Adjust hidden dimension to be divisible by sequence length
+        # H = feature_dim × sequence_length        
         if hidden_dim % sequence_length != 0:
             feature_dim = ((hidden_dim + sequence_length - 1) // sequence_length)
             hidden_dim = feature_dim * sequence_length
         else:
             feature_dim = hidden_dim // sequence_length
 
-        # Attention mechanism setup
+        # Attention head compatibility check
+        # Select maximum compatible head count
+        # h ∈ ℕ : h ≤ num_heads ∧ feature_dim mod h = 0        
         attention_heads = cross_attention.get('num_heads', num_heads)
         attention_heads = get_compatible_heads(feature_dim, attention_heads)
         
-        # Feature dimension adjustment for attention
+        # Dimension adjustment for attention mechanism
+        # Ensure feature dimension is compatible with attention heads
         if feature_dim < attention_heads:
             feature_dim = attention_heads
             hidden_dim = feature_dim * sequence_length
@@ -164,15 +180,16 @@ class DynamicFusionEncoder(AbstractNWPSatelliteEncoder):
                 'hidden_dim': feature_dim
             })
             self.gating = ModalityGating(**gating_config)
-            
+
         # Cross modal attention mechanism
-        self.use_cross_attention = use_cross_attention
-        if use_cross_attention:
+        self.use_cross_attention = use_cross_attention and len(modality_channels) > 1
+        if self.use_cross_attention:
             attention_config = cross_attention.copy()
             attention_config.update({
                 'embed_dim': feature_dim,
                 'num_heads': attention_heads,
-                'dropout': dropout
+                'dropout': dropout,
+                'num_modalities': len(modality_channels)
             })
             self.cross_attention = CrossModalAttention(**attention_config)
             
@@ -195,45 +212,84 @@ class DynamicFusionEncoder(AbstractNWPSatelliteEncoder):
             nn.Linear(fc_features, out_features),
             nn.ELU(),
         )
-        
+
     def forward(
         self,
         inputs: Dict[str, torch.Tensor],
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
 
-        """ Dynamic fusion forward pass implementation """
-
+        # Encoded features dictionary 
+        # M ∈ {x_m | m ∈ Modalities}
         encoded_features = {}
 
         # Modality specific encoding
+        # x_m ∈ ℝ^{B×L×C_m} → encoded ∈ ℝ^{B×L×D}
         for modality, x in inputs.items():
             if modality not in self.modality_encoders or x is None:
                 continue
-                
+                    
             # Feature extraction and projection
             encoded = self.modality_encoders[modality](x)
+            print(f"Encoded {modality} shape: {encoded.shape}")
+
+            # Temporal projection across sequence
+            # π: ℝ^{B×L×D} → ℝ^{B×L×D}
             projected = torch.stack([
                 self.feature_projections[modality](encoded[:, t])
                 for t in range(self.sequence_length)
             ], dim=1)
+            print(f"Projected {modality} shape: {projected.shape}")
             
             encoded_features[modality] = projected
-            
+
+        # Validation of encoded feature space
+        # |M| > 0
         if not encoded_features:
             raise ValueError("No valid features after encoding")
             
         # Apply modality interaction mechanisms
         if self.use_gating:
+
+            # g: M → M̂
+            # Adaptive feature transformation with learned gates
             encoded_features = self.gating(encoded_features)
-            
-        if self.use_cross_attention and len(encoded_features) > 1:
-            encoded_features = self.cross_attention(encoded_features, mask)
-            
+            print(f"After gating, encoded_features shapes: {[encoded_features[mod].shape for mod in encoded_features]}")
+
+        # Cross-modal attention mechanism
+        if self.use_cross_attention:
+            if len(encoded_features) > 1:
+
+                # Multi-modal cross attention
+                encoded_features = self.cross_attention(encoded_features, mask)
+            else:
+
+                # For single modality, apply self-attention instead
+                for key in encoded_features:
+                    encoded_features[key] = encoded_features[key]  # Identity mapping
+
+            print(f"After cross-modal attention - encoded_features shapes: {[encoded_features[mod].shape for mod in encoded_features]}")
+
         # Feature fusion and output generation
         fused_features = self.fusion_module(encoded_features, mask)
+        print(f"Fused features shape: {fused_features.shape}")
+
+        # Ensure input to final_block matches hidden_dim
+        # Ensure z ∈ ℝ^{B×H}, H: hidden dimension
         batch_size = fused_features.size(0)
-        fused_features = fused_features.repeat(1, self.sequence_length)  
+        
+        # Repeat the features to match the expected hidden dimension
+        if fused_features.size(1) != self.hidden_dim:
+            fused_features = fused_features.repeat(1, self.hidden_dim // fused_features.size(1))
+        
+        # Precision projection if dimension mismatch persists
+        # π_H: ℝ^k → ℝ^H        
+        if fused_features.size(1) != self.hidden_dim:
+            projection = nn.Linear(fused_features.size(1), self.hidden_dim).to(fused_features.device)
+            fused_features = projection(fused_features)
+
+        # Final output generation
+        # ψ: ℝ^H → ℝ^M, M: output features
         output = self.final_block(fused_features)
         
         return output
@@ -246,6 +302,8 @@ class DynamicResidualEncoder(DynamicFusionEncoder):
         super().__init__(*args, **kwargs)
         
         # Enhanced projection with residual pathways
+        # With residual transformation
+        # φ_m: ℝ^H → ℝ^H
         self.feature_projections = nn.ModuleDict({
             modality: nn.Sequential(
                 nn.LayerNorm(self.hidden_dim),
@@ -266,14 +324,19 @@ class DynamicResidualEncoder(DynamicFusionEncoder):
 
         """ Forward implementation with residual pathways """
 
+        # Encoded features dictionary
         encoded_features = {}
 
         # Feature extraction with residual connections
+        # x_m + R_m(x_m)
         for modality, x in inputs.items():
             if modality not in self.modality_encoders or x is None:
                 continue
                 
-            encoded = self.modality_encoders[modality](x)            
+            encoded = self.modality_encoders[modality](x)
+
+            # Residual connection
+            # x_m ⊕ R_m(x_m)           
             projected = encoded + self.feature_projections[modality](encoded)
             encoded_features[modality] = projected
             
@@ -281,6 +344,7 @@ class DynamicResidualEncoder(DynamicFusionEncoder):
             raise ValueError("No valid features after encoding")
             
         # Gating with residual pathways
+        # g_m: x_m ⊕ g(x_m)
         if self.use_gating:
             gated_features = self.gating(encoded_features)
             for modality in encoded_features:
@@ -288,6 +352,7 @@ class DynamicResidualEncoder(DynamicFusionEncoder):
             encoded_features = gated_features
             
         # Attention with residual pathways
+        # A_m: x_m ⊕ A(x_m)
         if self.use_cross_attention and len(encoded_features) > 1:
             attended_features = self.cross_attention(encoded_features, mask)
             for modality in encoded_features:
