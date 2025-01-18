@@ -1,15 +1,24 @@
 # multimodal_dynamic.py
 
-from collections import OrderedDict
-from typing import Optional, Dict, List, Tuple, Any, Union
-import logging
 
+"""
+Dynamic multimodal fusion model implementation
+
+Model class for multimodal fusion architecture - integrates multiple modality encoders / fusion mechanisms
+
+Implementation permits dynamic fusion through attention-based mechanisms and modality-specific processing stages
+"""
+
+import logging
+import pvnet
 import torch
+
 from torch import nn
 from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from omegaconf import DictConfig
+from collections import OrderedDict
+from typing import Optional, Dict, List, Tuple, Any, Union
 
-import pvnet
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.dynamic_encoder import DynamicFusionEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
@@ -17,11 +26,22 @@ from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEn
 from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.optimizers import AbstractOptimizer
 
+
 logger = logging.getLogger(__name__)
 
+
 class Model(MultimodalBaseModel):
+    """ 
+    Dynamic multimodal fusion model definition
+    
+    Implements fusion of M modalities through attention-based mechanisms
+    Supports heterogeneous input spaces 
+    # X_m ∈ ℝ^{d_m} for m ∈ M
+    """
+
     name = "dynamic_fusion"
 
+    # Model initialisation
     def __init__(
         self,
         output_network: AbstractLinearNetwork,
@@ -106,7 +126,7 @@ class Model(MultimodalBaseModel):
             forecast_minutes_ignore=forecast_minutes_ignore,
         )
 
-        self._initialize_model_config(
+        self._initialise_model_config(
             include_gsp_yield_history=include_gsp_yield_history,
             nwp_encoders_dict=nwp_encoders_dict,
             pv_encoder=pv_encoder,
@@ -128,7 +148,7 @@ class Model(MultimodalBaseModel):
             nwp_history_minutes=nwp_history_minutes
         )
 
-        self.encoder = self._initialize_fusion_encoder(
+        self.encoder = self._initialise_fusion_encoder(
             modality_channels=modality_channels,
             fusion_hidden_dim=fusion_hidden_dim,
             num_fusion_heads=num_fusion_heads,
@@ -142,13 +162,17 @@ class Model(MultimodalBaseModel):
         )
 
         self.save_hyperparameters()
-        logger.info(f"Initialized {self.name} model with {len(modality_channels)} modalities")
+        logger.info(f"Initialised {self.name} model with {len(modality_channels)} modalities")
 
     def _validate_inputs(self, **kwargs):
+        """ Validation - architectural hyperparameters / input config """
+
         if kwargs['fusion_hidden_dim'] <= 0:
             raise ValueError("fusion_hidden_dim must be positive")
+
         if kwargs['num_fusion_heads'] <= 0:
             raise ValueError("num_fusion_heads must be positive")
+
         if kwargs['fusion_method'] not in ["weighted_sum", "concat"]:
             raise ValueError(f"Invalid fusion method: {kwargs['fusion_method']}")
             
@@ -161,7 +185,9 @@ class Model(MultimodalBaseModel):
         if kwargs['pv_encoder'] is not None and kwargs['pv_history_minutes'] is None:
             raise ValueError("pv_history_minutes required when using PV encoder")
 
-    def _initialize_model_config(self, **kwargs):
+    def _initialise_model_config(self, **kwargs):
+        """ Configuration of model architecture / modality-specific parameters """
+
         config_params = {
             k: v for k, v in kwargs.items() 
             if not k.startswith('include_')
@@ -176,8 +202,13 @@ class Model(MultimodalBaseModel):
             self.nwp_encoders_dict = {}
 
     def _setup_modality_channels(self, **kwargs) -> Dict[str, int]:
+        """ Modality-specific channel configurations """
+
         modality_channels = {}
         
+        # Defines input dimension for each modality 
+        # Returns mapping
+        # m ∈ M → d_m
         if self.embedding_dim:
             modality_channels["embedding"] = self.embedding_dim
             
@@ -189,6 +220,11 @@ class Model(MultimodalBaseModel):
         return modality_channels
 
     def _setup_nwp_channels(self, modality_channels: Dict[str, int], **kwargs):
+        """ NWP channel configuration """
+        
+        # Defines temporal sequence length / channel dimension
+        # Mapping for NWP features
+        # (L,C) → ℝ^{L×C}
         nwp_interval_minutes = kwargs.get('nwp_interval_minutes')
         if nwp_interval_minutes is None:
             nwp_interval_minutes = dict.fromkeys(self.nwp_encoders_dict.keys(), 60)
@@ -210,22 +246,35 @@ class Model(MultimodalBaseModel):
             modality_channels[f"nwp/{nwp_source}"] = nwp_channels
 
     def _add_additional_channels(self, modality_channels: Dict[str, int]):
+
         if self.include_pv:
             modality_channels["pv"] = self.pv_encoder.keywords.get("num_sites", 1)
+
         if self.include_wind:
             modality_channels["wind"] = self.wind_encoder.keywords.get("num_sites", 1)
+
         if self.include_sensor:
             modality_channels["sensor"] = self.sensor_encoder.keywords.get("num_sites", 1)
+
         if self.include_sun:
             modality_channels["sun"] = self.fusion_hidden_dim
+
         if self.include_time:
             modality_channels["time"] = self.fusion_hidden_dim
+
         if self.include_gsp_yield_history:
             modality_channels["gsp"] = self.history_len
 
-    def _initialize_fusion_encoder(self, modality_channels: Dict[str, int], fusion_hidden_dim: int,
+    def _initialise_fusion_encoder(self, modality_channels: Dict[str, int], fusion_hidden_dim: int,
                                  num_fusion_heads: int, fusion_dropout: float, fusion_method: str) -> DynamicFusionEncoder:
+        """ Initialisation of dynamic fusion encoder """
+             
         modality_encoders = {}
+        
+        # Modality encoders φ_m: X_m → ℝ^H
+        # Cross attention A_c: ⊗_{m∈M} ℝ^H → ℝ^H 
+        # Modality gating g_m: ℝ^H → [0,1]
+        # Dynamic fusion F: {ℝ^H}^M → ℝ^H
         
         if self.include_nwp:
             for nwp_source, encoder in self.nwp_encoders_dict.items():
@@ -253,9 +302,15 @@ class Model(MultimodalBaseModel):
         )
 
     def forward(self, x: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """ Forward pass implementation """
+
+        # f: X → Y mapping in feature space
+        # x_m ∈ X_m → y ∈ ℝ^O
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
+        # Input feature collection
+        # X = {x_m}_{m∈M}
         inputs = {}
 
         if self.include_nwp:
@@ -286,14 +341,62 @@ class Model(MultimodalBaseModel):
             inputs["time"] = self.time_fc1(time_features)
 
         encoded_features = self.encoder(inputs)
+        print(f"Encoded features shape: {encoded_features.shape}")
+
+        # Dimension validation and expansion
+        if encoded_features.dim() == 2:
+
+            # Single feature expansion
+            # π: ℝ^1 → ℝ^H
+            if encoded_features.size(1) == 1:
+                # Repeat to match hidden dimension
+                encoded_features = encoded_features.repeat(1, self.fusion_hidden_dim)
+            
+
+            # Quantile feature preparation
+            # Q: ℝ^H → ℝ^{H×q}, q: number of quantiles
+            if self.use_quantile_regression and self.output_quantiles:
+                num_quantiles = len(self.output_quantiles)                
+                batch_size = encoded_features.size(0)
+                
+                # Layer dimension matching
+                first_layer = list(self.output_network.layers)[0][0]
+                if hasattr(first_layer, 'in_features'):
+                    target_dim = first_layer.in_features
+                    
+                    # Feature expansion and padding
+                    # ξ: ℝ^H → ℝ^{H×q}
+                    quantile_features = encoded_features.repeat(1, num_quantiles)
+
+                    # Dimension matching via truncation/padding
+                    # π: ℝ^k → ℝ^d                    
+                    if quantile_features.size(1) > target_dim:
+                        quantile_features = quantile_features[:, :target_dim]
+                    elif quantile_features.size(1) < target_dim:
+                        padding = torch.zeros(batch_size, target_dim - quantile_features.size(1), 
+                                            device=quantile_features.device)
+                        quantile_features = torch.cat([quantile_features, padding], dim=1)
+                    
+                    encoded_features = quantile_features
+
+        # Output generation
+        # y = ψ(z)
         output = self.output_network(encoded_features)
 
-        if self.use_quantile_regression:
-            output = output.reshape(output.shape[0], self.forecast_len, len(self.output_quantiles))
+        # Quantile output reshaping
+        # ρ: ℝ^{B×T×q} → ℝ^{B×F×q}
+        if self.use_quantile_regression and self.output_quantiles:
+            output = output.reshape(
+                output.shape[0], 
+                self.forecast_len, 
+                len(self.output_quantiles)
+            )
 
         return output, encoded_features
 
     def _process_nwp_data(self, x: Dict[str, torch.Tensor], inputs: Dict[str, torch.Tensor]):
+        """ Process NWP input features """
+
         for nwp_source, nwp_encoder in self.nwp_encoders_dict.items():
             nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
             nwp_data = torch.swapaxes(nwp_data, 1, 2)
@@ -306,7 +409,13 @@ class Model(MultimodalBaseModel):
             inputs[f"nwp/{nwp_source}"] = nwp_data
 
     def _adapt_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Batch adaptation for tensor processing        
+        Maps arbitrary inputs to T
+        """
+
         adapted_batch = {}
+
         for key, value in batch.items():
             if isinstance(value, (torch.Tensor, dict)):
                 adapted_batch[key] = value
@@ -318,11 +427,17 @@ class Model(MultimodalBaseModel):
         return adapted_batch
 
     def _preprocess_features(self, x: torch.Tensor, modality: str) -> torch.Tensor:
+        """ Modality specific feature preprocessing """
+
+        # π_m: X_m → X̂_m
         if modality == "nwp":
             return torch.clip(torch.swapaxes(x, 1, 2), min=-50, max=50)
         return x.float()
 
     def _prepare_time_features(self, x: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """ Temporal feature preparation - cyclic encoding """
+
+        # τ: T → ℝ^4
         return torch.cat((
             x[f"{self._target_key_name}_date_sin"],
             x[f"{self._target_key_name}_date_cos"],
@@ -331,6 +446,9 @@ class Model(MultimodalBaseModel):
         ), dim=1).float()
 
     def _prepare_sun_features(self, x: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """ Solar feature preparation """
+        
+        # σ: S → ℝ^2
         return torch.cat((
             x[BatchKey[f"{self._target_key_name}_solar_azimuth"]],
             x[BatchKey[f"{self._target_key_name}_solar_elevation"]],
