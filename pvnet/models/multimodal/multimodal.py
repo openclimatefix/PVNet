@@ -42,7 +42,7 @@ class Model(MultimodalBaseModel):
         output_quantiles: Optional[list[float]] = None,
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
-        site_encoder: Optional[AbstractSitesEncoder] = None,
+        pv_encoder: Optional[AbstractSitesEncoder] = None,
         sensor_encoder: Optional[AbstractSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
@@ -55,14 +55,14 @@ class Model(MultimodalBaseModel):
         min_sat_delay_minutes: Optional[int] = 30,
         nwp_forecast_minutes: Optional[DictConfig] = None,
         nwp_history_minutes: Optional[DictConfig] = None,
-        site_history_minutes: Optional[int] = None,
+        pv_history_minutes: Optional[int] = None,
         sensor_history_minutes: Optional[int] = None,
         sensor_forecast_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
         interval_minutes: int = 30,
         nwp_interval_minutes: Optional[DictConfig] = None,
-        site_interval_minutes: int = 5,
+        pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
         num_embeddings: Optional[int] = 318,
@@ -88,7 +88,7 @@ class Model(MultimodalBaseModel):
                 encode the NWP data from 4D into a 1D feature vector from different sources.
             sat_encoder: A partially instantiated pytorch Module class used to encode the satellite
                 data from 4D into a 1D feature vector.
-            site_encoder: A partially instantiated pytorch Module class used to encode the site-level
+            pv_encoder: A partially instantiated pytorch Module class used to encode the site-level
                 PV data from 2D into a 1D feature vector.
             add_image_embedding_channel: Add a channel to the NWP and satellite data with the
                 embedding of the GSP ID.
@@ -107,14 +107,14 @@ class Model(MultimodalBaseModel):
                 `forecast_minutes` if not provided.
             nwp_history_minutes: Period of historical NWP forecast used as input. Defaults to
                 `history_minutes` if not provided.
-            site_history_minutes: Length of recent site-level PV data used as
+            pv_history_minutes: Length of recent site-level PV data used as
             input. Defaults to `history_minutes` if not provided.
             optimizer: Optimizer factory function used for network.
             target_key: The key of the target variable in the batch.
             interval_minutes: The interval between each sample of the target data
             nwp_interval_minutes: Dictionary of the intervals between each sample of the NWP
                 data for each source
-            site_interval_minutes: The interval between each sample of the PV data
+            pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
             num_embeddings: The number of dimensions to use for the image embedding
@@ -133,7 +133,7 @@ class Model(MultimodalBaseModel):
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sat = sat_encoder is not None
         self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
-        self.include_site = site_encoder is not None
+        self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
         self.include_time = include_time
         self.include_sensor = sensor_encoder is not None
@@ -218,17 +218,17 @@ class Model(MultimodalBaseModel):
                 # Update num features
                 fusion_input_features += self.nwp_encoders_dict[nwp_source].out_features
 
-        if self.include_site:
-            assert site_history_minutes is not None
+        if self.include_pv:
+            assert pv_history_minutes is not None
 
-            self.site_encoder = site_encoder(
-                sequence_length=site_history_minutes // site_interval_minutes - 1,
+            self.pv_encoder = pv_encoder(
+                sequence_length=pv_history_minutes // pv_interval_minutes - 1,
                 target_key_to_use=self._target_key_name,
                 input_key_to_use="site",
             )
 
             # Update num features
-            fusion_input_features += self.site_encoder.out_features
+            fusion_input_features += self.pv_encoder.out_features
 
         if self.include_sensor:
             if sensor_history_minutes is None:
@@ -294,7 +294,7 @@ class Model(MultimodalBaseModel):
         # ******************* Satellite imagery *************************
         if self.include_sat:
             # Shape: batch_size, seq_length, channel, height, width
-            sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
+            sat_data = x["satellite_actual"][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
@@ -322,20 +322,20 @@ class Model(MultimodalBaseModel):
 
         # *********************** Site Data *************************************
         # Add site-level PV yield
-        if self.include_site:
+        if self.include_pv:
             if self._target_key_name != "site":
-                modes["site"] = self.site_encoder(x)
+                modes["site"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
                 # Copy batch
                 x_tmp = x.copy()
                 x_tmp["site"] = x_tmp["site"][:, : self.history_len + 1]
-                modes["site"] = self.site_encoder(x_tmp)
+                modes["site"] = self.pv_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
+            gsp_history = x["gsp"][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             modes["gsp"] = gsp_history
 

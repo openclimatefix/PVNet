@@ -32,7 +32,7 @@ class Model(BaseModel):
     def forward(self, x: dict):
         """Run model forward on dict batch of data"""
         # Shape: batch_size, seq_length, n_sites
-        gsp_yield = x[BatchKey.gsp]
+        gsp_yield = x["gsp"]
 
         # take the last value non forecaster value and the first in the pv yeild
         # (this is the pv site we are preditcting for)

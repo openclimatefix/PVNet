@@ -1,0 +1,79 @@
+general:
+  description: Config for producing batches for wind sites using data sampler
+  name: windnet_data_sampler
+
+input_data:
+
+  site:
+    time_resolution_minutes: 15
+    interval_start_minutes: -60
+    interval_end_minutes: 2880
+    file_path: /mnt/storage_ssd_4tb/india_wind_data_data_sampler_schema_v2_multiple_sites.nc
+    metadata_file_path: /mnt/storage_ssd_4tb/india_wind_metadata_data_sampler_schema_mutliple_sites.csv
+    dropout_timedeltas_minutes: null
+    dropout_fraction: 0 # Fraction of samples with dropout
+
+
+  # nwp:
+  #   mo_global:
+  #     provider: mo_global
+  #     zarr_path: /mnt/storage_b/nwp/ceda/global/20*.zarr
+  #     interval_start_minutes: -60
+  #     interval_end_minutes: 1860
+  #     time_resolution_minutes: 60
+  #     channels:
+  #       - temperature_sl
+  #       - wind_u_component_10m
+  #       - wind_v_component_10m
+  #     image_size_pixels_height: 4
+  #     image_size_pixels_width: 4
+  #     # A random value from the list below will be chosen as the delay when dropout is used
+  #     # If set to null no dropout is applied. Values must be negative.
+  #     dropout_timedeltas_minutes: [-180]
+  #     # Dropout applied with this probability
+  #     dropout_fraction: 1.0
+  #     # How long after the NWP init-time are we still willing to use this forecast
+  #     # If null we use each init-time for all steps it covers
+  #     max_staleness_minutes: null
+  
+  nwp:
+    ecmwf:
+      provider: ecmwf
+      # Path to ECMWF NWP data in zarr format
+      # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
+      zarr_path: /mnt/storage_b/nwp/ecmwf/nw_india_84hrs/20220*.zarr.zip
+      interval_start_minutes: -60
+      interval_end_minutes: 2880
+      time_resolution_minutes: 60
+      channels:
+        - t2m
+        - prate
+        - u10
+        - v10
+        - u100
+        - v100
+        - u200
+        - v200
+      image_size_pixels_height: 24
+      image_size_pixels_width: 24
+      dropout_timedeltas_minutes: [-360]
+      dropout_fraction: 1.0
+      max_staleness_minutes: null
+
+    # gfs:
+    #   provider: gfs
+    #   dropout_fraction: 1.0
+    #   dropout_timedeltas_minutes: [-300]
+    #   interval_start_minutes: 0
+    #   interval_end_minutes: 2160
+    #   channels:
+    #   - t
+    #   - prate
+    #   - u10
+    #   - v10
+    #   - u100
+    #   - v100
+    #   image_size_pixels_height: 2
+    #   image_size_pixels_width: 2
+    #   zarr_path: /mnt/storage_b/nwp/gfs/nw_india/gfs_nw_india_*.zarr
+    #   time_resolution_minutes: 180

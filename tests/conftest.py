@@ -105,7 +105,7 @@ def sample_train_val_datamodule():
 
         file_n = 0
 
-        for file_n, file in enumerate(glob.glob("tests/test_data/presaved_samples/train/*.pt")):
+        for file_n, file in enumerate(glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")):
             sample = torch.load(file)
 
             for i in range(n_duplicates):
@@ -128,7 +128,7 @@ def sample_train_val_datamodule():
 @pytest.fixture()
 def sample_datamodule():
     dm = DataModule(
-        sample_dir="tests/test_data/presaved_samples",
+        sample_dir="tests/test_data/presaved_samples_uk_regional",
         configuration=None,
         batch_size=2,
         num_workers=0,
@@ -147,7 +147,7 @@ def sample_batch(sample_datamodule):
 
 @pytest.fixture()
 def sample_satellite_batch(sample_batch):
-    sat_image = sample_batch[BatchKey.satellite_actual]
+    sat_image = sample_batch["satellite_actual"]
     return torch.swapaxes(sat_image, 1, 2)
 
 
@@ -159,16 +159,15 @@ def sample_pv_batch():
 
 
 @pytest.fixture()
-def sample_wind_batch():
+def sample_site_batch():
     dm = SiteDataModule(
         configuration=None,
-        batch_size=2,
+        batch_size=8,
         num_workers=0,
         prefetch_factor=None,
         train_period=[None, None],
         val_period=[None, None],
-        test_period=[None, None],
-        batch_dir="tests/test_data/sample_site_batches",
+        sample_dir="tests/test_data/presaved_site_samples",
     )
     batch = next(iter(dm.train_dataloader()))
     return batch
@@ -202,6 +201,17 @@ def site_encoder_model_kwargs():
         sequence_length=180 // 5 + 1,
         num_sites=349,
         out_features=128,
+    )
+    return kwargs
+
+@pytest.fixture()
+def site_encoder_model_kwargs_dsampler():
+    # Used to test site encoder model on PV data
+    kwargs = dict(
+        sequence_length=60 // 15 - 1,
+        num_sites=1,
+        out_features=128,
+        target_key_to_use="site"
     )
     return kwargs
 
@@ -245,7 +255,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
         },
         add_image_embedding_channel=True,
         # ocf-data-sampler doesn't supprt PV site inputs yet
-        site_encoder=None,
+        pv_encoder=None,
         output_network=dict(
             _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
             _partial_=True,
