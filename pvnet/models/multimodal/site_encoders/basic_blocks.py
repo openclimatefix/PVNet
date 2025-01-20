@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from torch import nn
 
 
-class AbstractPVSitesEncoder(nn.Module, metaclass=ABCMeta):
+class AbstractSitesEncoder(nn.Module, metaclass=ABCMeta):
     """Abstract class for encoder for output data from multiple PV sites.
 
     The encoder will take an input of shape (batch_size, sequence_length, num_sites)

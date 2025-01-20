@@ -13,7 +13,7 @@ from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
 from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
-from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractPVSitesEncoder
+from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
 
 
@@ -42,8 +42,8 @@ class Model(MultimodalBaseModel):
         output_quantiles: Optional[list[float]] = None,
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
-        site_encoder: Optional[AbstractPVSitesEncoder] = None,
-        sensor_encoder: Optional[AbstractPVSitesEncoder] = None,
+        site_encoder: Optional[AbstractSitesEncoder] = None,
+        sensor_encoder: Optional[AbstractSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
@@ -222,7 +222,7 @@ class Model(MultimodalBaseModel):
             assert site_history_minutes is not None
 
             self.site_encoder = site_encoder(
-                sequence_length=site_history_minutes // site_interval_minutes + 1,
+                sequence_length=site_history_minutes // site_interval_minutes - 1,
                 target_key_to_use=self._target_key_name,
                 input_key_to_use="site",
             )
