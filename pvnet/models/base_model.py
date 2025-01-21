@@ -55,8 +55,8 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     for source in ["gsp", "satellite", "hrvsatellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
-            if config["input_data"][source][f"zarr_path"] != "":
-                config["input_data"][source][f"zarr_path"] = f"{placeholder}.zarr"
+            if config["input_data"][source]["zarr_path"] != "":
+                config["input_data"][source]["zarr_path"] = f"{placeholder}.zarr"
 
     if "nwp" in config["input_data"]:
         for source in config["input_data"]["nwp"]:
@@ -107,7 +107,8 @@ def minimize_data_config(input_path, output_path, model):
                     # Replace the forecast minutes
                     nwp_config["forecast_minutes"] = (
                         model.nwp_encoders_dict[nwp_source].sequence_length
-                        - nwp_config["interval_start_minutes"] / nwp_config["time_resolution_minutes"]
+                        - nwp_config["interval_start_minutes"]
+                        / nwp_config["time_resolution_minutes"]
                         - 1
                     ) * nwp_config["time_resolution_minutes"]
 
