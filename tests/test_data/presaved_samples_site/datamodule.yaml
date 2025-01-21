@@ -1,0 +1,14 @@
+_target_: pvnet.data.datamodule.DataModule
+configuration: /home/sukhil/ocf-code/pvnet_sampler/configs/datamodule/configuration/wind_config_mo_global_v0_data_sampler.yaml
+num_workers: 2
+prefetch_factor: 1
+batch_size: 1
+sample_output_dir: /mnt/storage_ssd_4tb/site_batches_d_sampler_output_multiple_sites_v4
+num_val_samples: 64
+num_train_samples: 128
+train_period:
+  - "2022-03-01"
+  - "2022-06-01"
+val_period:
+  - "2022-06-02"
+  - "2022-07-01"

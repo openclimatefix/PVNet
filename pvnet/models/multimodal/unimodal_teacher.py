@@ -7,7 +7,6 @@ from typing import Optional
 import hydra
 import torch
 import torch.nn.functional as F
-from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from pyaml_env import parse_config
 from torch import nn
 
@@ -142,10 +141,10 @@ class Model(MultimodalBaseModel):
 
                 fusion_input_features += self.sat_encoder.out_features
 
-            elif mode == "pv":
+            elif mode == "site":
                 self.include_pv = True
-                self.pv_encoder = mode_student_model.pv_encoder
-                fusion_input_features += self.pv_encoder.out_features
+                self.site_encoder = mode_student_model.site_encoder
+                fusion_input_features += self.site_encoder.out_features
 
             elif mode.startswith("nwp"):
                 nwp_source = mode.removeprefix("nwp/")
@@ -215,11 +214,11 @@ class Model(MultimodalBaseModel):
             # ******************* Satellite imagery *************************
             if mode == "sat":
                 # Shape: batch_size, seq_length, channel, height, width
-                sat_data = x[BatchKey.satellite_actual][:, : teacher_model.sat_sequence_len]
+                sat_data = x["satellite_actual"][:, : teacher_model.sat_sequence_len]
                 sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey.gsp_id].int()
+                    id = x["gsp_id"].int()
                     sat_data = teacher_model.sat_embed(sat_data, id)
 
                 modes[mode] = teacher_model.sat_encoder(sat_data)
@@ -229,11 +228,11 @@ class Model(MultimodalBaseModel):
                 nwp_source = mode.removeprefix("nwp/")
 
                 # shape: batch_size, seq_len, n_chans, height, width
-                nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
+                nwp_data = x["nwp"][nwp_source]["nwp"].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
                 if teacher_model.add_image_embedding_channel:
-                    id = x[BatchKey.gsp_id].int()
+                    id = x["gsp_id"].int()
                     nwp_data = teacher_model.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = teacher_model.nwp_encoders_dict[nwp_source](nwp_data)
@@ -241,8 +240,8 @@ class Model(MultimodalBaseModel):
 
             # *********************** PV Data *************************************
             # Add site-level PV yield
-            if mode == "pv":
-                modes[mode] = teacher_model.pv_encoder(x)
+            if mode == "site":
+                modes[mode] = teacher_model.site_encoder(x)
 
         return modes
 
@@ -256,11 +255,11 @@ class Model(MultimodalBaseModel):
         # ******************* Satellite imagery *************************
         if self.include_sat:
             # Shape: batch_size, seq_length, channel, height, width
-            sat_data = x[BatchKey.satellite_actual][:, : self.sat_sequence_len]
+            sat_data = x["satellite_actual"][:, : self.sat_sequence_len]
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x[BatchKey.gsp_id].int()
+                id = x["gsp_id"].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -269,14 +268,14 @@ class Model(MultimodalBaseModel):
             # Loop through potentially many NMPs
             for nwp_source in self.nwp_encoders_dict:
                 # shape: batch_size, seq_len, n_chans, height, width
-                nwp_data = x[BatchKey.nwp][nwp_source][NWPBatchKey.nwp].float()
+                nwp_data = x["nwp"][nwp_source]["nwp"].float()
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 # Some NWP variables can overflow into NaNs when normalised if they have extreme
                 # tails
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x[BatchKey.gsp_id].int()
+                    id = x["gsp_id"].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
@@ -285,31 +284,31 @@ class Model(MultimodalBaseModel):
         # *********************** PV Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            if self._target_key_name != "pv":
-                modes["pv"] = self.pv_encoder(x)
+            if self._target_key != "site":
+                modes["site"] = self.site_encoder(x)
             else:
                 # Target is PV, so only take the history
-                pv_history = x[BatchKey.pv][:, : self.history_len].float()
-                modes["pv"] = self.pv_encoder(pv_history)
+                pv_history = x["pv"][:, : self.history_len].float()
+                modes["site"] = self.site_encoder(pv_history)
 
         # *********************** GSP Data ************************************
         # add gsp yield history
         if self.include_gsp_yield_history:
-            gsp_history = x[BatchKey.gsp][:, : self.history_len].float()
+            gsp_history = x["gsp"][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
             modes["gsp"] = gsp_history
 
         # ********************** Embedding of GSP ID ********************
         if self.embedding_dim:
-            id = x[BatchKey.gsp_id].int()
+            id = x["gsp_id"].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
         if self.include_sun:
             sun = torch.cat(
                 (
-                    x[BatchKey.gsp_solar_azimuth],
-                    x[BatchKey.gsp_solar_elevation],
+                    x["gsp_solar_azimuth"],
+                    x["gsp_solar_elevation"],
                 ),
                 dim=1,
             ).float()
@@ -400,10 +399,10 @@ class Model(MultimodalBaseModel):
                     config[key] = model_config[key]
                 sources.append("sat")
 
-            elif mode == "pv":
-                for key in ["pv_encoder", "pv_history_minutes"]:
+            elif mode == "site":
+                for key in ["site_encoder", "site_history_minutes"]:
                     config[key] = model_config[key]
-                sources.append("pv")
+                sources.append("site")
 
         del config["mode_teacher_dict"]
 
@@ -414,8 +413,8 @@ class Model(MultimodalBaseModel):
             multimodal_model.sat_encoder.load_state_dict(self.sat_encoder.state_dict())
         if "nwp" in sources:
             multimodal_model.nwp_encoders_dict.load_state_dict(self.nwp_encoders_dict.state_dict())
-        if "pv" in sources:
-            multimodal_model.pv_encoder.load_state_dict(self.pv_encoder.state_dict())
+        if "site" in sources:
+            multimodal_model.site_encoder.load_state_dict(self.site_encoder.state_dict())
 
         multimodal_model.output_network.load_state_dict(self.output_network.state_dict())
 

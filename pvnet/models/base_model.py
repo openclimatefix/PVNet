@@ -18,7 +18,7 @@ from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-from ocf_datapipes.batch import BatchKey, copy_batch_to_device
+from ocf_datapipes.batch import copy_batch_to_device
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -371,8 +371,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         super().__init__()
 
         self._optimizer = optimizer
-        self._target_key_name = target_key
-        self._target_key = BatchKey[f"{target_key}"]
+        self._target_key = target_key
         if timestep_intervals_to_plot is not None:
             for interval in timestep_intervals_to_plot:
                 assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(
@@ -397,7 +396,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.forecast_len_ignore = forecast_minutes_ignore // interval_minutes
 
         self._accumulated_metrics = MetricAccumulator()
-        self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key_name)
+        self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key)
         self._accumulated_y_hat = PredAccumulator()
         self._horizon_maes = MetricAccumulator()
 
@@ -563,7 +562,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     y_hat,
                     batch_idx,
                     quantiles=self.output_quantiles,
-                    key_to_plot=self._target_key_name,
+                    key_to_plot=self._target_key,
                 )
                 fig.savefig("latest_logged_train_batch.png")
                 plt.close(fig)
@@ -590,7 +589,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             batch,
             y_hat,
             quantiles=self.output_quantiles,
-            key_to_plot=self._target_key_name,
+            key_to_plot=self._target_key,
         )
 
         plot_name = f"val_forecast_samples/batch_idx_{accum_batch_num}_{plot_suffix}"
@@ -614,11 +613,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         y_hat = y_hat.detach().cpu().numpy()
 
         # get time_utc, shape (b, forecast_len)
-        time_utc_key = BatchKey[f"{self._target_key_name}_time_utc"]
+        time_utc_key = f"{self._target_key}_time_utc"
         time_utc = batch[time_utc_key][:, -self.forecast_len :].detach().cpu().numpy()
 
         # get target id and change from (b,1) to (b,)
-        id_key = BatchKey[f"{self._target_key_name}_id"]
+        id_key = f"{self._target_key}_id"
         target_id = batch[id_key].detach().cpu().numpy()
         target_id = target_id.squeeze()
 
@@ -680,7 +679,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Store these temporarily under self
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
-                self._val_batches = BatchAccumulator(key_to_keep=self._target_key_name)
+                self._val_batches = BatchAccumulator(key_to_keep=self._target_key)
 
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)

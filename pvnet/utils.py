@@ -13,7 +13,6 @@ import rich.tree
 import xarray as xr
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
-from ocf_datapipes.batch import BatchKey
 from ocf_datapipes.utils import Location
 from omegaconf import DictConfig, OmegaConf
 
@@ -259,10 +258,9 @@ def plot_batch_forecasts(
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
-    y_key = BatchKey[f"{key_to_plot}"]
-    y_id_key = BatchKey[f"{key_to_plot}_id"]
-    BatchKey[f"{key_to_plot}_t0_idx"]
-    time_utc_key = BatchKey[f"{key_to_plot}_time_utc"]
+    y_key = key_to_plot
+    y_id_key = f"{key_to_plot}_id"
+    time_utc_key = f"{key_to_plot}_time_utc"
     y = batch[y_key].cpu().numpy()  # Select the one it is trained on
     y_hat = y_hat.cpu().numpy()
     # Select between the timesteps in timesteps to plot

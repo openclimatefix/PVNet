@@ -1,6 +1,5 @@
 """Average value model"""
 import torch
-from ocf_datapipes.batch import BatchKey
 from torch import nn
 
 import pvnet
@@ -33,5 +32,5 @@ class Model(BaseModel):
     def forward(self, x: dict):
         """Run model forward on dict batch of data"""
         # Returns a single value at all steps
-        y_hat = torch.zeros_like(x[BatchKey.gsp][:, : self.forecast_len]) + self._value
+        y_hat = torch.zeros_like(x["gsp"][:, : self.forecast_len]) + self._value
         return y_hat
