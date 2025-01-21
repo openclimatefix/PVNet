@@ -221,7 +221,7 @@ class Model(MultimodalBaseModel):
             assert pv_history_minutes is not None
 
             self.pv_encoder = pv_encoder(
-                sequence_length=pv_history_minutes // pv_interval_minutes - 1,
+                sequence_length=pv_history_minutes // pv_interval_minutes + 1,
                 target_key_to_use=self._target_key_name,
                 input_key_to_use="site",
             )

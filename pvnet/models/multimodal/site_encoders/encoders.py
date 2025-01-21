@@ -170,6 +170,7 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
         self.input_key_to_use = input_key_to_use
         self.num_channels = num_channels
         self.num_sites_in_inference = num_sites_in_inference
+        print(self.sequence_length, 'SEQUENCE LENGTH')
 
         if use_id_in_value:
             self.value_id_embedding = nn.Embedding(num_sites, id_embed_dim)

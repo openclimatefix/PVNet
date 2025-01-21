@@ -210,7 +210,7 @@ def site_encoder_model_kwargs():
 def site_encoder_model_kwargs_dsampler():
     # Used to test site encoder model on PV data
     kwargs = dict(
-        sequence_length=60 // 15 - 1, num_sites=1, out_features=128, target_key_to_use="site"
+        sequence_length=60 // 15 + 1, num_sites=1, out_features=128, target_key_to_use="site"
     )
     return kwargs
 
