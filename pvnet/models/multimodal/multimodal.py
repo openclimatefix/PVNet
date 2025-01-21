@@ -222,7 +222,7 @@ class Model(MultimodalBaseModel):
 
             self.pv_encoder = pv_encoder(
                 sequence_length=pv_history_minutes // pv_interval_minutes + 1,
-                target_key_to_use=self._target_key_name,
+                target_key_to_use=self._target_key,
                 input_key_to_use="site",
             )
 
@@ -239,7 +239,7 @@ class Model(MultimodalBaseModel):
                 sequence_length=sensor_history_minutes // sensor_interval_minutes
                 + sensor_forecast_minutes // sensor_interval_minutes
                 + 1,
-                target_key_to_use=self._target_key_name,
+                target_key_to_use=self._target_key,
                 input_key_to_use="sensor",
             )
 
@@ -297,7 +297,7 @@ class Model(MultimodalBaseModel):
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x[f"{self._target_key_name}_id"].int()
+                id = x[f"{self._target_key}_id"].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -313,7 +313,7 @@ class Model(MultimodalBaseModel):
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x[f"{self._target_key_name}_id"].int()
+                    id = x[f"{self._target_key}_id"].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
@@ -322,7 +322,7 @@ class Model(MultimodalBaseModel):
         # *********************** Site Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            if self._target_key_name != "site":
+            if self._target_key != "site":
                 modes["site"] = self.pv_encoder(x)
             else:
                 # Target is PV, so only take the history
@@ -340,15 +340,15 @@ class Model(MultimodalBaseModel):
 
         # ********************** Embedding of GSP/Site ID ********************
         if self.embedding_dim:
-            id = x[f"{self._target_key_name}_id"].int()
+            id = x[f"{self._target_key}_id"].int()
             id_embedding = self.embed(id)
             modes["id"] = id_embedding
 
         if self.include_sun:
             sun = torch.cat(
                 (
-                    x[f"{self._target_key_name}_solar_azimuth"],
-                    x[f"{self._target_key_name}_solar_elevation"],
+                    x[f"{self._target_key}_solar_azimuth"],
+                    x[f"{self._target_key}_solar_elevation"],
                 ),
                 dim=1,
             ).float()
@@ -358,10 +358,10 @@ class Model(MultimodalBaseModel):
         if self.include_time:
             time = torch.cat(
                 (
-                    x[f"{self._target_key_name}_date_sin"],
-                    x[f"{self._target_key_name}_date_cos"],
-                    x[f"{self._target_key_name}_time_sin"],
-                    x[f"{self._target_key_name}_time_cos"],
+                    x[f"{self._target_key}_date_sin"],
+                    x[f"{self._target_key}_date_cos"],
+                    x[f"{self._target_key}_time_sin"],
+                    x[f"{self._target_key}_time_cos"],
                 ),
                 dim=1,
             ).float()

@@ -284,7 +284,7 @@ class Model(MultimodalBaseModel):
         # *********************** PV Data *************************************
         # Add site-level PV yield
         if self.include_pv:
-            if self._target_key_name != "site":
+            if self._target_key != "site":
                 modes["site"] = self.site_encoder(x)
             else:
                 # Target is PV, so only take the history

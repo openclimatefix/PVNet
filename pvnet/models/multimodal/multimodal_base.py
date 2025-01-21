@@ -43,7 +43,7 @@ class MultimodalBaseModel(BaseModel):
         if self.include_sun:
             # Slice off the end of the solar coords data
             for s in ["solar_azimuth", "solar_elevation"]:
-                key = f"{self._target_key_name}_{s}"
+                key = f"{self._target_key}_{s}"
                 if key in batch.keys():
                     sun_len = self.forecast_len + self.history_len + 1
                     batch[key] = batch[key][:, :sun_len]
