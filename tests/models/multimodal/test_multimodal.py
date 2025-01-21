@@ -1,6 +1,7 @@
 from torch.optim import SGD
 import pytest
 
+
 def test_model_forward(multimodal_model, sample_batch):
     y = multimodal_model(sample_batch)
 
