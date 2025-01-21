@@ -4,7 +4,6 @@ import logging
 
 import numpy as np
 import torch
-from ocf_datapipes.batch import BatchKey
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ class BatchAccumulator(DictListAccumulator):
     """A class for accumulating batches when using grad accumulation and the batch size is small.
 
     Attributes:
-        _batches (Dict[BatchKey, list[torch.Tensor]]): Dictionary containing lists of metrics.
+        _batches (Dict[str, list[torch.Tensor]]): Dictionary containing lists of metrics.
     """
 
     def __init__(self, key_to_keep: str = "gsp"):
@@ -105,14 +104,14 @@ class BatchAccumulator(DictListAccumulator):
         ]
         return {k: v for k, v in d.items() if k in keep_keys}
 
-    def append(self, batch: dict[BatchKey, list[torch.Tensor]]):
+    def append(self, batch: dict[str, list[torch.Tensor]]):
         """Append batch to self"""
         if not self:
             self._batches = self._dict_init_list(self._filter_batch_dict(batch))
         else:
             self._dict_list_append(self._batches, self._filter_batch_dict(batch))
 
-    def flush(self) -> dict[BatchKey, list[torch.Tensor]]:
+    def flush(self) -> dict[str, list[torch.Tensor]]:
         """Concatenate all accumulated batches, return, and clear self"""
         batch = {}
         for k, v in self._batches.items():

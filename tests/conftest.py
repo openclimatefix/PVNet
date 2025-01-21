@@ -9,7 +9,6 @@ import xarray as xr
 import torch
 import hydra
 
-from ocf_datapipes.batch import BatchKey
 from datetime import timedelta
 
 import pvnet
@@ -164,7 +163,7 @@ def sample_pv_batch():
 def sample_site_batch():
     dm = SiteDataModule(
         configuration=None,
-        batch_size=8,
+        batch_size=2,
         num_workers=0,
         prefetch_factor=None,
         train_period=[None, None],

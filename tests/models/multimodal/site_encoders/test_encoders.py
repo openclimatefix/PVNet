@@ -1,5 +1,4 @@
 import torch
-from ocf_datapipes.batch import BatchKey
 from torch import nn
 
 from pvnet.models.multimodal.site_encoders.encoders import (
@@ -38,11 +37,11 @@ def test_singleattentionnetwork_forward(sample_site_batch, site_encoder_model_kw
         sample_site_batch,
         SingleAttentionNetwork,
         site_encoder_model_kwargs_dsampler,
-        batch_size=8,
+        batch_size=2,
     )
 
 
-# TODO once we have updated the sample batches for sites include this test
+# TODO once we have test data which inludes sensor data with sites include this test
 # def test_singleattentionnetwork_forward_4d(sample_wind_batch, site_encoder_sensor_model_kwargs):
 #     _test_model_forward(
 #         sample_wind_batch,

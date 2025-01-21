@@ -258,7 +258,7 @@ def plot_batch_forecasts(
     def _get_numpy(key):
         return batch[key].cpu().numpy().squeeze()
 
-    y_key = f"{key_to_plot}"
+    y_key = key_to_plot
     y_id_key = f"{key_to_plot}_id"
     time_utc_key = f"{key_to_plot}_time_utc"
     y = batch[y_key].cpu().numpy()  # Select the one it is trained on
