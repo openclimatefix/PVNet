@@ -13,8 +13,7 @@ from ocf_datapipes.batch import BatchKey
 from datetime import timedelta
 
 import pvnet
-from pvnet.data.datamodule import DataModule
-from pvnet.data.wind_datamodule import WindDataModule
+from pvnet.data import DataModule, SiteDataModule
 
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
@@ -161,7 +160,7 @@ def sample_pv_batch():
 
 @pytest.fixture()
 def sample_wind_batch():
-    dm = WindDataModule(
+    dm = SiteDataModule(
         configuration=None,
         batch_size=2,
         num_workers=0,
@@ -169,7 +168,7 @@ def sample_wind_batch():
         train_period=[None, None],
         val_period=[None, None],
         test_period=[None, None],
-        batch_dir="tests/test_data/sample_wind_batches",
+        batch_dir="tests/test_data/sample_site_batches",
     )
     batch = next(iter(dm.train_dataloader()))
     return batch
