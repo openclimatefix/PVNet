@@ -167,7 +167,7 @@ def sample_site_batch():
         prefetch_factor=None,
         train_period=[None, None],
         val_period=[None, None],
-        sample_dir="tests/test_data/presaved_site_samples",
+        sample_dir="tests/test_data/presaved_samples_site",
     )
     batch = next(iter(dm.train_dataloader()))
     return batch
