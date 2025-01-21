@@ -3,7 +3,6 @@ general:
   name: windnet_data_sampler
 
 input_data:
-
   site:
     time_resolution_minutes: 15
     interval_start_minutes: -60
@@ -12,7 +11,6 @@ input_data:
     metadata_file_path: /mnt/storage_ssd_4tb/india_wind_metadata_data_sampler_schema_mutliple_sites.csv
     dropout_timedeltas_minutes: null
     dropout_fraction: 0 # Fraction of samples with dropout
-
 
   # nwp:
   #   mo_global:
@@ -35,7 +33,7 @@ input_data:
   #     # How long after the NWP init-time are we still willing to use this forecast
   #     # If null we use each init-time for all steps it covers
   #     max_staleness_minutes: null
-  
+
   nwp:
     ecmwf:
       provider: ecmwf

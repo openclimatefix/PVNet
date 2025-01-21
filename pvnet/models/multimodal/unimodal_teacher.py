@@ -7,7 +7,6 @@ from typing import Optional
 import hydra
 import torch
 import torch.nn.functional as F
-from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from pyaml_env import parse_config
 from torch import nn
 

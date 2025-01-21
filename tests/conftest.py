@@ -105,7 +105,9 @@ def sample_train_val_datamodule():
 
         file_n = 0
 
-        for file_n, file in enumerate(glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")):
+        for file_n, file in enumerate(
+            glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")
+        ):
             sample = torch.load(file)
 
             for i in range(n_duplicates):
@@ -204,14 +206,12 @@ def site_encoder_model_kwargs():
     )
     return kwargs
 
+
 @pytest.fixture()
 def site_encoder_model_kwargs_dsampler():
     # Used to test site encoder model on PV data
     kwargs = dict(
-        sequence_length=60 // 15 - 1,
-        num_sites=1,
-        out_features=128,
-        target_key_to_use="site"
+        sequence_length=60 // 15 - 1, num_sites=1, out_features=128, target_key_to_use="site"
     )
     return kwargs
 

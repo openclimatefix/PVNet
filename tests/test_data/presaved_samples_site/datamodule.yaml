@@ -7,8 +7,8 @@ sample_output_dir: /mnt/storage_ssd_4tb/site_batches_d_sampler_output_multiple_s
 num_val_samples: 64
 num_train_samples: 128
 train_period:
-- '2022-03-01'
-- '2022-06-01'
+  - "2022-03-01"
+  - "2022-06-01"
 val_period:
-- '2022-06-02'
-- '2022-07-01'
+  - "2022-06-02"
+  - "2022-07-01"

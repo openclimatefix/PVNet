@@ -209,8 +209,8 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
         # Shape: [batch size, sequence length, number of sites] -> [8, 197, 1]
         # Shape: [batch size,  station_id, sequence length,  channels] -> [8, 197, 26, 23]
         input_data = x[f"{self.input_key_to_use}"]
-        if len(input_data.shape) == 2: # one site per sample
-            input_data = input_data.unsqueeze(-1) # add dimension of 1 to end to make 3D
+        if len(input_data.shape) == 2:  # one site per sample
+            input_data = input_data.unsqueeze(-1)  # add dimension of 1 to end to make 3D
         if len(input_data.shape) == 4:  # Has multiple channels
             input_data = input_data[:, :, : self.sequence_length]
             input_data = einops.rearrange(input_data, "b id s c -> b (s c) id")

@@ -58,4 +58,6 @@ def test_simplelearnedaggregator_backward(sample_pv_batch, site_encoder_model_kw
 
 
 def test_singleattentionnetwork_backward(sample_site_batch, site_encoder_model_kwargs_dsampler):
-    _test_model_backward(sample_site_batch, SingleAttentionNetwork, site_encoder_model_kwargs_dsampler)
+    _test_model_backward(
+        sample_site_batch, SingleAttentionNetwork, site_encoder_model_kwargs_dsampler
+    )

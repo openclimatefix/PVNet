@@ -4,7 +4,6 @@ from collections import OrderedDict
 from typing import Optional
 
 import torch
-from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from omegaconf import DictConfig
 from torch import nn
 

@@ -2,9 +2,10 @@
 from glob import glob
 
 import torch
-from pvnet.data.base_datamodule import BaseDataModule
 from ocf_data_sampler.torch_datasets.datasets.pvnet_uk_regional import PVNetUKRegionalDataset
 from torch.utils.data import Dataset
+
+from pvnet.data.base_datamodule import BaseDataModule
 
 
 class NumpybatchPremadeSamplesDataset(Dataset):

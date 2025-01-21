@@ -1,6 +1,5 @@
 """Persistence model"""
 
-from ocf_datapipes.batch import BatchKey
 
 import pvnet
 from pvnet.models.base_model import BaseModel
