@@ -55,13 +55,13 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     for source in ["gsp", "satellite", "hrvsatellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
-            if config["input_data"][source][f"{source}_zarr_path"] != "":
-                config["input_data"][source][f"{source}_zarr_path"] = f"{placeholder}.zarr"
+            if config["input_data"][source][f"zarr_path"] != "":
+                config["input_data"][source][f"zarr_path"] = f"{placeholder}.zarr"
 
     if "nwp" in config["input_data"]:
         for source in config["input_data"]["nwp"]:
-            if config["input_data"]["nwp"][source]["nwp_zarr_path"] != "":
-                config["input_data"]["nwp"][source]["nwp_zarr_path"] = f"{placeholder}.zarr"
+            if config["input_data"]["nwp"][source]["zarr_path"] != "":
+                config["input_data"]["nwp"][source]["zarr_path"] = f"{placeholder}.zarr"
 
     if "pv" in config["input_data"]:
         for d in config["input_data"]["pv"]["pv_files_groups"]:
@@ -101,13 +101,13 @@ def minimize_data_config(input_path, output_path, model):
                 else:
                     # Replace the image size
                     nwp_pixel_size = model.nwp_encoders_dict[nwp_source].image_size_pixels
-                    nwp_config["nwp_image_size_pixels_height"] = nwp_pixel_size
-                    nwp_config["nwp_image_size_pixels_width"] = nwp_pixel_size
+                    nwp_config["image_size_pixels_height"] = nwp_pixel_size
+                    nwp_config["image_size_pixels_width"] = nwp_pixel_size
 
                     # Replace the forecast minutes
                     nwp_config["forecast_minutes"] = (
                         model.nwp_encoders_dict[nwp_source].sequence_length
-                        - nwp_config["history_minutes"] / nwp_config["time_resolution_minutes"]
+                        - nwp_config["interval_start_minutes"] / nwp_config["time_resolution_minutes"]
                         - 1
                     ) * nwp_config["time_resolution_minutes"]
 
