@@ -462,6 +462,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
     def _calculate_common_losses(self, y, y_hat):
         """Calculate losses common to train, test, and val"""
+        # y (actual values) shape: [batch_size, time horizon]
+        # y_hat (predicted values) shape: [batch_size, time horizon, quantile]
 
         losses = {}
 
@@ -477,6 +479,18 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         mse_exp = self.weighted_losses.get_mse_exp(output=y_hat, target=y)
         mae_exp = self.weighted_losses.get_mae_exp(output=y_hat, target=y)
 
+        if self.use_quantile_regression:
+            # Take median value for remaining metric calculations
+            y_hat = self._quantiles_to_prediction(y_hat)
+
+        # Ramp Rate - % of GSP capacity per hour
+        start_step = 1
+        end_step = 3
+        interval_hours = (end_step - start_step) / 2
+        ramp_rate = y[:, end_step] - y[:, start_step] / interval_hours
+        ramp_rate_hat = y_hat[:, end_step] - y_hat[:, start_step] / interval_hours
+        ramp_rate_mae = F.l1_loss(ramp_rate_hat, ramp_rate)
+
         # TODO: Compute correlation coef using np.corrcoef(tensor with
         # shape (2, num_timesteps))[0, 1] on each example, and taking
         # the mean across the batch?
@@ -486,6 +500,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 "MAE": mae_loss,
                 "MSE_EXP": mse_exp,
                 "MAE_EXP": mae_exp,
+                "normalised_ramp_rate_MAE_60-120mins": ramp_rate_mae,
             }
         )
 
