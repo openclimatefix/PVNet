@@ -44,7 +44,7 @@ import warnings
 import dask
 import hydra
 import torch
-from ocf_data_sampler.torch_datasets import PVNetUKRegionalDataset, SitesDataset
+from ocf_data_sampler.torch_datasets.datasets import PVNetUKRegionalDataset, SitesDataset
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader, Dataset
