@@ -9,9 +9,9 @@ class MultimodalBaseModel(BaseModel):
     """Base model class for multimodal model and unimodal teacher"""
 
     def _adapt_batch(self, batch):
-        """Slice batches into appropriate shapes for model
-        Returns a new batch dictionary with adapted data, leaving the original batch unchanged.
+        """Slice batches into appropriate shapes for model.
 
+        Returns a new batch dictionary with adapted data, leaving the original batch unchanged.
         We make some specific assumptions about the original batch and the derived sliced batch:
         - We are only limiting the future projections. I.e. we are never shrinking the batch from
           the left hand side of the time axis, only slicing it from the right
