@@ -1,5 +1,5 @@
 _target_: pvnet.data.site_datamodule.SiteDataModule
-configuration: /home/sukhil/ocf-code/pvnet_sampler/configs/datamodule/configuration/wind_config_mo_global_v0_data_sampler.yaml
+configuration: PLACEHOLDER
 num_workers: 0
 prefetch_factor: null
 batch_size: 1
