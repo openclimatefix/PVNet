@@ -1,14 +1,14 @@
 general:
   description: Config for producing batches for wind sites using data sampler
-  name: windnet_data_sampler
+  name: example
 
 input_data:
   site:
     time_resolution_minutes: 15
     interval_start_minutes: -60
     interval_end_minutes: 2880
-    file_path: /mnt/storage_ssd_4tb/india_wind_data_data_sampler_schema_v2_multiple_sites.nc
-    metadata_file_path: /mnt/storage_ssd_4tb/india_wind_metadata_data_sampler_schema_mutliple_sites.csv
+    file_path: PLACEHOLDER
+    metadata_file_path: PLACEHOLDER
     dropout_timedeltas_minutes: null
     dropout_fraction: 0 # Fraction of samples with dropout
 
@@ -17,7 +17,7 @@ input_data:
       provider: ecmwf
       # Path to ECMWF NWP data in zarr format
       # n.b. It is not necessary to use multiple or any NWP data. These entries can be removed
-      zarr_path: /mnt/storage_b/nwp/ecmwf/nw_india_84hrs/20220*.zarr.zip
+      zarr_path: PLACEHOLDER
       interval_start_minutes: -60
       interval_end_minutes: 2880
       time_resolution_minutes: 60
