@@ -78,7 +78,7 @@ class SaveFuncFactory:
     def __call__(self, sample, sample_num: int):
         """Save a sample to disk"""
         save_path = f"{self.save_dir}/{sample_num:08}"
-        
+
         if self.renewable == "pv_uk":
             sample_class = UKRegionalSample()
             filename = f"{save_path}.pt"
