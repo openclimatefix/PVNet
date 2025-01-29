@@ -23,6 +23,7 @@ class NumpybatchPremadeSamplesDataset(Dataset):
         return len(self.sample_paths)
 
     def __getitem__(self, idx):
+        # Returns a dict of tensors
         sample = UKRegionalSample.load(self.sample_paths[idx])
         return sample.to_numpy()
 
