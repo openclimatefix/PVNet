@@ -78,19 +78,18 @@ class SaveFuncFactory:
     def __call__(self, sample, sample_num: int):
         """Save a sample to disk"""
         save_path = f"{self.save_dir}/{sample_num:08}"
-
+        
         if self.renewable == "pv_uk":
-            # Create UK Regional Sample and save
-            uk_sample = UKRegionalSample()
-            uk_sample._data = sample
-            uk_sample.save(f"{save_path}.pt")
+            sample_class = UKRegionalSample()
+            filename = f"{save_path}.pt"
         elif self.renewable == "site":
-            # Create Site Sample and save
-            site_sample = SiteSample()
-            site_sample._data = sample
-            site_sample.save(f"{save_path}.nc")
+            sample_class = SiteSample()
+            filename = f"{save_path}.nc"
         else:
             raise ValueError(f"Unknown renewable: {self.renewable}")
+        # Assign data and save
+        sample_class._data = sample
+        sample_class.save(filename)
 
 
 def get_dataset(
