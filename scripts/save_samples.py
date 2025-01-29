@@ -40,10 +40,9 @@ import os
 import shutil
 import sys
 import warnings
+
 import dask
 import hydra
-import torch
-
 from ocf_data_sampler.sample.site import SiteSample
 from ocf_data_sampler.sample.uk_regional import UKRegionalSample
 from ocf_data_sampler.torch_datasets.datasets import PVNetUKRegionalDataset, SitesDataset
@@ -66,6 +65,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 # -------------------------------------------------
+
 
 class SaveFuncFactory:
     """Factory for creating a function to save a sample to disk."""
