@@ -6,6 +6,7 @@ from ocf_data_sampler.torch_datasets.datasets.site import (
     SitesDataset,
     convert_netcdf_to_numpy_sample,
 )
+from ocf_data_sampler.sample.site import SiteSample
 from torch.utils.data import Dataset
 
 from pvnet.data.base_datamodule import BaseDataModule
@@ -29,12 +30,8 @@ class NetcdfPreMadeSamplesDataset(Dataset):
         return len(self.sample_paths)
 
     def __getitem__(self, idx):
-        # open the sample
-        ds = xr.open_dataset(self.sample_paths[idx])
-
-        # convert to numpy
-        sample = convert_netcdf_to_numpy_sample(ds)
-        return sample
+        sample = SiteSample.load(self.sample_paths[idx])        
+        return sample.to_numpy()
 
 
 class SiteDataModule(BaseDataModule):

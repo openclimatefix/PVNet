@@ -3,6 +3,7 @@ from glob import glob
 
 import torch
 from ocf_data_sampler.torch_datasets.datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_data_sampler.sample.uk_regional import UKRegionalSample 
 from torch.utils.data import Dataset
 
 from pvnet.data.base_datamodule import BaseDataModule
@@ -23,7 +24,8 @@ class NumpybatchPremadeSamplesDataset(Dataset):
         return len(self.sample_paths)
 
     def __getitem__(self, idx):
-        return torch.load(self.sample_paths[idx])
+        sample = UKRegionalSample.load(self.sample_paths[idx])        
+        return sample.to_numpy()
 
 
 class DataModule(BaseDataModule):
