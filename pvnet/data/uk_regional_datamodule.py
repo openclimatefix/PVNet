@@ -1,29 +1,10 @@
 """ Data module for pytorch lightning """
-from glob import glob
 
-import torch
+from ocf_data_sampler.sample.uk_regional import UKRegionalSample
 from ocf_data_sampler.torch_datasets.datasets.pvnet_uk_regional import PVNetUKRegionalDataset
 from torch.utils.data import Dataset
 
-from pvnet.data.base_datamodule import BaseDataModule
-
-
-class NumpybatchPremadeSamplesDataset(Dataset):
-    """Dataset to load NumpyBatch samples"""
-
-    def __init__(self, sample_dir):
-        """Dataset to load NumpyBatch samples
-
-        Args:
-            sample_dir: Path to the directory of pre-saved samples.
-        """
-        self.sample_paths = glob(f"{sample_dir}/*.pt")
-
-    def __len__(self):
-        return len(self.sample_paths)
-
-    def __getitem__(self, idx):
-        return torch.load(self.sample_paths[idx])
+from pvnet.data.base_datamodule import BaseDataModule, PremadeSamplesDataset
 
 
 class DataModule(BaseDataModule):
@@ -69,4 +50,5 @@ class DataModule(BaseDataModule):
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
-        return NumpybatchPremadeSamplesDataset(split_dir)
+        # Returns a dict of np arrays
+        return PremadeSamplesDataset(split_dir, UKRegionalSample)

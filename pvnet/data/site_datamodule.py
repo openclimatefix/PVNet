@@ -1,40 +1,12 @@
 """ Data module for pytorch lightning """
-from glob import glob
 
-import xarray as xr
+from ocf_data_sampler.sample.site import SiteSample
 from ocf_data_sampler.torch_datasets.datasets.site import (
     SitesDataset,
-    convert_netcdf_to_numpy_sample,
 )
 from torch.utils.data import Dataset
 
-from pvnet.data.base_datamodule import BaseDataModule
-
-
-class NetcdfPreMadeSamplesDataset(Dataset):
-    """Dataset to load pre-made netcdf samples"""
-
-    def __init__(
-        self,
-        sample_dir,
-    ):
-        """Dataset to load pre-made netcdf samples
-
-        Args:
-            sample_dir: Path to the directory of pre-saved samples.
-        """
-        self.sample_paths = glob(f"{sample_dir}/*.nc")
-
-    def __len__(self):
-        return len(self.sample_paths)
-
-    def __getitem__(self, idx):
-        # open the sample
-        ds = xr.open_dataset(self.sample_paths[idx])
-
-        # convert to numpy
-        sample = convert_netcdf_to_numpy_sample(ds)
-        return sample
+from pvnet.data.base_datamodule import BaseDataModule, PremadeSamplesDataset
 
 
 class SiteDataModule(BaseDataModule):
@@ -80,4 +52,4 @@ class SiteDataModule(BaseDataModule):
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
-        return NetcdfPreMadeSamplesDataset(split_dir)
+        return PremadeSamplesDataset(split_dir, SiteSample)

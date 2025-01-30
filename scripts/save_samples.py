@@ -43,7 +43,8 @@ import warnings
 
 import dask
 import hydra
-import torch
+from ocf_data_sampler.sample.site import SiteSample
+from ocf_data_sampler.sample.uk_regional import UKRegionalSample
 from ocf_data_sampler.torch_datasets.datasets import PVNetUKRegionalDataset, SitesDataset
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
@@ -76,12 +77,19 @@ class SaveFuncFactory:
 
     def __call__(self, sample, sample_num: int):
         """Save a sample to disk"""
+        save_path = f"{self.save_dir}/{sample_num:08}"
+
         if self.renewable == "pv_uk":
-            torch.save(sample, f"{self.save_dir}/{sample_num:08}.pt")
+            sample_class = UKRegionalSample()
+            filename = f"{save_path}.pt"
         elif self.renewable == "site":
-            sample.to_netcdf(f"{self.save_dir}/{sample_num:08}.nc", mode="w", engine="h5netcdf")
+            sample_class = SiteSample()
+            filename = f"{save_path}.nc"
         else:
             raise ValueError(f"Unknown renewable: {self.renewable}")
+        # Assign data and save
+        sample_class._data = sample
+        sample_class.save(filename)
 
 
 def get_dataset(
