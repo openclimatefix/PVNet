@@ -1,4 +1,6 @@
 """ Data module for pytorch lightning """
+
+from glob import glob
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
 from ocf_datapipes.batch import (
@@ -12,6 +14,24 @@ from torch.utils.data import DataLoader, Dataset
 def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
     """Convert a list of NumpySample samples to a tensor batch"""
     return batch_to_tensor(stack_np_samples_into_batch(samples))
+
+
+class PremadeSamplesDataset(Dataset):
+    """Dataset to load samples from
+
+    Args:
+        sample_dir: Path to the directory of pre-saved samples.
+    """
+    def __init__(self, sample_dir: str, sample_class):
+        self.sample_paths = glob(f"{sample_dir}/*")
+        self.sample_class = sample_class
+
+    def __len__(self):
+        return len(self.sample_paths)
+
+    def __getitem__(self, idx):
+        sample = self.sample_class.load(self.sample_paths[idx])
+        return sample.to_numpy()
 
 
 class BaseDataModule(LightningDataModule):
