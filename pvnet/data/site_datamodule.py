@@ -1,11 +1,9 @@
 """ Data module for pytorch lightning """
 
-import xarray as xr
+from ocf_data_sampler.sample.site import SiteSample
 from ocf_data_sampler.torch_datasets.datasets.site import (
     SitesDataset,
-    convert_netcdf_to_numpy_sample,
 )
-from ocf_data_sampler.sample.site import SiteSample
 from torch.utils.data import Dataset
 
 from pvnet.data.base_datamodule import BaseDataModule, PremadeSamplesDataset

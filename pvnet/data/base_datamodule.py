@@ -1,6 +1,7 @@
 """ Data module for pytorch lightning """
 
 from glob import glob
+
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
 from ocf_datapipes.batch import (
@@ -22,6 +23,7 @@ class PremadeSamplesDataset(Dataset):
     Args:
         sample_dir: Path to the directory of pre-saved samples.
     """
+
     def __init__(self, sample_dir: str, sample_class):
         self.sample_paths = glob(f"{sample_dir}/*")
         self.sample_class = sample_class
