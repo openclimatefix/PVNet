@@ -25,7 +25,7 @@ class PremadeSamplesDataset(Dataset):
     """
 
     def __init__(self, sample_dir: str, sample_class):
-        """ Initialise PremadeSamplesDataset """
+        """Initialise PremadeSamplesDataset"""
         self.sample_paths = glob(f"{sample_dir}/*")
         self.sample_class = sample_class
 
