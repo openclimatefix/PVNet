@@ -50,5 +50,5 @@ class DataModule(BaseDataModule):
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
-        # Returns a dict of tensors
+        # Returns a dict of np arrays
         return PremadeSamplesDataset(split_dir, UKRegionalSample)
