@@ -40,7 +40,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 #_________VARIABLES_________
 
-output_dir = "/home/alex/wp6/PVNet/backtest" # directory where to store predictions
+output_dir = "PLACEHOLDER" # directory where to store predictions
 
 # Time window for which to run the backtest
 start_time = "2024-12-31"
@@ -55,20 +55,17 @@ MIN_DAY_ELEVATION = 0
 # All regional GSP IDs
 ALL_GSP_IDS = np.arange(1, 318)
 
-# Whether to include all GSP IDs in the batch. If false defaults to the batch size in datamodule
-predict_all_gsps = False 
-
 #_________MODEL VARIABLES_________
 
-hf_model_id = "openclimatefix/pvnet_uk_region"
-hf_revision = "0bc344fafb2232fb0b6bb0bf419f0449fe11c643"
+hf_model_id = "openclimatefix/PLACEHOLDER"
+hf_revision = "PLACEHOLDER"
 hf_token = None
 
 #_________DATA_PATHS_________
 
 # paths to populate the config with after loading from HF 
-ecmwf_path = "/home/alex/wp6/data/2025010100.zarr"
-gsp_path = "/home/alex/wp6/data/pv_gsp.zarr"
+ecmwf_path = "PLACEHOLDER.zarr"
+gsp_path = "PLACEHOLDER.zarr"
 
 # member if using ECMWF ensambles. Set to None to ignore
 ensemble_member = 1
@@ -369,12 +366,7 @@ def main(config: DictConfig) -> None:
     model, data_config_path = load_model_from_hf(hf_model_id, hf_revision, hf_token)
     log.info(f"Model loaded from HuggingFace: {hf_model_id}/{hf_revision}")
 
-    # If all-gsp batch requested, override batch size
-    if predict_all_gsps:
-        batch_size = len(ALL_GSP_IDS)
-        log.warning(f"All GSP IDs are used per batch. Batch size increased to {batch_size}")
-    else:
-        batch_size = config.datamodule.batch_size
+    batch_size = config.datamodule.batch_size
 
     # Prepare DataLoader
     dataloader_kwargs = dict(
