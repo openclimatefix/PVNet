@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import wandb
+import matplotlib
+
+matplotlib.rcParams['axes.prop_cycle'] = matplotlib.cycler(color=[
+    "FFD053", "7BCDF3", "63BCAF", "086788", 
+    "FF9736", "E4E4E4", "14120E", "FFAC5F", "4C9A8E"])
 
 
 def main(project: str, runs: list[str], run_names: list[str]) -> None:
