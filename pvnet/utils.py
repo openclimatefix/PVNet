@@ -13,7 +13,7 @@ import rich.tree
 import xarray as xr
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
-from ocf_datapipes.utils import Location
+from ocf_data_sampler.select.location import Location
 from omegaconf import DictConfig, OmegaConf
 
 
