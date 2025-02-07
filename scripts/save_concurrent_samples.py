@@ -29,26 +29,22 @@ if __name__ == "__main__":
     mp.set_sharing_strategy("file_system")
 
 
-import os
-import sys
-import shutil
-from tqdm import tqdm
-
-import warnings
 import logging
-from sqlalchemy import exc as sa_exc
+import os
+import shutil
+import sys
+import warnings
 
 import hydra
-from omegaconf import DictConfig, OmegaConf
-
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset
-from ocf_datapipes.batch import batch_to_tensor
 from ocf_data_sampler.torch_datasets.datasets.pvnet_uk import PVNetUKConcurrentDataset
+from omegaconf import DictConfig, OmegaConf
+from sqlalchemy import exc as sa_exc
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 from pvnet.utils import print_config
-
 
 # ------- filter warning and set up config  -------
 
@@ -144,9 +140,9 @@ def main(config: DictConfig) -> None:
 
         # Get the dataset
         val_dataset = PVNetUKConcurrentDataset(
-            config_dm.configuration, 
-            start_time=config_dm.val_period[0], 
-            end_time=config_dm.val_period[1]
+            config_dm.configuration,
+            start_time=config_dm.val_period[0],
+            end_time=config_dm.val_period[1],
         )
 
         # Save samples
@@ -169,9 +165,9 @@ def main(config: DictConfig) -> None:
 
         # Get the dataset
         train_dataset = PVNetUKConcurrentDataset(
-            config_dm.configuration, 
-            start_time=config_dm.train_period[0], 
-            end_time=config_dm.train_period[1]
+            config_dm.configuration,
+            start_time=config_dm.train_period[0],
+            end_time=config_dm.train_period[1],
         )
 
         # Save samples
