@@ -7,10 +7,25 @@ Does this for 48 hour horizon forecasts with 15 minute granularity
 
 import argparse
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import wandb
+
+matplotlib.rcParams["axes.prop_cycle"] = matplotlib.cycler(
+    color=[
+        "FFD053",  # yellow
+        "7BCDF3",  # blue
+        "63BCAF",  # teal
+        "086788",  # dark blue
+        "FF9736",  # dark orange
+        "E4E4E4",  # grey
+        "14120E",  # black
+        "FFAC5F",  # orange
+        "4C9A8E",  # dark teal
+    ]
+)
 
 
 def main(project: str, runs: list[str], run_names: list[str]) -> None:
