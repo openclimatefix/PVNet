@@ -1,6 +1,4 @@
-"""Encoder modules for the site-level PV data.
-
-"""
+"""Encoder modules for the site-level PV data."""
 
 import einops
 import torch
