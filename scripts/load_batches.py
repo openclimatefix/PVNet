@@ -1,5 +1,4 @@
-"""A test script to examine the pre-saved batches
-"""
+"""A test script to examine the pre-saved batches"""
 
 import torch
 from torch.utils.data.datapipes.iter import FileLister
