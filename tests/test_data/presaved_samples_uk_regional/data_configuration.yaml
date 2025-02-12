@@ -4,7 +4,7 @@ general:
 
 input_data:
   gsp:
-    gsp_zarr_path: /mnt/disks/nwp_rechunk/pv_gsp/pvlive_gsp.zarr
+    zarr_path: /mnt/disks/nwp_rechunk/pv_gsp/pvlive_gsp.zarr
     interval_start_minutes: -120
     interval_end_minutes: 480
     time_resolution_minutes: 30
@@ -16,8 +16,8 @@ input_data:
 
   nwp:
     ukv:
-      nwp_provider: ukv
-      nwp_zarr_path:
+      provider: ukv
+      zarr_path:
         - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_intermediate_version_7.1.zarr
         - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_2021_missing.zarr
         - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_2022.zarr
@@ -25,7 +25,7 @@ input_data:
       interval_start_minutes: -120
       interval_end_minutes: 480
       time_resolution_minutes: 60
-      nwp_channels:
+      channels:
         # These variables exist in the CEDA training set and in the live MetOffice live service
         - t # 2-metre temperature
         - dswrf # downwards short-wave radiation flux
@@ -38,20 +38,20 @@ input_data:
         - vis # visibility
         - si10 # 10-metre wind speed
         - prate # precipitation rate
-      nwp_image_size_pixels_height: 24
-      nwp_image_size_pixels_width: 24
+      image_size_pixels_height: 24
+      image_size_pixels_width: 24
       dropout_timedeltas_minutes: [-180]
       dropout_fraction: 1.0
       max_staleness_minutes: null
 
     ecmwf:
-      nwp_provider: ecmwf
-      nwp_zarr_path: /mnt/disks/nwp_rechunk/nwp/ecmwf/UK_v2.zarr
+      provider: ecmwf
+      zarr_path: /mnt/disks/nwp_rechunk/nwp/ecmwf/UK_v2.zarr
       interval_start_minutes: -120
       interval_end_minutes: 480
       time_resolution_minutes: 60
 
-      nwp_channels:
+      channels:
         - t2m # 2-metre temperature
         - dswrf # downwards short-wave radiation flux
         - dlwrf # downwards long-wave radiation flux
@@ -66,25 +66,25 @@ input_data:
         - v10 # 10-metre V component of wind speed
 
       # The following channels are accumulated and need to be diffed
-      nwp_accum_channels:
+      accum_channels:
         - dswrf
         - dlwrf
         - sr
         - duvrs
 
-      nwp_image_size_pixels_height: 12 # roughly equivalent to ukv 48
-      nwp_image_size_pixels_width: 12 # roughly equivalent to ukv 48
+      image_size_pixels_height: 12 # roughly equivalent to ukv 48
+      image_size_pixels_width: 12 # roughly equivalent to ukv 48
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0
       max_staleness_minutes: null
 
     sat_pred:
-      nwp_provider: sat_pred
-      nwp_zarr_path: /mnt/disks/sat_preds/simvp_preds/*.zarr
+      provider: sat_pred
+      zarr_path: /mnt/disks/sat_preds/simvp_preds/*.zarr
       interval_start_minutes: 15
       interval_end_minutes: 180
       time_resolution_minutes: 15
-      nwp_channels:
+      channels:
         - IR_016
         - IR_039
         - IR_087
@@ -96,14 +96,14 @@ input_data:
         - VIS008
         - WV_062
         - WV_073
-      nwp_image_size_pixels_height: 24
-      nwp_image_size_pixels_width: 24
+      image_size_pixels_height: 24
+      image_size_pixels_width: 24
       dropout_timedeltas_minutes: null
       dropout_fraction: 0
       max_staleness_minutes: null
 
   satellite:
-    satellite_zarr_path:
+    zarr_path:
       - /mnt/disks/nwp_rechunk/sat/2019_nonhrv.zarr
       - /mnt/disks/nwp_rechunk/sat/2020_nonhrv.zarr
       - /mnt/disks/nwp_rechunk/sat/2021_nonhrv.zarr
@@ -112,7 +112,7 @@ input_data:
     interval_start_minutes: -30
     interval_end_minutes: 0
     time_resolution_minutes: 5
-    satellite_channels:
+    channels:
       - IR_016
       - IR_039
       - IR_087
@@ -124,7 +124,7 @@ input_data:
       - VIS008
       - WV_062
       - WV_073
-    satellite_image_size_pixels_height: 24
-    satellite_image_size_pixels_width: 24
+    image_size_pixels_height: 24
+    image_size_pixels_width: 24
     dropout_timedeltas_minutes: null
     dropout_fraction: 0.

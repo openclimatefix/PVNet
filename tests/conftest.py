@@ -26,7 +26,6 @@ xr.set_options(keep_attrs=True)
 def time_before_present(dt: timedelta):
     return pd.Timestamp.now(tz=None) - dt
 
-
 @pytest.fixture
 def nwp_data():
     # Load dataset which only contains coordinates, but no data
@@ -233,7 +232,7 @@ def site_encoder_sensor_model_kwargs():
 def raw_multimodal_model_kwargs(model_minutes_kwargs):
     kwargs = dict(
         sat_encoder=dict(
-            _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
+            _target_="pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
             _partial_=True,
             in_channels=11,
             out_features=128,
@@ -243,7 +242,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
         ),
         nwp_encoders_dict={
             "ukv": dict(
-                _target_=pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet,
+                _target_="pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
                 _partial_=True,
                 in_channels=11,
                 out_features=128,
@@ -256,7 +255,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
         # ocf-data-sampler doesn't supprt PV site inputs yet
         pv_encoder=None,
         output_network=dict(
-            _target_=pvnet.models.multimodal.linear_networks.networks.ResFCNet2,
+            _target_="pvnet.models.multimodal.linear_networks.networks.ResFCNet2",
             _partial_=True,
             fc_hidden_features=128,
             n_res_blocks=6,
