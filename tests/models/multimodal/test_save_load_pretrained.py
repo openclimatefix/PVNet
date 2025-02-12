@@ -1,6 +1,7 @@
 from pvnet.models.base_model import BaseModel
 from pathlib import Path
 
+
 def test_from_pretrained():
     model_name = "openclimatefix/pvnet_uk_region"
     model_version = "92266cd9040c590a9e90ee33eafd0e7b92548be8"
@@ -10,8 +11,8 @@ def test_from_pretrained():
         revision=model_version,
     )
 
-def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs):
 
+def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs):
     data_config_path = "tests/test_data/presaved_samples_uk_regional/data_configuration.yaml"
 
     # Construct the model config

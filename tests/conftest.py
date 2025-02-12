@@ -26,6 +26,7 @@ xr.set_options(keep_attrs=True)
 def time_before_present(dt: timedelta):
     return pd.Timestamp.now(tz=None) - dt
 
+
 @pytest.fixture
 def nwp_data():
     # Load dataset which only contains coordinates, but no data
