@@ -1,11 +1,12 @@
 """ Data module for pytorch lightning """
 
 from glob import glob
-
+from typing import Type
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
-from ocf_data_sampler.sample.base import SampleBase
-from ocf_datapipes.batch import (
+
+from ocf_data_sampler.sample.base import (
+    SampleBase,
     NumpyBatch,
     TensorBatch,
     batch_to_tensor,
@@ -26,8 +27,8 @@ class PremadeSamplesDataset(Dataset):
         sample_class: sample class type to use for save/load/to_numpy
     """
 
-    def __init__(self, sample_dir: str, sample_class: SampleBase):
-        """Initialise PremadeSamplesDataset"""
+    def __init__(self, sample_dir: str, sample_class: Type[SampleBase]):
+        """Initialise PremadeSamplesDataset"""  
         self.sample_paths = glob(f"{sample_dir}/*")
         self.sample_class = sample_class
 
@@ -99,7 +100,8 @@ class BaseDataModule(LightningDataModule):
         raise NotImplementedError
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
-        raise NotImplementedError
+        split_dir = f"{self.sample_dir}/{subdir}"
+        return PremadeSamplesDataset(split_dir, None)
 
     def train_dataloader(self) -> DataLoader:
         """Construct train dataloader"""
