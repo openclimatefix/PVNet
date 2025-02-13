@@ -2,7 +2,7 @@
 import copy
 
 from torchvision.transforms.functional import center_crop
-import copy
+
 from pvnet.models.base_model import BaseModel
 
 
