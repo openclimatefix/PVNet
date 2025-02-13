@@ -72,4 +72,3 @@ def test_site_init_config():
         val_period=[None, None],
         sample_dir=None,
     )
-

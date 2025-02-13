@@ -2,12 +2,12 @@
 
 from glob import glob
 from typing import Type
+
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
-
 from ocf_data_sampler.sample.base import (
-    SampleBase,
     NumpyBatch,
+    SampleBase,
     TensorBatch,
     batch_to_tensor,
 )
@@ -28,7 +28,7 @@ class PremadeSamplesDataset(Dataset):
     """
 
     def __init__(self, sample_dir: str, sample_class: Type[SampleBase]):
-        """Initialise PremadeSamplesDataset"""  
+        """Initialise PremadeSamplesDataset"""
         self.sample_paths = glob(f"{sample_dir}/*")
         self.sample_class = sample_class
 
