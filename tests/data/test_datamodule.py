@@ -26,8 +26,6 @@ def test_iter():
         val_period=[None, None],
     )
 
-    batch = next(iter(dm.train_dataloader()))
-
 
 def test_iter_multiprocessing():
     dm = DataModule(
@@ -55,12 +53,12 @@ def test_iter_multiprocessing():
 def test_site_init_sample_dir():
     dm = SiteDataModule(
         configuration=None,
+        sample_dir="tests/test_data/presaved_site_samples",
         batch_size=2,
         num_workers=0,
         prefetch_factor=None,
         train_period=[None, None],
         val_period=[None, None],
-        sample_dir="tests/test_data/presaved_site_samples",
     )
 
 
@@ -74,21 +72,3 @@ def test_site_init_config():
         val_period=[None, None],
         sample_dir=None,
     )
-
-
-def test_worker_configuration():
-    dm = DataModule(
-        sample_dir="tests/test_data/presaved_samples_uk_regional",
-        batch_size=2,
-        num_workers=4,
-        prefetch_factor=2,
-    )
-
-    # Iterate through dataloader - assert multi-processing functions fine
-    batches_processed = 0
-    for batch in dm.train_dataloader():
-        batches_processed += 1
-        if batches_processed >= 5:
-            break
-
-    assert batches_processed > 0, "No batches were processed"

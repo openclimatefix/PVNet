@@ -1,16 +1,14 @@
 """ Data module for pytorch lightning """
 
 from ocf_data_sampler.sample.site import SiteSample
-from ocf_data_sampler.torch_datasets.datasets.site import (
-    SitesDataset,
-)
+from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
 from torch.utils.data import Dataset
 
 from pvnet.data.base_datamodule import BaseDataModule, PremadeSamplesDataset
 
 
 class SiteDataModule(BaseDataModule):
-    """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
+    """Datamodule for training pvnet and using pvnet pipeline in `ocf-data-sampler`."""
 
     def __init__(
         self,

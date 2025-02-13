@@ -4,9 +4,9 @@ from glob import glob
 
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
-from ocf_data_sampler.sample.base import SampleBase
-from ocf_datapipes.batch import (
+from ocf_data_sampler.sample.base import (
     NumpyBatch,
+    SampleBase,
     TensorBatch,
     batch_to_tensor,
 )
