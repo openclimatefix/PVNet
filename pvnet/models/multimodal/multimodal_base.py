@@ -1,7 +1,7 @@
 """Base model class for multimodal model and unimodal teacher"""
 from ocf_datapipes.batch import BatchKey, NWPBatchKey
 from torchvision.transforms.functional import center_crop
-
+import copy
 from pvnet.models.base_model import BaseModel
 
 
@@ -19,7 +19,7 @@ class MultimodalBaseModel(BaseModel):
 
         """
         # Create a copy of the batch to avoid modifying the original
-        new_batch = {key: value.copy() for key, value in batch.items()}
+        new_batch = {key: copy.deepcopy(value) for key, value in batch.items()}
 
         if BatchKey.gsp in new_batch.keys():
             # Slice off the end of the GSP data
