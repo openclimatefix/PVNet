@@ -35,30 +35,12 @@ import torch
 import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
-from ocf_datapipes.batch import (
-    BatchKey,
-    NumpyBatch,
-    batch_to_tensor,
-    copy_batch_to_device,
-    stack_np_examples_into_batch,
-)
-from ocf_datapipes.config.load import load_yaml_configuration
-from ocf_datapipes.load.pv.pv import OpenPVFromNetCDFIterDataPipe
-from ocf_datapipes.training.common import create_t0_and_loc_datapipes
-from ocf_datapipes.training.pvnet_site import (
-    DictDatasetIterDataPipe,
-    _get_datapipes_dict,
-    construct_sliced_data_pipeline,
-    split_dataset_dict_dp,
-)
-from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
+from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader, IterDataPipe, functional_datapipe
-from torch.utils.data.datapipes.iter import IterableWrapper
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from pvnet.load_model import get_model_from_checkpoints
-from pvnet.utils import SiteLocationLookup
 
 # ------------------------------------------------------------------
 # USER CONFIGURED VARIABLES TO RUN THE SCRIPT
@@ -75,8 +57,8 @@ hf_token = None
 hf_model_id = None
 
 # Forecasts will be made for all available init times between these
-start_datetime = "2022-05-08 00:00"
-end_datetime = "2022-05-08 00:30"
+start_datetime = "2022-05-07 13:00"
+end_datetime = "2022-05-07 16:30"
 
 # ------------------------------------------------------------------
 # SET UP LOGGING
@@ -106,51 +88,6 @@ ALL_SITE_IDS.sort()
 
 # ------------------------------------------------------------------
 # FUNCTIONS
-
-
-@functional_datapipe("pad_forward_pv")
-class PadForwardPVIterDataPipe(IterDataPipe):
-    """
-    Pads forecast pv.
-
-    Sun position is calculated based off of pv time index
-    and for t0's close to end of pv data can have wrong shape as pv starts
-    to run out of data to slice for the forecast part.
-    """
-
-    def __init__(
-        self,
-        pv_dp: IterDataPipe,
-        forecast_duration: np.timedelta64,
-        history_duration: np.timedelta64,
-        time_resolution_minutes: np.timedelta64,
-    ):
-        """Init"""
-
-        super().__init__()
-        self.pv_dp = pv_dp
-        self.forecast_duration = forecast_duration
-        self.history_duration = history_duration
-        self.time_resolution_minutes = time_resolution_minutes
-
-        self.min_seq_length = history_duration // time_resolution_minutes
-
-    def __iter__(self):
-        """Iter"""
-
-        for xr_data in self.pv_dp:
-            t_end = (
-                xr_data.time_utc.data[0]
-                + self.history_duration
-                + self.forecast_duration
-                + self.time_resolution_minutes
-            )
-            time_idx = np.arange(xr_data.time_utc.data[0], t_end, self.time_resolution_minutes)
-
-            if len(xr_data.time_utc.data) < self.min_seq_length:
-                raise ValueError("Not enough PV data to predict")
-
-            yield xr_data.reindex(time_utc=time_idx, fill_value=-1)
 
 
 def load_model_from_hf(model_id: str, revision: str, token: str):
@@ -215,141 +152,11 @@ def get_sites_ds(config_path: str) -> xr.Dataset:
         config_path: Path to the data configuration file
 
     Returns:
-        xarray.Dataset of PVLive truths and capacities
+        xarray.Dataset of PV sites data
     """
+    dataset = SitesDataset(config_path)
+    return dataset.datasets_dict["site"]
 
-    config = load_yaml_configuration(config_path)
-    site_datapipe = OpenPVFromNetCDFIterDataPipe(pv=config.input_data.pv)
-    ds_sites = next(iter(site_datapipe))
-
-    return ds_sites
-
-
-def get_available_t0_times(start_datetime, end_datetime, config_path):
-    """Filter a list of t0 init-times to those for which all required input data is available.
-
-    Args:
-        start_datetime: First potential t0 time
-        end_datetime: Last potential t0 time
-        config_path: Path to data config file
-
-    Returns:
-        pandas.DatetimeIndex of the init-times available for required inputs
-    """
-
-    start_datetime = pd.Timestamp(start_datetime)
-    end_datetime = pd.Timestamp(end_datetime)
-    # Open all the input data so we can check what of the potential data init times we have input
-    # data for
-    datapipes_dict = _get_datapipes_dict(config_path, production=False)
-
-    # Pop out the config file
-    config = datapipes_dict.pop("config")
-
-    # We are going to abuse the `create_t0_and_loc_datapipes()` function to find the init-times in
-    # potential_init_times which we have input data for. To do this, we will feed in some fake site
-    # data which has the potential_init_times as timestamps. This is a bit hacky but works for now
-
-    # Set up init-times we would like to make predictions for
-    potential_init_times = pd.date_range(start_datetime, end_datetime, freq=f"{FREQ_MINS}min")
-
-    # We buffer the potential init-times so that we don't lose any init-times from the
-    # start and end. Again this is a hacky step
-    history_duration = pd.Timedelta(config.input_data.pv.history_minutes, "min")
-    forecast_duration = pd.Timedelta(config.input_data.pv.forecast_minutes, "min")
-    buffered_potential_init_times = pd.date_range(
-        start_datetime - history_duration, end_datetime + forecast_duration, freq=f"{FREQ_MINS}min"
-    )
-    ds_fake_site = (
-        buffered_potential_init_times.to_frame().to_xarray().rename({"index": "time_utc"})
-    )
-    ds_fake_site = ds_fake_site.rename({0: "site_pv_power_mw"})
-    ds_fake_site = ds_fake_site.expand_dims("pv_system_id", axis=1)
-    ds_fake_site = ds_fake_site.assign_coords(
-        pv_system_id=[0],
-        latitude=("pv_system_id", [0]),
-        longitude=("pv_system_id", [0]),
-    )
-    ds_fake_site = ds_fake_site.site_pv_power_mw.astype(float) * 1e-18
-    # Overwrite the site data which is already in the datapipes dict
-    datapipes_dict["pv"] = IterableWrapper([ds_fake_site])
-
-    # Use create_t0_and_loc_datapipes to get datapipe of init-times
-    location_pipe, t0_datapipe = create_t0_and_loc_datapipes(
-        datapipes_dict,
-        configuration=config,
-        key_for_t0="pv",
-        shuffle=False,
-    )
-
-    # Create a full list of available init-times. Note that we need to loop over the t0s AND
-    # locations to avoid the torch datapipes buffer overflow but we don't actually use the location
-    available_init_times = [t0 for _, t0 in zip(location_pipe, t0_datapipe)]
-    available_init_times = pd.to_datetime(available_init_times)
-
-    logger.info(
-        f"{len(available_init_times)} out of {len(potential_init_times)} "
-        "requested init-times have required input data"
-    )
-
-    return available_init_times
-
-
-def get_loctimes_datapipes(config_path):
-    """Create location and init-time datapipes
-
-    Args:
-        config_path: Path to data config file
-
-    Returns:
-        tuple: A tuple of datapipes
-            - Datapipe yielding locations
-            - Datapipe yielding init-times
-    """
-
-    # Set up ID location query object
-    ds_sites = get_sites_ds(config_path)
-    site_id_to_loc = SiteLocationLookup(ds_sites.longitude, ds_sites.latitude)
-
-    # Filter the init-times to times we have all input data for
-    available_target_times = get_available_t0_times(
-        start_datetime,
-        end_datetime,
-        config_path,
-    )
-    num_t0s = len(available_target_times)
-
-    # Save the init-times which predictions are being made for. This is really helpful to check
-    # whilst the backtest is running since it takes a long time. This lets you see what init-times
-    # the backtest will end up producing
-    available_target_times.to_frame().to_csv(f"{output_dir}/t0_times.csv")
-
-    # Cycle the site locations
-    location_pipe = IterableWrapper([[site_id_to_loc(site_id) for site_id in ALL_SITE_IDS]]).repeat(
-        num_t0s
-    )
-
-    # Shard and then unbatch the locations so that each worker will generate all samples for all
-    # sites and for a single init-time
-    location_pipe = location_pipe.sharding_filter()
-    location_pipe = location_pipe.unbatch(
-        unbatch_level=1
-    )  # might not need this part since the site datapipe is creating examples
-
-    # Create times datapipe so each worker receives
-    # len(ALL_SITE_IDS) copies of the same datetime for its batch
-    t0_datapipe = IterableWrapper(
-        [[t0 for site_id in ALL_SITE_IDS] for t0 in available_target_times]
-    )
-    t0_datapipe = t0_datapipe.sharding_filter()
-    t0_datapipe = t0_datapipe.unbatch(
-        unbatch_level=1
-    )  # might not need this part since the site datapipe is creating examples
-
-    t0_datapipe = t0_datapipe.set_length(num_t0s * len(ALL_SITE_IDS))
-    location_pipe = location_pipe.set_length(num_t0s * len(ALL_SITE_IDS))
-
-    return location_pipe, t0_datapipe
 
 
 class ModelPipe:
@@ -360,114 +167,84 @@ class ModelPipe:
 
         Args:
             model: PVNet site level model
-            ds_site:xarray dataset of pv site true values and capacities
+            ds_site: xarray dataset of pv site true values and capacities
         """
         self.model = model
         self.ds_site = ds_site
 
-    def predict_batch(self, batch: NumpyBatch) -> xr.Dataset:
-        """Run the batch through the model and compile the predictions into an xarray DataArray
+    def predict_batch(self, sample: dict) -> xr.Dataset:
+        """Run the sample through the model and compile the predictions into an xarray DataArray
 
         Args:
-            batch: A batch of samples with inputs for each site for the same init-time
+            sample: A sample containing inputs for a site
 
         Returns:
-            xarray.Dataset of all site and national forecasts for the batch
+            xarray.Dataset of site forecasts for the sample
         """
-        # Unpack some variables from the batch
-        id0 = batch[BatchKey.pv_t0_idx]
+        # Convert sample to tensor and move to device
+        sample_tensor = {k: torch.from_numpy(v).to(device) for k, v in sample.items()}
 
-        t0 = batch[BatchKey.pv_time_utc].cpu().numpy().astype("datetime64[s]")[0, id0]
-        n_valid_times = len(batch[BatchKey.pv_time_utc][0, id0 + 1 :])
-        model = self.model
+        t0 = pd.Timestamp(sample["site_init_time_utc"][0])
+        site_id = sample["site_id"][0]
 
         # Get valid times for this forecast
-        valid_times = pd.to_datetime(
-            [t0 + np.timedelta64((i + 1) * FREQ_MINS, "m") for i in range(n_valid_times)]
+        valid_times = pd.date_range(
+            start=t0 + pd.Timedelta(minutes=FREQ_MINS),
+            periods=len(sample["site_target_time_utc"]),
+            freq=f"{FREQ_MINS}min"
         )
 
-        # Get effective capacities for this forecast
-        site_capacities = self.ds_site.nominal_capacity_wp.values
-        # Get the solar elevations. We need to un-normalise these from the values in the batch
-        elevation = batch[BatchKey.pv_solar_elevation] * ELEVATION_STD + ELEVATION_MEAN
-        # We only need elevation mask for forecasted values, not history
-        elevation = elevation[:, id0 + 1 :]
+        # Get capacity for this site
+        site_capacity = float(self.ds_site.sel(site_id=site_id).capacity_kwp)
 
-        # Make mask dataset for sundown
+        # Get solar elevation and create sundown mask
+        elevation = sample["site_solar_elevation"]
         da_sundown_mask = xr.DataArray(
             data=elevation < MIN_DAY_ELEVATION,
-            dims=["pv_system_id", "target_datetime_utc"],
-            coords=dict(
-                pv_system_id=ALL_SITE_IDS,
-                target_datetime_utc=valid_times,
-            ),
+            dims=["target_datetime_utc"],
+            coords=dict(target_datetime_utc=valid_times),
         )
 
         with torch.no_grad():
-            # Run batch through model to get 0-1 predictions for all sites
-            device_batch = copy_batch_to_device(batch_to_tensor(batch), device)
-            y_normed_site = model(device_batch).detach().cpu().numpy()
-        da_normed_site = preds_to_dataarray(y_normed_site, model, valid_times, ALL_SITE_IDS)
+            # Run through model to get 0-1 predictions
+            y_normed = self.model(sample_tensor).detach().cpu().numpy()
 
-        # Multiply normalised forecasts by capacities and clip negatives
-        da_abs_site = da_normed_site.clip(0, None) * site_capacities[:, None, None]
+        da_normed = preds_to_dataarray(y_normed, self.model, valid_times, [site_id])
+
+        # Multiply normalised forecasts by capacity and clip negatives
+        da_abs = da_normed.clip(0, None) * site_capacity
 
         # Apply sundown mask
-        da_abs_site = da_abs_site.where(~da_sundown_mask).fillna(0.0)
+        da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
 
-        da_abs_site = da_abs_site.expand_dims(dim="init_time_utc", axis=0).assign_coords(
+        da_abs = da_abs.expand_dims(dim="init_time_utc", axis=0).assign_coords(
             init_time_utc=np.array([t0], dtype="datetime64[ns]")
         )
 
-        return da_abs_site
+        return da_abs
 
-
-def get_datapipe(config_path: str) -> NumpyBatch:
-    """Construct datapipe yielding batches of concurrent samples for all sites
+def get_datapipe(config_path: str):
+    """Construct dataset for all sites
 
     Args:
         config_path: Path to the data configuration file
 
     Returns:
-        NumpyBatch: Concurrent batch of samples for each site
+        SitesDataset: Dataset containing samples for each site
     """
-
-    # Construct location and init-time datapipes
-    location_pipe, t0_datapipe = get_loctimes_datapipes(config_path)
-
-    # Get the number of init-times
-    # num_batches = len(t0_datapipe)
-    num_batches = len(t0_datapipe) // len(ALL_SITE_IDS)
-    # Construct sample datapipes
-    data_pipeline = construct_sliced_data_pipeline(
+    # Create dataset with time range filter
+    dataset = SitesDataset(
         config_path,
-        location_pipe,
-        t0_datapipe,
+        start_time=start_datetime,
+        end_time=end_datetime
     )
 
-    config = load_yaml_configuration(config_path)
-    data_pipeline["pv"] = data_pipeline["pv"].pad_forward_pv(
-        forecast_duration=np.timedelta64(config.input_data.pv.forecast_minutes, "m"),
-        history_duration=np.timedelta64(config.input_data.pv.history_minutes, "m"),
-        time_resolution_minutes=np.timedelta64(config.input_data.pv.time_resolution_minutes, "m"),
-    )
+    # Filter for specific site IDs
+    dataset.valid_t0_and_site_ids = dataset.valid_t0_and_site_ids[
+        dataset.valid_t0_and_site_ids.site_id.isin(ALL_SITE_IDS)
+    ]
 
-    data_pipeline = DictDatasetIterDataPipe(
-        {k: v for k, v in data_pipeline.items() if k != "config"},
-    ).map(split_dataset_dict_dp)
-
-    data_pipeline = data_pipeline.pvnet_site_convert_to_numpy_batch()
-
-    # Batch so that each worker returns a batch of all locations for a single init-time
-    # Also convert to tensor for model
-    data_pipeline = (
-        data_pipeline.batch(len(ALL_SITE_IDS))
-        .map(stack_np_examples_into_batch)
-        .map(batch_to_tensor)
-    )
-    data_pipeline = data_pipeline.set_length(num_batches)
-
-    return data_pipeline
+    return dataset
 
 
 @hydra.main(config_path="../configs", config_name="config.yaml", version_base="1.2")
@@ -477,15 +254,9 @@ def main(config: DictConfig):
     dataloader_kwargs = dict(
         shuffle=False,
         batch_size=None,
-        sampler=None,
-        batch_sampler=None,
-        # Number of workers set in the config file
         num_workers=config.datamodule.num_workers,
-        collate_fn=None,
         pin_memory=False,
         drop_last=False,
-        timeout=0,
-        worker_init_fn=None,
         prefetch_factor=config.datamodule.prefetch_factor,
         persistent_workers=False,
     )
@@ -493,14 +264,15 @@ def main(config: DictConfig):
     # Set up output dir
     os.makedirs(output_dir)
 
-    # Create concurrent batch datapipe
-    # Each batch includes a sample for each of the n sites for a single init-time
-    batch_pipe = get_datapipe(config.datamodule.configuration)
-    num_batches = len(batch_pipe)
-    # Load the site data as an xarray object
+    # Create dataset
+    dataset = get_datapipe(config.datamodule.configuration)
+
+    # Load the site data
     ds_site = get_sites_ds(config.datamodule.configuration)
-    # Create a dataloader for the concurrent batches and use multiprocessing
-    dataloader = DataLoader(batch_pipe, **dataloader_kwargs)
+
+    # Create a dataloader
+    dataloader = DataLoader(dataset, **dataloader_kwargs)
+
     # Load the PVNet model
     if model_chckpoint_dir:
         model, *_ = get_model_from_checkpoints([model_chckpoint_dir], val_best=True)
@@ -511,14 +283,15 @@ def main(config: DictConfig):
 
     model = model.eval().to(device)
 
-    # Create object to make predictions for each input batch
+    # Create object to make predictions
     model_pipe = ModelPipe(model, ds_site)
-    # Loop through the batches
-    pbar = tqdm(total=num_batches)
-    for i, batch in zip(range(num_batches), dataloader):
+
+    # Loop through the samples
+    pbar = tqdm(total=len(dataset))
+    for i, sample in enumerate(dataloader):
         try:
-            # Make predictions for the init-time
-            ds_abs_all = model_pipe.predict_batch(batch)
+            # Make predictions
+            ds_abs_all = model_pipe.predict_batch(sample)
 
             t0 = ds_abs_all.init_time_utc.values[0]
 
@@ -528,13 +301,11 @@ def main(config: DictConfig):
 
             pbar.update()
         except Exception as e:
-            print(f"Exception {e} at batch {i}")
+            print(f"Exception {e} at sample {i}")
             pass
 
-    # Close down
     pbar.close()
     del dataloader
-
 
 if __name__ == "__main__":
     main()
