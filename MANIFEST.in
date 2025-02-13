@@ -1,1 +1,2 @@
 include *.txt
+recursive-include pvnet/models/model_cards *.md
