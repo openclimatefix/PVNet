@@ -89,31 +89,29 @@ OCF maintains a Zarr formatted version of the German Weather Service's (DWD)
 ICON-EU NWP model here:
 https://huggingface.co/datasets/openclimatefix/dwd-icon-eu which includes the UK
 
-Please note that the current version of [ICON loader]([url](https://github.com/openclimatefix/ocf_datapipes/blob/9ec252eeee44937c12ab52699579bdcace76e72f/ocf_datapipes/load/nwp/providers/icon.py#L9-L30)) supports a different format. If you want to use our ICON-EU dataset or your own NWP source, you can create a loader for it using [the instructions here]([url](https://github.com/openclimatefix/ocf_datapipes/tree/main/ocf_datapipes/load#nwp)).
-
 **PV**\
 OCF maintains a dataset of PV generation from 1311 private PV installations
 here: https://huggingface.co/datasets/openclimatefix/uk_pv
 
 
-### Connecting with ocf_datapipes for batch creation
+### Connecting with ocf-data-sampler for batch creation
 
-Outside the PVNet repo, clone the ocf-datapipes repo and exit the conda env created for PVNet: https://github.com/openclimatefix/ocf_datapipes
+Outside the PVNet repo, clone the ocf-data-sampler repo and exit the conda env created for PVNet: https://github.com/openclimatefix/ocf-data-sampler
 ```bash
-git clone --depth 1 https://github.com/openclimatefix/ocf_datapipes.git
-conda create -n ocf_datapipes python=3.10
+git clone --depth 1 https://github.com/openclimatefix/ocf-data-sampler.git
+conda create -n ocf-data-sampler python=3.11
 ```
 
-Then go inside the ocf_datapipes repo to add packages
+Then go inside the ocf-data-sampler repo to add packages
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt
+pip install .
 ```
 
-Then exit this environment, and enter back into the pvnet conda environment and install ocf_datapies in editable mode (-e). This means the package is directly linked to the source code in the ocf_datapies repo.
+Then exit this environment, and enter back into the pvnet conda environment and install ocf-data-sampler in editable mode (-e). This means the package is directly linked to the source code in the ocf-data-sampler repo.
 
 ```bash
-pip install -e <PATH-TO-ocf_datapipes-REPO>
+pip install -e <PATH-TO-ocf-data-sampler-REPO>
 ```
 
 ## Generating pre-made batches of data for training/validation of PVNet
@@ -185,7 +183,7 @@ satellite:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr"
 ```
 
-Datapipes are currently set up to use 11 channels from the satellite data, the 12th of which is HRV and is not included in these.
+ocf-data-sampler is currently set up to use 11 channels from the satellite data, the 12th of which is HRV and is not included in these.
 
 
 ### Training PVNet
