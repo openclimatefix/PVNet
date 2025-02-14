@@ -42,7 +42,7 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     """Resave the data config and replace the filepaths with a placeholder.
 
     Args:
-        input_path: Path to input datapipes configuration file
+        input_path: Path to input configuration file
         output_path: Location to save the output configuration file
         placeholder: String placeholder for data sources
     """
@@ -81,7 +81,7 @@ def minimize_data_config(input_path, output_path, model):
     """Strip out parts of the data config which aren't used by the model
 
     Args:
-        input_path: Path to input datapipes configuration file
+        input_path: Path to input configuration file
         output_path: Location to save the output configuration file
         model: The PVNet model object
     """
@@ -286,7 +286,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         if isinstance(config, dict):
             (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
 
-        # Save cleaned datapipes configuration file
+        # Save cleaned configuration file
         if data_config is not None:
             new_data_config_path = save_directory / DATA_CONFIG_NAME
 

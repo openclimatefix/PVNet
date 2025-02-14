@@ -1,4 +1,4 @@
-from ocf_datapipes.utils.location import Location
+from ocf_data_sampler.select.location import Location
 from pvnet.utils import SiteLocationLookup
 import xarray as xr
 import pytest
