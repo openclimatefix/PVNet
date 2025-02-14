@@ -158,7 +158,6 @@ def get_sites_ds(config_path: str) -> xr.Dataset:
     return dataset.datasets_dict["site"]
 
 
-
 class ModelPipe:
     """A class to conveniently make and process predictions from batches"""
 
@@ -191,7 +190,7 @@ class ModelPipe:
         valid_times = pd.date_range(
             start=t0 + pd.Timedelta(minutes=FREQ_MINS),
             periods=len(sample["site_target_time_utc"]),
-            freq=f"{FREQ_MINS}min"
+            freq=f"{FREQ_MINS}min",
         )
 
         # Get capacity for this site
@@ -223,6 +222,7 @@ class ModelPipe:
 
         return da_abs
 
+
 def get_datapipe(config_path: str):
     """Construct dataset for all sites
 
@@ -233,11 +233,7 @@ def get_datapipe(config_path: str):
         SitesDataset: Dataset containing samples for each site
     """
     # Create dataset with time range filter
-    dataset = SitesDataset(
-        config_path,
-        start_time=start_datetime,
-        end_time=end_datetime
-    )
+    dataset = SitesDataset(config_path, start_time=start_datetime, end_time=end_datetime)
 
     # Filter for specific site IDs
     dataset.valid_t0_and_site_ids = dataset.valid_t0_and_site_ids[
@@ -306,6 +302,7 @@ def main(config: DictConfig):
 
     pbar.close()
     del dataloader
+
 
 if __name__ == "__main__":
     main()
