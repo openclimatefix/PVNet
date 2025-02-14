@@ -1,0 +1,130 @@
+general:
+  description: Config for producing batches on GCP
+  name: gcp_pvnet
+
+input_data:
+  gsp:
+    zarr_path: /mnt/disks/nwp_rechunk/pv_gsp/pvlive_gsp.zarr
+    interval_start_minutes: -120
+    interval_end_minutes: 480
+    time_resolution_minutes: 30
+    # A random value from the list below will be chosen as the delay when dropout is used
+    # If set to null no dropout is applied. Only values before t0 are dropped out for GSP.
+    # Values after t0 are assumed as targets and cannot be dropped.
+    dropout_timedeltas_minutes: null
+    dropout_fraction: 0 # Fraction of samples with dropout
+
+  nwp:
+    ukv:
+      provider: ukv
+      zarr_path:
+        - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_intermediate_version_7.1.zarr
+        - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_2021_missing.zarr
+        - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_2022.zarr
+        - /mnt/disks/nwp_rechunk/nwp/ukv/UKV_2023.zarr
+      interval_start_minutes: -120
+      interval_end_minutes: 480
+      time_resolution_minutes: 60
+      channels:
+        # These variables exist in the CEDA training set and in the live MetOffice live service
+        - t # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
+        - sde # snow depth water equivalent
+        - r # relative humidty
+        - vis # visibility
+        - si10 # 10-metre wind speed
+        - prate # precipitation rate
+      image_size_pixels_height: 24
+      image_size_pixels_width: 24
+      dropout_timedeltas_minutes: [-180]
+      dropout_fraction: 1.0
+      max_staleness_minutes: null
+
+    ecmwf:
+      provider: ecmwf
+      zarr_path: /mnt/disks/nwp_rechunk/nwp/ecmwf/UK_v2.zarr
+      interval_start_minutes: -120
+      interval_end_minutes: 480
+      time_resolution_minutes: 60
+
+      channels:
+        - t2m # 2-metre temperature
+        - dswrf # downwards short-wave radiation flux
+        - dlwrf # downwards long-wave radiation flux
+        - hcc # high cloud cover
+        - mcc # medium cloud cover
+        - lcc # low cloud cover
+        - tcc # total cloud cover
+        - sde # snow depth water equivalent
+        - sr # direct solar radiation
+        - duvrs # downwards UV radiation at surface
+        - u10 # 10-metre U component of wind speed
+        - v10 # 10-metre V component of wind speed
+
+      # The following channels are accumulated and need to be diffed
+      accum_channels:
+        - dswrf
+        - dlwrf
+        - sr
+        - duvrs
+
+      image_size_pixels_height: 12 # roughly equivalent to ukv 48
+      image_size_pixels_width: 12 # roughly equivalent to ukv 48
+      dropout_timedeltas_minutes: [-360]
+      dropout_fraction: 1.0
+      max_staleness_minutes: null
+
+    sat_pred:
+      provider: sat_pred
+      zarr_path: /mnt/disks/sat_preds/simvp_preds/*.zarr
+      interval_start_minutes: 15
+      interval_end_minutes: 180
+      time_resolution_minutes: 15
+      channels:
+        - IR_016
+        - IR_039
+        - IR_087
+        - IR_097
+        - IR_108
+        - IR_120
+        - IR_134
+        - VIS006
+        - VIS008
+        - WV_062
+        - WV_073
+      image_size_pixels_height: 24
+      image_size_pixels_width: 24
+      dropout_timedeltas_minutes: null
+      dropout_fraction: 0
+      max_staleness_minutes: null
+
+  satellite:
+    zarr_path:
+      - /mnt/disks/nwp_rechunk/sat/2019_nonhrv.zarr
+      - /mnt/disks/nwp_rechunk/sat/2020_nonhrv.zarr
+      - /mnt/disks/nwp_rechunk/sat/2021_nonhrv.zarr
+      - /mnt/disks/nwp_rechunk/sat/2022_nonhrv.zarr
+      - /mnt/disks/nwp_rechunk/sat/2023_nonhrv.zarr
+    interval_start_minutes: -30
+    interval_end_minutes: 0
+    time_resolution_minutes: 5
+    channels:
+      - IR_016
+      - IR_039
+      - IR_087
+      - IR_097
+      - IR_108
+      - IR_120
+      - IR_134
+      - VIS006
+      - VIS008
+      - WV_062
+      - WV_073
+    image_size_pixels_height: 24
+    image_size_pixels_width: 24
+    dropout_timedeltas_minutes: null
+    dropout_fraction: 0.

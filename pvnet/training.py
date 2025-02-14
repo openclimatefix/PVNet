@@ -117,7 +117,7 @@ def train(config: DictConfig) -> Optional[float]:
                 if data_config is None:
                     # Data config can be none if using presaved batches. We go to the presaved
                     # batches to get the data config
-                    data_config = f"{config.datamodule.batch_dir}/data_configuration.yaml"
+                    data_config = f"{config.datamodule.sample_dir}/data_configuration.yaml"
 
                 assert os.path.isfile(data_config), f"Data config file not found: {data_config}"
                 shutil.copyfile(data_config, f"{callback.dirpath}/data_config.yaml")
@@ -161,11 +161,6 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Train the model completely
     trainer.fit(model=model, datamodule=datamodule)
-
-    if config.test_after_training:
-        # Evaluate model on test set, using the best model achieved during training
-        log.info("Starting testing!")
-        trainer.test(model=model, datamodule=datamodule, ckpt_path="best")
 
     # Make sure everything closed properly
     log.info("Finalizing!")

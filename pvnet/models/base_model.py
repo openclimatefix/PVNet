@@ -18,17 +18,15 @@ from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-from ocf_datapipes.batch import BatchKey
-from ocf_ml_metrics.evaluation.evaluation import evaluation
+from ocf_datapipes.batch import copy_batch_to_device
 
 from pvnet.models.utils import (
     BatchAccumulator,
     MetricAccumulator,
     PredAccumulator,
-    WeightedLosses,
 )
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.utils import construct_ocf_ml_metrics_batch_df, plot_batch_forecasts
+from pvnet.utils import plot_batch_forecasts
 
 DATA_CONFIG_NAME = "data_config.yaml"
 
@@ -57,13 +55,13 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     for source in ["gsp", "satellite", "hrvsatellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
-            if config["input_data"][source][f"{source}_zarr_path"] != "":
-                config["input_data"][source][f"{source}_zarr_path"] = f"{placeholder}.zarr"
+            if config["input_data"][source]["zarr_path"] != "":
+                config["input_data"][source]["zarr_path"] = f"{placeholder}.zarr"
 
     if "nwp" in config["input_data"]:
         for source in config["input_data"]["nwp"]:
-            if config["input_data"]["nwp"][source]["nwp_zarr_path"] != "":
-                config["input_data"]["nwp"][source]["nwp_zarr_path"] = f"{placeholder}.zarr"
+            if config["input_data"]["nwp"][source]["zarr_path"] != "":
+                config["input_data"]["nwp"][source]["zarr_path"] = f"{placeholder}.zarr"
 
     if "pv" in config["input_data"]:
         for d in config["input_data"]["pv"]["pv_files_groups"]:
@@ -103,13 +101,14 @@ def minimize_data_config(input_path, output_path, model):
                 else:
                     # Replace the image size
                     nwp_pixel_size = model.nwp_encoders_dict[nwp_source].image_size_pixels
-                    nwp_config["nwp_image_size_pixels_height"] = nwp_pixel_size
-                    nwp_config["nwp_image_size_pixels_width"] = nwp_pixel_size
+                    nwp_config["image_size_pixels_height"] = nwp_pixel_size
+                    nwp_config["image_size_pixels_width"] = nwp_pixel_size
 
                     # Replace the forecast minutes
                     nwp_config["forecast_minutes"] = (
                         model.nwp_encoders_dict[nwp_source].sequence_length
-                        - nwp_config["history_minutes"] / nwp_config["time_resolution_minutes"]
+                        - nwp_config["interval_start_minutes"]
+                        / nwp_config["time_resolution_minutes"]
                         - 1
                     ) * nwp_config["time_resolution_minutes"]
 
@@ -236,6 +235,11 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         return data_config_file
 
+    def _save_pretrained(self, save_directory: Path) -> None:
+        """Save weights from a Pytorch model to a local directory."""
+        model_to_save = self.module if hasattr(self, "module") else self  # type: ignore
+        torch.save(model_to_save.state_dict(), save_directory / PYTORCH_WEIGHTS_NAME)
+
     def save_pretrained(
         self,
         save_directory: Union[str, Path],
@@ -348,7 +352,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         target_key: str = "gsp",
         interval_minutes: int = 30,
         timestep_intervals_to_plot: Optional[list[int]] = None,
-        use_weighted_loss: bool = False,
         forecast_minutes_ignore: Optional[int] = 0,
     ):
         """Abtstract base class for PVNet submodels.
@@ -362,15 +365,13 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             target_key: The key of the target variable in the batch
             interval_minutes: The interval in minutes between each timestep in the data
             timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
-            use_weighted_loss: Whether to use a weighted loss function
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
         """
         super().__init__()
 
         self._optimizer = optimizer
-        self._target_key_name = target_key
-        self._target_key = BatchKey[f"{target_key}"]
+        self._target_key = target_key
         if timestep_intervals_to_plot is not None:
             for interval in timestep_intervals_to_plot:
                 assert type(interval) in [list, tuple] and len(interval) == 2, ValueError(
@@ -394,16 +395,13 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.forecast_len = (forecast_minutes - forecast_minutes_ignore) // interval_minutes
         self.forecast_len_ignore = forecast_minutes_ignore // interval_minutes
 
-        self.weighted_losses = WeightedLosses(forecast_length=self.forecast_len)
-
         self._accumulated_metrics = MetricAccumulator()
-        self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key_name)
+        self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key)
         self._accumulated_y_hat = PredAccumulator()
         self._horizon_maes = MetricAccumulator()
 
         # Store whether the model should use quantile regression or simply predict the mean
         self.use_quantile_regression = self.output_quantiles is not None
-        self.use_weighted_loss = use_weighted_loss
 
         # Store the number of ouput features that the model should predict for
         if self.use_quantile_regression:
@@ -413,6 +411,10 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # save all validation results to array, so we can save these to weights n biases
         self.validation_epoch_results = []
+
+    def transfer_batch_to_device(self, batch, device, dataloader_idx):
+        """Method to move custom batches to a given device"""
+        return copy_batch_to_device(batch, device)
 
     def _quantiles_to_prediction(self, y_quantiles):
         """
@@ -455,13 +457,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             errors = y - y_quantiles[..., i]
             losses.append(torch.max((q - 1) * errors, q * errors).unsqueeze(-1))
         losses = 2 * torch.cat(losses, dim=2)
-        if self.use_weighted_loss:
-            weights = self.weighted_losses.weights.unsqueeze(1).unsqueeze(0).to(y.device)
-            losses = losses * weights
+
         return losses.mean()
 
     def _calculate_common_losses(self, y, y_hat):
-        """Calculate losses common to train, test, and val"""
+        """Calculate losses common to train, and val"""
 
         losses = {}
 
@@ -473,10 +473,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         mse_loss = F.mse_loss(y_hat, y)
         mae_loss = F.l1_loss(y_hat, y)
 
-        # calculate mse, mae with exp weighted loss
-        mse_exp = self.weighted_losses.get_mse_exp(output=y_hat, target=y)
-        mae_exp = self.weighted_losses.get_mae_exp(output=y_hat, target=y)
-
         # TODO: Compute correlation coef using np.corrcoef(tensor with
         # shape (2, num_timesteps))[0, 1] on each example, and taking
         # the mean across the batch?
@@ -484,8 +480,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             {
                 "MSE": mse_loss,
                 "MAE": mae_loss,
-                "MSE_EXP": mse_exp,
-                "MAE_EXP": mae_exp,
             }
         )
 
@@ -531,12 +525,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         losses.update(self._step_mae_and_mse(y, y_persist, dict_key_root="persistence"))
         return losses
 
-    def _calculate_test_losses(self, y, y_hat):
-        """Calculate additional test losses"""
-        # No additional test losses
-        losses = {}
-        return losses
-
     def _training_accumulate_log(self, batch, batch_idx, losses, y_hat):
         """Internal function to accumulate training batches and log results.
 
@@ -574,7 +562,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     y_hat,
                     batch_idx,
                     quantiles=self.output_quantiles,
-                    key_to_plot=self._target_key_name,
+                    key_to_plot=self._target_key,
                 )
                 fig.savefig("latest_logged_train_batch.png")
                 plt.close(fig)
@@ -582,7 +570,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :]
 
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
@@ -601,7 +589,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             batch,
             y_hat,
             quantiles=self.output_quantiles,
-            key_to_plot=self._target_key_name,
+            key_to_plot=self._target_key,
         )
 
         plot_name = f"val_forecast_samples/batch_idx_{accum_batch_num}_{plot_suffix}"
@@ -617,7 +605,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """Append validation results to self.validation_epoch_results"""
 
         # get truth values, shape (b, forecast_len)
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
+        y = batch[self._target_key][:, -self.forecast_len :]
         y = y.detach().cpu().numpy()
         batch_size = y.shape[0]
 
@@ -625,11 +613,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         y_hat = y_hat.detach().cpu().numpy()
 
         # get time_utc, shape (b, forecast_len)
-        time_utc_key = BatchKey[f"{self._target_key_name}_time_utc"]
+        time_utc_key = f"{self._target_key}_time_utc"
         time_utc = batch[time_utc_key][:, -self.forecast_len :].detach().cpu().numpy()
 
         # get target id and change from (b,1) to (b,)
-        id_key = BatchKey[f"{self._target_key_name}_id"]
+        id_key = f"{self._target_key}_id"
         target_id = batch[id_key].detach().cpu().numpy()
         target_id = target_id.squeeze()
 
@@ -663,8 +651,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
 
         y_hat = self(batch)
-        # Sensor seems to be in batch, station, time order
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
+
+        y = batch[self._target_key][:, -self.forecast_len :]
 
         if (batch_idx + 1) % self.trainer.accumulate_grad_batches == 0:
             self._log_validation_results(batch, y_hat, accum_batch_num)
@@ -691,7 +679,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             # Store these temporarily under self
             if not hasattr(self, "_val_y_hats"):
                 self._val_y_hats = PredAccumulator()
-                self._val_batches = BatchAccumulator(key_to_keep=self._target_key_name)
+                self._val_batches = BatchAccumulator(key_to_keep=self._target_key)
 
             self._val_y_hats.append(y_hat)
             self._val_batches.append(batch)
@@ -762,37 +750,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             except Exception as e:
                 print("Failed to log horizon_loss_curve to wandb")
                 print(e)
-
-    def test_step(self, batch, batch_idx):
-        """Run test step"""
-        y_hat = self(batch)
-        y = batch[self._target_key][:, -self.forecast_len :, 0]
-
-        losses = self._calculate_common_losses(y, y_hat)
-        losses.update(self._calculate_val_losses(y, y_hat))
-        losses.update(self._calculate_test_losses(y, y_hat))
-        logged_losses = {f"{k}/test": v for k, v in losses.items()}
-
-        self.log_dict(
-            logged_losses,
-            on_step=False,
-            on_epoch=True,
-        )
-
-        if self.use_quantile_regression:
-            y_hat = self._quantiles_to_prediction(y_hat)
-
-        return construct_ocf_ml_metrics_batch_df(batch, y, y_hat)
-
-    def on_test_epoch_end(self, outputs):
-        """Evalauate test results using oc_ml_metrics"""
-        results_df = pd.concat(outputs)
-        # setting model_name="test" gives us keys like "test/mw/forecast_horizon_30_minutes/mae"
-        metrics = evaluation(results_df=results_df, model_name="test", outturn_unit="mw")
-
-        self.log_dict(
-            metrics,
-        )
 
     def configure_optimizers(self):
         """Configure the optimizers using learning rate found with LR finder if used"""

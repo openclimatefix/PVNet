@@ -35,7 +35,7 @@ class Ensemble(BaseModel):
             output_quantiles.append(model.output_quantiles)
             history_minutes.append(model.history_minutes)
             forecast_minutes.append(model.forecast_minutes)
-            target_key.append(model._target_key_name)
+            target_key.append(model._target_key)
             interval_minutes.append(model.interval_minutes)
 
         # Check these properties are all the same

@@ -148,20 +148,20 @@ This is also where you can update the train, val & test periods to cover the dat
 
 ### Running the batch creation script
 
-Run the `save_batches.py` script to create batches with the parameters specified in the datamodule config (`streamed_batches.yaml` in this example):
+Run the `save_samples.py` script to create batches with the parameters specified in the datamodule config (`streamed_batches.yaml` in this example):
 
 ```bash
-python scripts/save_batches.py
+python scripts/save_samples.py
 ```
 PVNet uses
 [hydra](https://hydra.cc/) which enables us to pass variables via the command
 line that will override the configuration defined in the `./configs` directory, like this:
 
 ```bash
-python scripts/save_batches.py datamodule=streamed_batches datamodule.batch_output_dir="./output" datamodule.num_train_batches=10 datamodule.num_val_batches=5
+python scripts/save_samples.py datamodule=streamed_batches datamodule.sample_output_dir="./output" datamodule.num_train_batches=10 datamodule.num_val_batches=5
 ```
 
-`scripts/save_batches.py` needs a config under `PVNet/configs/datamodule`. You can adapt `streamed_batches.yaml` or create your own in the same folder.
+`scripts/save_samples.py` needs a config under `PVNet/configs/datamodule`. You can adapt `streamed_batches.yaml` or create your own in the same folder.
 
 If downloading private data from a GCP bucket make sure to authenticate gcloud (the public satellite data does not need authentication):
 
@@ -200,7 +200,7 @@ Make sure to update the following config files before training your model:
 2. In `configs/model/local_multimodal.yaml`:
     - update the list of encoders to reflect the data sources you are using. If you are using different NWP sources, the encoders for these should follow the same structure with two important updates:
         - `in_channels`: number of variables your NWP source supplies
-        - `image_size_pixels`: spatial crop of your NWP data. It depends on the spatial resolution of your NWP; should match `nwp_image_size_pixels_height` and/or `nwp_image_size_pixels_width` in `datamodule/example_configs.yaml`, unless transformations such as coarsening was applied (e. g. as for ECMWF data)
+        - `image_size_pixels`: spatial crop of your NWP data. It depends on the spatial resolution of your NWP; should match `image_size_pixels_height` and/or `image_size_pixels_width` in `datamodule/configuration/site_example_configuration.yaml` for the NWP, unless transformations such as coarsening was applied (e. g. as for ECMWF data)
 3. In `configs/local_trainer.yaml`:
     - set `accelerator: 0` if running on a system without a supported GPU
 
@@ -219,7 +219,7 @@ defaults:
   - hydra: default.yaml
 ```
 
-Assuming you ran the `save_batches.py` script to generate some premade train and
+Assuming you ran the `save_samples.py` script to generate some premade train and
 val data batches, you can now train PVNet by running:
 
 ```

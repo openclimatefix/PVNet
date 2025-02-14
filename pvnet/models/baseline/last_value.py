@@ -1,6 +1,5 @@
 """Persistence model"""
 
-from ocf_datapipes.batch import BatchKey
 
 import pvnet
 from pvnet.models.base_model import BaseModel
@@ -32,11 +31,11 @@ class Model(BaseModel):
     def forward(self, x: dict):
         """Run model forward on dict batch of data"""
         # Shape: batch_size, seq_length, n_sites
-        gsp_yield = x[BatchKey.gsp]
+        gsp_yield = x["gsp"]
 
         # take the last value non forecaster value and the first in the pv yeild
         # (this is the pv site we are preditcting for)
-        y_hat = gsp_yield[:, -self.forecast_len - 1, 0]
+        y_hat = gsp_yield[:, -self.forecast_len - 1]
 
         # expand the last valid forward n predict steps
         out = y_hat.unsqueeze(1).repeat(1, self.forecast_len)
