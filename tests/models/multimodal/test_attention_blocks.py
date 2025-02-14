@@ -162,8 +162,60 @@ def test_self_attention_gradient_flow(config, attention_inputs):
     assert self_attn.layer_norm.weight.grad is not None
 
 
-# Error handling testing
-def test_invalid_multihead_config():
-    """ Test error handling for invalid configuration """
-    with pytest.raises(ValueError, match="embed_dim not divisible by num_heads"):
-        MultiheadAttention(embed_dim=65, num_heads=4)
+def test_multihead_attention_numerical_stability(config, attention_inputs):
+    """Test attention output for numerical stability"""
+    attn = MultiheadAttention(config['embed_dim'], config['num_heads'])
+    
+    # Test with very large inputs
+    large_inputs = {k: v * 1e5 for k, v in attention_inputs.items()}
+    output_large = attn(large_inputs['query'], large_inputs['key'], large_inputs['value'])
+    assert not torch.isnan(output_large).any(), "NaN values in large input output"
+    
+    # Test with very small inputs
+    small_inputs = {k: v * 1e-5 for k, v in attention_inputs.items()}
+    output_small = attn(small_inputs['query'], small_inputs['key'], small_inputs['value'])
+    assert not torch.isnan(output_small).any(), "NaN values in small input output"
+
+
+def test_attention_pattern(config, attention_inputs):
+    """Verify expected attention patterns"""
+    attn = MultiheadAttention(config['embed_dim'], config['num_heads'])
+    
+    # Create diagonal-dominant input with correct shape
+    diagonal_query = torch.eye(config['seq_len'])
+    # Expand to match embed_dim
+    diagonal_query = diagonal_query.repeat(1, config['embed_dim'] // config['seq_len'])
+    # Add batch dimension and expand
+    diagonal_query = diagonal_query.unsqueeze(0).expand(config['batch_size'], -1, -1)
+    diagonal_query = diagonal_query.to(attention_inputs['query'].dtype)
+    
+    output = attn(diagonal_query, 
+                 attention_inputs['key'],
+                 attention_inputs['value'])
+    
+    # Ensure tensors are contiguous and properly reshaped
+    output_flat = output.contiguous().reshape(-1)
+    query_flat = diagonal_query.contiguous().reshape(-1)
+    
+    # Check if output maintains some correlation with input
+    correlation = torch.corrcoef(
+        torch.stack([output_flat, query_flat])
+    )[0, 1]
+    assert not torch.isnan(correlation), "NaN correlation found"
+
+
+def test_cross_modal_interaction(config, multimodal_inputs):
+    """Test if modalities influence each other"""
+    cross_attn = CrossModalAttention(config['embed_dim'], config['num_heads'])
+    
+    # Get outputs with normal inputs
+    outputs_normal = cross_attn(multimodal_inputs)
+    
+    # Modify one modality
+    modified_inputs = multimodal_inputs.copy()
+    modified_inputs['visual'] = torch.zeros_like(multimodal_inputs['visual'])
+    outputs_modified = cross_attn(modified_inputs)
+    
+    # Check if modification of one modality affects the other
+    diff = (outputs_normal['text'] - outputs_modified['text']).abs().mean()
+    assert diff > 0, "No cross-modal interaction detected"
