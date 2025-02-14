@@ -8,7 +8,7 @@ from pvnet.data.base_datamodule import BaseDataModule, PremadeSamplesDataset
 
 
 class DataModule(BaseDataModule):
-    """Datamodule for training pvnet and using pvnet pipeline in `ocf_datapipes`."""
+    """Datamodule for training pvnet and using pvnet pipeline in `ocf-data-sampler`."""
 
     def __init__(
         self,
@@ -25,7 +25,7 @@ class DataModule(BaseDataModule):
         Can also be used with pre-made batches if `sample_dir` is set.
 
         Args:
-            configuration: Path to datapipe configuration file.
+            configuration: Path to configuration file.
             sample_dir: Path to the directory of pre-saved samples. Cannot be used together with
                 `configuration` or '[train/val]_period'.
             batch_size: Batch size.

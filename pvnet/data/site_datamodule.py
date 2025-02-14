@@ -25,7 +25,7 @@ class SiteDataModule(BaseDataModule):
         Can also be used with pre-made batches if `sample_dir` is set.
 
         Args:
-            configuration: Path to datapipe configuration file.
+            configuration: Path to configuration file.
             sample_dir: Path to the directory of pre-saved samples. Cannot be used together with
                 `configuration` or '[train/val]_period'.
             batch_size: Batch size.

@@ -32,7 +32,7 @@ The model is trained on data from 2019-2022 and validated on data from 2022-2023
 
 ### Preprocessing
 
-Data is prepared with the `ocf_datapipes.training.pvnet_site` datapipe [2].
+Data is prepared with the `ocf_data_sampler/torch_datasets/datasets/site` Dataset [2].
 
 
 ## Results
@@ -48,4 +48,4 @@ Trained on a single NVIDIA Tesla T4
 ### Software
 
 - [1] https://github.com/openclimatefix/PVNet
-- [2] https://github.com/openclimatefix/ocf_datapipes
+- [2] https://github.com/openclimatefix/ocf-data-sampler
