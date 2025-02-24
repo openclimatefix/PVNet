@@ -36,7 +36,9 @@ import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
+from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
 from omegaconf import DictConfig
+from torch.utils.data import DataLoader
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -57,6 +59,8 @@ hf_token = None
 hf_model_id = None
 
 # Forecasts will be made for all available init times between these
+start_datetime = "2022-05-07 13:00"
+end_datetime = "2022-05-07 16:30"
 start_datetime = "2022-05-07 13:00"
 end_datetime = "2022-05-07 16:30"
 
@@ -173,22 +177,31 @@ class ModelPipe:
         Args:
             model: PVNet site level model
             ds_site: xarray dataset of pv site true values and capacities
+            ds_site: xarray dataset of pv site true values and capacities
         """
         self.model = model
         self.ds_site = ds_site
 
     def predict_batch(self, sample: dict) -> xr.Dataset:
         """Run the sample through the model and compile the predictions into an xarray DataArray
+    def predict_batch(self, sample: dict) -> xr.Dataset:
+        """Run the sample through the model and compile the predictions into an xarray DataArray
 
         Args:
+            sample: A sample containing inputs for a site
             sample: A sample containing inputs for a site
 
         Returns:
             xarray.Dataset of site forecasts for the sample
+            xarray.Dataset of site forecasts for the sample
         """
         # Convert sample to tensor and move to device
         sample_tensor = {k: torch.from_numpy(v).to(device) for k, v in sample.items()}
+        # Convert sample to tensor and move to device
+        sample_tensor = {k: torch.from_numpy(v).to(device) for k, v in sample.items()}
 
+        t0 = pd.Timestamp(sample["site_init_time_utc"][0])
+        site_id = sample["site_id"][0]
         t0 = pd.Timestamp(sample["site_init_time_utc"][0])
         site_id = sample["site_id"][0]
 
@@ -204,8 +217,15 @@ class ModelPipe:
 
         # Get solar elevation and create sundown mask
         elevation = sample["site_solar_elevation"]
+        # Get capacity for this site
+        site_capacity = float(self.ds_site.sel(site_id=site_id).capacity_kwp)
+
+        # Get solar elevation and create sundown mask
+        elevation = sample["site_solar_elevation"]
         da_sundown_mask = xr.DataArray(
             data=elevation < MIN_DAY_ELEVATION,
+            dims=["target_datetime_utc"],
+            coords=dict(target_datetime_utc=valid_times),
             dims=["target_datetime_utc"],
             coords=dict(target_datetime_utc=valid_times),
         )
@@ -215,17 +235,26 @@ class ModelPipe:
             y_normed = self.model(sample_tensor).detach().cpu().numpy()
 
         da_normed = preds_to_dataarray(y_normed, self.model, valid_times, [site_id])
+            # Run through model to get 0-1 predictions
+            y_normed = self.model(sample_tensor).detach().cpu().numpy()
 
+        da_normed = preds_to_dataarray(y_normed, self.model, valid_times, [site_id])
+
+        # Multiply normalised forecasts by capacity and clip negatives
+        da_abs = da_normed.clip(0, None) * site_capacity
         # Multiply normalised forecasts by capacity and clip negatives
         da_abs = da_normed.clip(0, None) * site_capacity
 
         # Apply sundown mask
         da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
+        da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
 
+        da_abs = da_abs.expand_dims(dim="init_time_utc", axis=0).assign_coords(
         da_abs = da_abs.expand_dims(dim="init_time_utc", axis=0).assign_coords(
             init_time_utc=np.array([t0], dtype="datetime64[ns]")
         )
 
+        return da_abs
         return da_abs
 
 def get_datapipe(config_path: str):
@@ -235,6 +264,7 @@ def get_datapipe(config_path: str):
         config_path: Path to the data configuration file
 
     Returns:
+        SitesDataset: Dataset containing samples for each site
         SitesDataset: Dataset containing samples for each site
     """
     # Create dataset with time range filter
@@ -273,6 +303,10 @@ def main(config: DictConfig):
     dataset = get_datapipe(config.datamodule.configuration)
 
     # Load the site data
+    # Create dataset
+    dataset = get_datapipe(config.datamodule.configuration)
+
+    # Load the site data
     ds_site = get_sites_ds(config.datamodule.configuration)
 
     # Create a dataloader
@@ -289,12 +323,19 @@ def main(config: DictConfig):
     model = model.eval().to(device)
 
     # Create object to make predictions
+    # Create object to make predictions
     model_pipe = ModelPipe(model, ds_site)
 
     # Loop through the samples
     pbar = tqdm(total=len(dataset))
     for i, sample in enumerate(dataloader):
+
+    # Loop through the samples
+    pbar = tqdm(total=len(dataset))
+    for i, sample in enumerate(dataloader):
         try:
+            # Make predictions
+            ds_abs_all = model_pipe.predict_batch(sample)
             # Make predictions
             ds_abs_all = model_pipe.predict_batch(sample)
 
@@ -306,6 +347,7 @@ def main(config: DictConfig):
 
             pbar.update()
         except Exception as e:
+            print(f"Exception {e} at sample {i}")
             print(f"Exception {e} at sample {i}")
             pass
 
