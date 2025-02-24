@@ -33,6 +33,7 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+from ocf_data_sampler.sample.base import batch_to_tensor, copy_batch_to_device
 from ocf_datapipes.batch import (
     BatchKey,
     NumpyBatch,
@@ -42,7 +43,6 @@ from ocf_datapipes.load import OpenGSP
 from ocf_datapipes.training.common import _get_datapipes_dict
 from ocf_datapipes.training.pvnet_all_gsp import construct_sliced_data_pipeline, create_t0_datapipe
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
-from ocf_data_sampler.sample.base import batch_to_tensor, copy_batch_to_device
 from omegaconf import DictConfig
 
 # TODO: Having this script rely on pvnet_app sets up a circular dependency. The function

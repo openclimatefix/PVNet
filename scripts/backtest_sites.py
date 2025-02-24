@@ -35,6 +35,7 @@ import torch
 import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
+from ocf_data_sampler.sample.base import batch_to_tensor, copy_batch_to_device
 from ocf_datapipes.batch import (
     BatchKey,
     NumpyBatch,
@@ -50,7 +51,6 @@ from ocf_datapipes.training.pvnet_site import (
     split_dataset_dict_dp,
 )
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD
-from ocf_data_sampler.sample.base import batch_to_tensor, copy_batch_to_device
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, IterDataPipe, functional_datapipe
 from torch.utils.data.datapipes.iter import IterableWrapper

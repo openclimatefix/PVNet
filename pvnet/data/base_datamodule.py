@@ -8,10 +8,9 @@ from ocf_data_sampler.sample.base import (
     NumpyBatch,
     SampleBase,
     TensorBatch,
+    batch_to_tensor,
 )
-from ocf_data_sampler.sample.base import batch_to_tensor
 from torch.utils.data import DataLoader, Dataset
-
 
 
 def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
