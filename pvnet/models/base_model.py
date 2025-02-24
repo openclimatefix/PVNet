@@ -18,7 +18,7 @@ from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-from ocf_datapipes.batch import copy_batch_to_device
+from ocf_data_sampler.sample.base import copy_batch_to_device
 
 from pvnet.models.utils import (
     BatchAccumulator,
