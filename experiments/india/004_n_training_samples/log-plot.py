@@ -1,4 +1,4 @@
-""" Small script to make MAE vs number of batches plot"""
+"""Small script to make MAE vs number of batches plot"""
 
 import pandas as df
 import plotly.graph_objects as go
