@@ -1,5 +1,5 @@
-"""Custom callbacks
-"""
+"""Custom callbacks"""
+
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import BaseFinetuning, EarlyStopping, LearningRateFinder
 from lightning.pytorch.trainer.states import TrainerFn

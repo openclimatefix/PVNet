@@ -1,4 +1,5 @@
 """Average value model"""
+
 import torch
 from torch import nn
 
