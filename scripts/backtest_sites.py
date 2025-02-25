@@ -35,8 +35,8 @@ import torch
 import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
-from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
 from ocf_data_sampler.config import load_yaml_configuration
+from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -159,7 +159,6 @@ def get_sites_ds(config_path: str) -> xr.Dataset:
     return dataset.datasets_dict["site"]
 
 
-
 class ModelPipe:
     """A class to conveniently make and process predictions from batches"""
 
@@ -195,11 +194,11 @@ class ModelPipe:
         t0 = pd.Timestamp(sample["site_init_time_utc"][0])
         site_id = sample["site_id"][0]
 
-        #Get valid times for this forecast
+        # Get valid times for this forecast
         valid_times = pd.date_range(
             start=t0 + pd.Timedelta(interval_start),
             end=t0 + pd.Timedelta(interval_end),
-            freq=f"{time_resolution.astype(int)}min"
+            freq=f"{time_resolution.astype(int)}min",
         )
 
         # Get capacity for this site
@@ -231,6 +230,7 @@ class ModelPipe:
 
         return da_abs
 
+
 def get_datapipe(config_path: str):
     """Construct dataset for all sites
 
@@ -241,11 +241,7 @@ def get_datapipe(config_path: str):
         SitesDataset: Dataset containing samples for each site
     """
     # Create dataset with time range filter
-    dataset = SitesDataset(
-        config_path,
-        start_time=start_datetime,
-        end_time=end_datetime
-    )
+    dataset = SitesDataset(config_path, start_time=start_datetime, end_time=end_datetime)
 
     # Filter for specific site IDs
     dataset.valid_t0_and_site_ids = dataset.valid_t0_and_site_ids[
@@ -314,6 +310,7 @@ def main(config: DictConfig):
 
     pbar.close()
     del dataloader
+
 
 if __name__ == "__main__":
     main()
