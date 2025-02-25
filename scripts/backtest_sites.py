@@ -36,9 +36,8 @@ import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
-from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
+from ocf_data_sampler.config import load_yaml_configuration
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -59,8 +58,6 @@ hf_token = None
 hf_model_id = None
 
 # Forecasts will be made for all available init times between these
-start_datetime = "2022-05-07 13:00"
-end_datetime = "2022-05-07 16:30"
 start_datetime = "2022-05-07 13:00"
 end_datetime = "2022-05-07 16:30"
 
@@ -94,12 +91,9 @@ ALL_SITE_IDS.sort()
 # FUNCTIONS
 
 
-
 def load_model_from_hf(model_id: str, revision: str, token: str):
     """
     Loads model from HuggingFace
-
-    
     """
 
     model_file = hf_hub_download(
@@ -107,8 +101,6 @@ def load_model_from_hf(model_id: str, revision: str, token: str):
         filename=PYTORCH_WEIGHTS_NAME,
         revision=revision,
         token=token,
-
-
     )
 
     # load config file
@@ -171,52 +163,45 @@ def get_sites_ds(config_path: str) -> xr.Dataset:
 class ModelPipe:
     """A class to conveniently make and process predictions from batches"""
 
-    def __init__(self, model, ds_site: xr.Dataset):
+    def __init__(self, model, ds_site: xr.Dataset, config_path: str):
         """A class to conveniently make and process predictions from batches
 
         Args:
             model: PVNet site level model
             ds_site: xarray dataset of pv site true values and capacities
-            ds_site: xarray dataset of pv site true values and capacities
         """
         self.model = model
         self.ds_site = ds_site
+        self.config_path = config_path
 
-    def predict_batch(self, sample: dict) -> xr.Dataset:
-        """Run the sample through the model and compile the predictions into an xarray DataArray
     def predict_batch(self, sample: dict) -> xr.Dataset:
         """Run the sample through the model and compile the predictions into an xarray DataArray
 
         Args:
             sample: A sample containing inputs for a site
-            sample: A sample containing inputs for a site
 
         Returns:
-            xarray.Dataset of site forecasts for the sample
             xarray.Dataset of site forecasts for the sample
         """
         # Convert sample to tensor and move to device
         sample_tensor = {k: torch.from_numpy(v).to(device) for k, v in sample.items()}
-        # Convert sample to tensor and move to device
-        sample_tensor = {k: torch.from_numpy(v).to(device) for k, v in sample.items()}
+
+        config = load_yaml_configuration(self.config_path)
+
+        interval_start = np.timedelta64(config.input_data.site.interval_start_minutes, "m")
+        interval_end = np.timedelta64(config.input_data.site.interval_end_minutes, "m")
+        time_resolution = np.timedelta64(config.input_data.site.time_resolution_minutes, "m")
 
         t0 = pd.Timestamp(sample["site_init_time_utc"][0])
         site_id = sample["site_id"][0]
-        t0 = pd.Timestamp(sample["site_init_time_utc"][0])
-        site_id = sample["site_id"][0]
 
-        # Get valid times for this forecast
+        #Get valid times for this forecast
         valid_times = pd.date_range(
-            start=t0 + pd.Timedelta(minutes=FREQ_MINS),
-            periods=len(sample["site_target_time_utc"]),
-            freq=f"{FREQ_MINS}min"
+            start=t0 + pd.Timedelta(interval_start),
+            end=t0 + pd.Timedelta(interval_end),
+            freq=f"{time_resolution.astype(int)}min"
         )
 
-        # Get capacity for this site
-        site_capacity = float(self.ds_site.sel(site_id=site_id).capacity_kwp)
-
-        # Get solar elevation and create sundown mask
-        elevation = sample["site_solar_elevation"]
         # Get capacity for this site
         site_capacity = float(self.ds_site.sel(site_id=site_id).capacity_kwp)
 
@@ -226,8 +211,6 @@ class ModelPipe:
             data=elevation < MIN_DAY_ELEVATION,
             dims=["target_datetime_utc"],
             coords=dict(target_datetime_utc=valid_times),
-            dims=["target_datetime_utc"],
-            coords=dict(target_datetime_utc=valid_times),
         )
 
         with torch.no_grad():
@@ -235,26 +218,17 @@ class ModelPipe:
             y_normed = self.model(sample_tensor).detach().cpu().numpy()
 
         da_normed = preds_to_dataarray(y_normed, self.model, valid_times, [site_id])
-            # Run through model to get 0-1 predictions
-            y_normed = self.model(sample_tensor).detach().cpu().numpy()
 
-        da_normed = preds_to_dataarray(y_normed, self.model, valid_times, [site_id])
-
-        # Multiply normalised forecasts by capacity and clip negatives
-        da_abs = da_normed.clip(0, None) * site_capacity
         # Multiply normalised forecasts by capacity and clip negatives
         da_abs = da_normed.clip(0, None) * site_capacity
 
         # Apply sundown mask
         da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
-        da_abs = da_abs.where(~da_sundown_mask).fillna(0.0)
 
-        da_abs = da_abs.expand_dims(dim="init_time_utc", axis=0).assign_coords(
         da_abs = da_abs.expand_dims(dim="init_time_utc", axis=0).assign_coords(
             init_time_utc=np.array([t0], dtype="datetime64[ns]")
         )
 
-        return da_abs
         return da_abs
 
 def get_datapipe(config_path: str):
@@ -264,7 +238,6 @@ def get_datapipe(config_path: str):
         config_path: Path to the data configuration file
 
     Returns:
-        SitesDataset: Dataset containing samples for each site
         SitesDataset: Dataset containing samples for each site
     """
     # Create dataset with time range filter
@@ -303,10 +276,6 @@ def main(config: DictConfig):
     dataset = get_datapipe(config.datamodule.configuration)
 
     # Load the site data
-    # Create dataset
-    dataset = get_datapipe(config.datamodule.configuration)
-
-    # Load the site data
     ds_site = get_sites_ds(config.datamodule.configuration)
 
     # Create a dataloader
@@ -323,19 +292,12 @@ def main(config: DictConfig):
     model = model.eval().to(device)
 
     # Create object to make predictions
-    # Create object to make predictions
-    model_pipe = ModelPipe(model, ds_site)
-
-    # Loop through the samples
-    pbar = tqdm(total=len(dataset))
-    for i, sample in enumerate(dataloader):
+    model_pipe = ModelPipe(model, ds_site, config.datamodule.configuration)
 
     # Loop through the samples
     pbar = tqdm(total=len(dataset))
     for i, sample in enumerate(dataloader):
         try:
-            # Make predictions
-            ds_abs_all = model_pipe.predict_batch(sample)
             # Make predictions
             ds_abs_all = model_pipe.predict_batch(sample)
 
@@ -347,7 +309,6 @@ def main(config: DictConfig):
 
             pbar.update()
         except Exception as e:
-            print(f"Exception {e} at sample {i}")
             print(f"Exception {e} at sample {i}")
             pass
 
