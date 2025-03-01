@@ -78,7 +78,6 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
         for key in x.keys():
             if(i==17):
                 ans=key
-            print(key, type(key))
             i+=1
         gsp_ids = x[ans].squeeze().int()
         attention = self._attention_network(gsp_ids)
@@ -90,7 +89,6 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
         for key in x.keys():
             if(i==6):
                 ans=key
-            print(key, type(key))
             i+=1
         pv_site_seqs = x[ans].float()
         batch_size = pv_site_seqs.shape[0]
