@@ -74,24 +74,22 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
         )
 
     def _calculate_attention(self, x):
-        # added this for loop to correctly acess the enum object
         i=0
         for key in x.keys():
-            if(i==17):
-                ans=key
-            i+=1
+            if i == 17:
+                ans = key
+            i += 1
         gsp_ids = x[ans].squeeze().int()
         attention = self._attention_network(gsp_ids)
         return attention
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        # added this for loop to correctly acess the enum object
         i=0
         for key in x.keys():
-            if(i==6):
-                ans=key
-            i+=1
+            if i == 6:
+                ans = key
+            i += 1
         pv_site_seqs = x[ans].float()
         batch_size = pv_site_seqs.shape[0]
 
