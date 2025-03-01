@@ -74,6 +74,7 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
         )
 
     def _calculate_attention(self, x):
+        # added this for loop to correctly acess the enum object
         i=0
         for key in x.keys():
             if(i==17):
@@ -85,6 +86,7 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
+        # added this for loop to correctly acess the enum object
         i=0
         for key in x.keys():
             if(i==6):
