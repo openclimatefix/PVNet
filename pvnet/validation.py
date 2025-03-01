@@ -18,6 +18,7 @@ def validate_sample(
 ) -> Dict[str, Union[bool, Dict[str, bool]]]:
     """
     Validates that a sample matches the expected dimensions and requirements
+
     specified in the model configuration.
 
     Args:
@@ -30,6 +31,7 @@ def validate_sample(
             - 'valid': Overall validity (boolean)
             - 'details': Dict with specific validation results per component
     """
+
     results = {"valid": True, "details": {}}
 
     # Initialize details structure
@@ -65,7 +67,8 @@ def validate_sample(
                     _add_issue(
                         results,
                         "nwp",
-                        f"{nwp_type} NWP has incorrect dimensions: {nwp_data.shape}, expected 5D tensor",
+                        f"""{nwp_type} NWP has incorrect dimensions: {nwp_data.shape}, 
+                        expected 5D tensor""",
                     )
                 else:
                     height, width = nwp_data.shape[3], nwp_data.shape[4]
@@ -73,7 +76,8 @@ def validate_sample(
                         _add_issue(
                             results,
                             "nwp",
-                            f"{nwp_type} NWP has spatial dimensions {height}x{width}, expected {expected_size}x{expected_size}",
+                            f"{nwp_type} NWP has spatial dimensions {height}x{width}, " 
+                            f"expected {expected_size}x{expected_size}",
                         )
 
             # Check time dimension
@@ -83,7 +87,9 @@ def validate_sample(
                 nwp_interval = config.get("nwp_interval_minutes", {}).get(nwp_type, 60)
 
                 # Calculate expected time steps
-                expected_time_steps = (expected_history + expected_forecast) // nwp_interval
+                expected_time_steps = (
+                    expected_history + expected_forecast
+                ) // nwp_interval
 
                 # Check time dimension (3rd dimension, index 2)
                 if len(nwp_data.shape) > 2:
@@ -92,7 +98,8 @@ def validate_sample(
                         _add_issue(
                             results,
                             "nwp",
-                            f"{nwp_type} NWP has {time_steps} time steps, expected {expected_time_steps}",
+                            f"{nwp_type} NWP has {time_steps} time steps, "
+                            f"expected {expected_time_steps}",
                         )
     else:
         if config.get("nwp_encoders_dict"):
@@ -130,7 +137,8 @@ def validate_sample(
                     _add_issue(
                         results,
                         "satellite",
-                        f"Satellite has spatial dimensions {height}x{width}, expected {expected_size}x{expected_size}",
+                        f"Satellite has spatial dimensions {height}x{width}, " 
+                        f"expected {expected_size}x{expected_size}",
                     )
 
         # Check time dimension
@@ -146,10 +154,13 @@ def validate_sample(
                     _add_issue(
                         results,
                         "satellite",
-                        f"Satellite has {time_steps} time steps, expected {expected_time_steps}",
+                        f"Satellite has spatial dimensions {height}x{width}, "
+                        f"expected {expected_size}x{expected_size}",
                     )
     elif config.get("sat_encoder"):
-        _add_issue(results, "satellite", "Satellite data missing but expected in configuration")
+        _add_issue(
+            results, "satellite", "Satellite data missing but expected in configuration"
+        )
 
     # Validate PV site data
     if "pv" in sample and config.get("pv_encoder"):
@@ -196,7 +207,9 @@ def validate_sample(
     # Validate sun features if required
     if config.get("include_sun", False):
         if "sun_features" not in sample:
-            _add_issue(results, "times", "Sun features missing but required by configuration")
+            _add_issue(
+                results, "times", "Sun features missing but required by configuration"
+            )
 
     # Validate any other specific requirements
     # (Add additional validation based on specific model requirements)
@@ -245,7 +258,9 @@ def validate_batch(
     sample = {}
     for key, value in batch.items():
         if isinstance(value, dict):
-            sample[key] = {k: v[0:1] if torch.is_tensor(v) else v for k, v in value.items()}
+            sample[key] = {
+                k: v[0:1] if torch.is_tensor(v) else v for k, v in value.items()
+            }
         elif torch.is_tensor(value):
             sample[key] = value[0:1]
         else:
