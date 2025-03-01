@@ -67,8 +67,8 @@ def validate_sample(
                     _add_issue(
                         results,
                         "nwp",
-                        f"""{nwp_type} NWP has incorrect dimensions: {nwp_data.shape}, 
-                        expected 5D tensor""",
+                        f"{nwp_type} NWP has incorrect dimensions: {nwp_data.shape}", 
+                        "expected 5D tensor",
                     )
                 else:
                     height, width = nwp_data.shape[3], nwp_data.shape[4]
