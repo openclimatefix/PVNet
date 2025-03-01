@@ -4,7 +4,10 @@
 
 import einops
 import torch
-from ocf_datapipes.batch import BatchKey
+
+# removed BatchKey import
+# from ocf_datapipes.batch import BatchKey
+
 from torch import nn
 
 from pvnet.models.multimodal.linear_networks.networks import ResFCNet2
@@ -75,13 +78,13 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
         )
 
     def _calculate_attention(self, x):
-        gsp_ids = x[BatchKey.gsp_id].squeeze().int()
+        gsp_ids = x["gsp_id"].squeeze().int() # removed BatchKey
         attention = self._attention_network(gsp_ids)
         return attention
 
     def _encode_value(self, x):
         # Shape: [batch size, sequence length, PV site]
-        pv_site_seqs = x[BatchKey.pv].float()
+        pv_site_seqs = x["pv"].float() # removed BatchKey
         batch_size = pv_site_seqs.shape[0]
 
         pv_site_seqs = pv_site_seqs.swapaxes(1, 2).flatten(0, 1)
