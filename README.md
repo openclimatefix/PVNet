@@ -98,7 +98,7 @@ here: https://huggingface.co/datasets/openclimatefix/uk_pv
 
 Outside the PVNet repo, clone the ocf-data-sampler repo and exit the conda env created for PVNet: https://github.com/openclimatefix/ocf-data-sampler
 ```bash
-git clone --depth 1 https://github.com/openclimatefix/ocf-data-sampler.git
+git clone https://github.com/openclimatefix/ocf-data-sampler.git
 conda create -n ocf-data-sampler python=3.11
 ```
 
@@ -113,6 +113,8 @@ Then exit this environment, and enter back into the pvnet conda environment and 
 ```bash
 pip install -e <PATH-TO-ocf-data-sampler-REPO>
 ```
+
+If you install the local version of `ocf-data-sampler` that is more recent than the version specified in PVNet, you might receive a warning. However, it should still function correctly.
 
 ## Generating pre-made batches of data for training/validation of PVNet
 
