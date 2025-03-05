@@ -35,9 +35,9 @@ import torch
 import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
-from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
-from ocf_data_sampler.load.load_dataset import get_dataset_dict
 from ocf_data_sampler.config import load_yaml_configuration
+from ocf_data_sampler.load.load_dataset import get_dataset_dict
+from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -200,7 +200,7 @@ class ModelPipe:
         valid_times = pd.date_range(
             start=t0,
             end=t0 + pd.Timedelta(self.interval_end),
-            freq=f"{self.time_resolution.astype(int)}min"
+            freq=f"{self.time_resolution.astype(int)}min",
         )
 
         # Get capacity for this site
@@ -256,15 +256,17 @@ def main(config: DictConfig):
     # load yaml file
     unpacked_configuration = load_yaml_configuration(config.datamodule.configuration)
 
-    interval_start = np.timedelta64(unpacked_configuration.input_data.site.interval_start_minutes, "m")
+    interval_start = np.timedelta64(
+        unpacked_configuration.input_data.site.interval_start_minutes, "m"
+    )
     interval_end = np.timedelta64(unpacked_configuration.input_data.site.interval_end_minutes, "m")
-    time_resolution = np.timedelta64(unpacked_configuration.input_data.site.time_resolution_minutes, "m")
+    time_resolution = np.timedelta64(
+        unpacked_configuration.input_data.site.time_resolution_minutes, "m"
+    )
 
     # Create dataset
     dataset = SitesDataset(
-        config.datamodule.configuration,
-        start_time=start_datetime,
-        end_time=end_datetime
+        config.datamodule.configuration, start_time=start_datetime, end_time=end_datetime
     )
     # Filter for specific site IDs
     dataset.valid_t0_and_site_ids = dataset.valid_t0_and_site_ids[
@@ -310,6 +312,7 @@ def main(config: DictConfig):
 
     pbar.close()
     del dataloader
+
 
 if __name__ == "__main__":
     main()
