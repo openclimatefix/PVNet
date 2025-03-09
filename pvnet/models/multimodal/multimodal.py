@@ -68,6 +68,7 @@ class Model(MultimodalBaseModel):
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
         forecast_minutes_ignore: Optional[int] = 0,
+        solar_position_config: Optional[dict] = None,
     ):
         """Neural network which combines information from different sources.
 
@@ -141,6 +142,7 @@ class Model(MultimodalBaseModel):
         self.interval_minutes = interval_minutes
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
+        self.solar_position_config = solar_position_config
 
         super().__init__(
             history_minutes=history_minutes,
@@ -345,15 +347,25 @@ class Model(MultimodalBaseModel):
             modes["id"] = id_embedding
 
         if self.include_sun:
-            sun = torch.cat(
-                (
-                    x[f"{self._target_key}_solar_azimuth"],
-                    x[f"{self._target_key}_solar_elevation"],
-                ),
-                dim=1,
-            ).float()
-            sun = self.sun_fc1(sun)
-            modes["sun"] = sun
+
+            azimuth_key = f"solar_position_{self._target_key}_azimuth"
+            elevation_key = f"solar_position_{self._target_key}_elevation"
+            
+            # Fall back to legacy keys
+            if azimuth_key not in x:
+                azimuth_key = f"{self._target_key}_solar_azimuth"
+                elevation_key = f"{self._target_key}_solar_elevation"
+            
+            if azimuth_key in x and elevation_key in x:
+                sun = torch.cat(
+                    (
+                        x[azimuth_key],
+                        x[elevation_key],
+                    ),
+                    dim=1,
+                ).float()
+                sun = self.sun_fc1(sun)
+                modes["sun"] = sun
 
         if self.include_time:
             time = torch.cat(

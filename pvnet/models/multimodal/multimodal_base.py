@@ -48,4 +48,24 @@ class MultimodalBaseModel(BaseModel):
                     sun_len = self.forecast_len + self.history_len + 1
                     batch[key] = batch[key][:, :sun_len]
 
+        if self.include_sun:
+            sun_len = self.forecast_len + self.history_len + 1
+            
+            # Check for solar position keys first
+            solar_position_keys = []
+            # Slice off the end of the solar coords data
+            for s in ["azimuth", "elevation"]:
+                key = f"solar_position_{self._target_key}_{s}"
+                if key in batch.keys():
+                    solar_position_keys.append(key)
+                    batch[key] = batch[key][:, :sun_len]
+            
+            # Check for legacy keys
+            if not solar_position_keys:
+                # Slice off the end of the solar coords data
+                for s in ["solar_azimuth", "solar_elevation"]:
+                    key = f"{self._target_key}_{s}"
+                    if key in batch.keys():
+                        batch[key] = batch[key][:, :sun_len]
+
         return batch
