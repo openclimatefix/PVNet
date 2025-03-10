@@ -1,6 +1,5 @@
 """Persistence model"""
 
-
 import pvnet
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer

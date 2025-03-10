@@ -1,4 +1,4 @@
-""" Data module for pytorch lightning """
+"""Data module for pytorch lightning"""
 
 from ocf_data_sampler.sample.uk_regional import UKRegionalSample
 from ocf_data_sampler.torch_datasets.datasets.pvnet_uk import PVNetUKRegionalDataset

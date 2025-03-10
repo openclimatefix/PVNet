@@ -1,5 +1,5 @@
-"""Encoder modules for the satellite/NWP data based on 3D concolutions.
-"""
+"""Encoder modules for the satellite/NWP data based on 3D concolutions."""
+
 from typing import List, Union
 
 import torch

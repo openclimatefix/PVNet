@@ -1,4 +1,4 @@
-""" Data module for pytorch lightning """
+"""Data module for pytorch lightning"""
 
 from ocf_data_sampler.sample.site import SiteSample
 from ocf_data_sampler.torch_datasets.datasets.site import SitesDataset
