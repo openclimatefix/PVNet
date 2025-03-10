@@ -1,5 +1,4 @@
-"""Optimizer factory-function classes.
-"""
+"""Optimizer factory-function classes."""
 
 from abc import ABC, abstractmethod
 
