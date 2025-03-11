@@ -356,7 +356,7 @@ class Model(MultimodalBaseModel):
                 # Fall back to legacy keys
                 azimuth_key = f"{self._target_key}_solar_azimuth"
                 elevation_key = f"{self._target_key}_solar_elevation"
-            
+
             # Process the sun data if either key set is found
             if azimuth_key in x and elevation_key in x:
                 sun = torch.cat(
