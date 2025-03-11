@@ -41,28 +41,18 @@ class MultimodalBaseModel(BaseModel):
                 )[:, : self.nwp_encoders_dict[nwp_source].sequence_length]
 
         if self.include_sun:
-            # Slice off the end of the solar coords data
-            for s in ["solar_azimuth", "solar_elevation"]:
-                key = f"{self._target_key}_{s}"
-                if key in batch.keys():
-                    sun_len = self.forecast_len + self.history_len + 1
-                    batch[key] = batch[key][:, :sun_len]
-
-        if self.include_sun:
             sun_len = self.forecast_len + self.history_len + 1
             
-            # Check for solar position keys first
+            # Check for new standalone solar position keys first
             solar_position_keys = []
-            # Slice off the end of the solar coords data
-            for s in ["azimuth", "elevation"]:
-                key = f"solar_position_{self._target_key}_{s}"
-                if key in batch.keys():
-                    solar_position_keys.append(key)
-                    batch[key] = batch[key][:, :sun_len]
+            for s in ["solar_azimuth", "solar_elevation"]:
+                if s in batch.keys():
+                    solar_position_keys.append(s)
+                    batch[s] = batch[s][:, :sun_len]
             
-            # Check for legacy keys
+            # Check for legacy keys if new keys aren't found
             if not solar_position_keys:
-                # Slice off the end of the solar coords data
+                # Slice off the end of the legacy solar coords data
                 for s in ["solar_azimuth", "solar_elevation"]:
                     key = f"{self._target_key}_{s}"
                     if key in batch.keys():

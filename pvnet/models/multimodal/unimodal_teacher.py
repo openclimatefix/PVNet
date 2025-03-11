@@ -305,15 +305,27 @@ class Model(MultimodalBaseModel):
             modes["id"] = id_embedding
 
         if self.include_sun:
-            sun = torch.cat(
-                (
-                    x["gsp_solar_azimuth"],
-                    x["gsp_solar_elevation"],
-                ),
-                dim=1,
-            ).float()
-            sun = self.sun_fc1(sun)
-            modes["sun"] = sun
+            # Determine which keys to use
+            if "solar_azimuth" in x and "solar_elevation" in x:
+                # Use new standalone keys
+                azimuth_key = "solar_azimuth"
+                elevation_key = "solar_elevation"
+            else:
+                # Fall back to legacy keys
+                azimuth_key = f"{self._target_key}_solar_azimuth"
+                elevation_key = f"{self._target_key}_solar_elevation"
+            
+            # Process the sun data if either key set is found
+            if azimuth_key in x and elevation_key in x:
+                sun = torch.cat(
+                    (
+                        x[azimuth_key],
+                        x[elevation_key],
+                    ),
+                    dim=1,
+                ).float()
+                sun = self.sun_fc1(sun)
+                modes["sun"] = sun
 
         out = self.output_network(modes)
 

@@ -347,15 +347,17 @@ class Model(MultimodalBaseModel):
             modes["id"] = id_embedding
 
         if self.include_sun:
-
-            azimuth_key = f"solar_position_{self._target_key}_azimuth"
-            elevation_key = f"solar_position_{self._target_key}_elevation"
-            
-            # Fall back to legacy keys
-            if azimuth_key not in x:
+            # Determine which keys to use
+            if "solar_azimuth" in x and "solar_elevation" in x:
+                # Use new standalone keys
+                azimuth_key = "solar_azimuth"
+                elevation_key = "solar_elevation"
+            else:
+                # Fall back to legacy keys
                 azimuth_key = f"{self._target_key}_solar_azimuth"
                 elevation_key = f"{self._target_key}_solar_elevation"
             
+            # Process the sun data if either key set is found
             if azimuth_key in x and elevation_key in x:
                 sun = torch.cat(
                     (
