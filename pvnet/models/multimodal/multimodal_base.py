@@ -43,8 +43,8 @@ class MultimodalBaseModel(BaseModel):
         if self.include_sun:
             sun_len = self.forecast_len + self.history_len + 1
             
-            # Check for new standalone solar position keys first
             solar_position_keys = []
+            # Slife off end of solar coords
             for s in ["solar_azimuth", "solar_elevation"]:
                 if s in batch.keys():
                     solar_position_keys.append(s)
@@ -52,7 +52,7 @@ class MultimodalBaseModel(BaseModel):
             
             # Check for legacy keys if new keys aren't found
             if not solar_position_keys:
-                # Slice off the end of the legacy solar coords data
+                # Slice off the end of the legacy solar coords
                 for s in ["solar_azimuth", "solar_elevation"]:
                     key = f"{self._target_key}_{s}"
                     if key in batch.keys():
