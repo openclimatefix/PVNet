@@ -1,17 +1,19 @@
 """
 Module for the Smart Persistence model.
 
-This module implements a baseline model using smart persistence 
+This module implements a baseline model using smart persistence
 for forecasting global solar power (GSP) yield.
 """
+
+from datetime import timedelta
+
+import pandas as pd
+import pvlib
+import torch
 
 import pvnet
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer
-import pvlib
-import pandas as pd
-from datetime import timedelta
-import torch
 
 
 class Model(BaseModel):
@@ -69,11 +71,11 @@ class Model(BaseModel):
         current_time_index = pd.DatetimeIndex([current_time])
 
         # Compute current and future clear-sky GHI values
-        cs_current = self.location.get_clearsky(current_time_index, model='ineichen')['ghi'].iloc[0]
+        cs_current = self.location.get_clearsky(current_time_index, model="ineichen")["ghi"].iloc[0]
         forecast_times = pd.DatetimeIndex(
             [current_time + timedelta(minutes=i) for i in range(1, self.forecast_len + 1)]
         )
-        cs_forecast = self.location.get_clearsky(forecast_times, model='ineichen')['ghi']
+        cs_forecast = self.location.get_clearsky(forecast_times, model="ineichen")["ghi"]
 
         # Compute persistence factor
         if cs_current > 0:
@@ -81,7 +83,9 @@ class Model(BaseModel):
         else:
             k = torch.zeros_like(y_hat)
 
-        cs_forecast_tensor = torch.tensor(cs_forecast.values, dtype=y_hat.dtype, device=y_hat.device)
+        cs_forecast_tensor = torch.tensor(
+            cs_forecast.values, dtype=y_hat.dtype, device=y_hat.device
+        )
         forecast = k.unsqueeze(1) * cs_forecast_tensor.unsqueeze(0)
 
         return forecast
