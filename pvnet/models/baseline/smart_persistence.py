@@ -1,17 +1,9 @@
-<<<<<<< HEAD
 """
 Module for the Smart Persistence model.
 
 This module implements a baseline model using smart persistence
 for forecasting global solar power (GSP) yield.
 """
-=======
-from datetime import timedelta
-
-import pandas as pd
-import pvlib
-import torch
->>>>>>> 52d1a52a239f41db089f730771ca0ecd364c7e26
 
 import pvnet
 from pvnet.models.base_model import BaseModel
