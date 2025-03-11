@@ -2,7 +2,7 @@
 """
 Module for the Smart Persistence model.
 
-This module implements a baseline model using smart persistence 
+This module implements a baseline model using smart persistence
 for forecasting global solar power (GSP) yield.
 """
 =======
@@ -74,7 +74,7 @@ class Model(BaseModel):
         current_time_index = pd.DatetimeIndex([current_time])
 <<<<<<< HEAD
 
-        
+
         cs_current = self.location.get_clearsky(current_time_index, model='ineichen')['ghi'].iloc[0]
 =======
         cs_current = self.location.get_clearsky(current_time_index, model="ineichen")["ghi"].iloc[0]
