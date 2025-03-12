@@ -35,11 +35,10 @@ import torch
 import xarray as xr
 from huggingface_hub import hf_hub_download
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
+from ocf_data_sampler.sample.base import batch_to_tensor, copy_batch_to_device
 from ocf_datapipes.batch import (
     BatchKey,
     NumpyBatch,
-    batch_to_tensor,
-    copy_batch_to_device,
     stack_np_examples_into_batch,
 )
 from ocf_datapipes.config.load import load_yaml_configuration
