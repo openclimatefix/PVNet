@@ -1,6 +1,8 @@
+import satellite_patch
+import fix_optimizer
+
 try:
     import torch.multiprocessing as mp
-
     mp.set_start_method("spawn", force=True)
     mp.set_sharing_strategy("file_system")
 except RuntimeError:
@@ -26,13 +28,14 @@ import xarray as xr
 from pvnet.load_model import get_model_from_checkpoints
 from pvnet.models.multimodal.multimodal import Model
 
-from ocf_datapipes.batch import BatchKey, NumpyBatch, stack_np_examples_into_batch, batch_to_tensor, copy_batch_to_device
-from ocf_datapipes.config.load import load_yaml_configuration
-from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD 
-
-from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_data_sampler.config.load import load_yaml_configuration
+from ocf_data_sampler.torch_datasets.datasets.pvnet_uk import PVNetUKRegionalDataset
+from ocf_data_sampler.numpy_sample.gsp import GSPSampleKey
+from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
+from ocf_data_sampler.sample.base import NumpyBatch, batch_to_tensor, copy_batch_to_device
 
 import logging
+
 
 log = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -40,35 +43,42 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 #_________VARIABLES_________
 
-output_dir = "PLACEHOLDER" # directory where to store predictions
-
-# Time window for which to run the backtest
-start_time = "2024-12-31"
-end_time = "2025-01-05"
-
-# The frequency at which to create forecast horizons
+output_dir = "/mnt/felix-output-real/backtest_intra"
+start_time = "2023-01-07"
+end_time = "2023-12-30"
 FREQ_MINS = 30
-
-# When sun at elevation below this, the forecast is set to zero
 MIN_DAY_ELEVATION = 0
-
-# All regional GSP IDs
 ALL_GSP_IDS = np.arange(1, 318)
 
 #_________MODEL VARIABLES_________
 
-hf_model_id = "openclimatefix/PLACEHOLDER"
-hf_revision = "PLACEHOLDER"
+# Intraday - ECMWF ONLY
+hf_model_id = "openclimatefix/pvnet_uk_region"
+hf_revision = "d81a9cf8adca49739ea6a3d031e36510f44744a1"
 hf_token = None
 
 #_________DATA_PATHS_________
 
 # paths to populate the config with after loading from HF 
-ecmwf_path = "PLACEHOLDER.zarr"
-gsp_path = "PLACEHOLDER.zarr"
+gsp_path = "/mnt/uk-all-inputs-v3/pv_gsp/pvlive_gsp.zarr"
 
-# member if using ECMWF ensambles. Set to None to ignore
-ensemble_member = 1
+ecmwf_paths = [
+    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2019.zarr",
+    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2020.zarr",
+    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2021.zarr",
+    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2022.zarr",
+    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2023.zarr",
+    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2024.zarr"
+]
+
+ukv_paths = [
+    "/mnt/uk-all-inputs-v3/nwp/ukv/UKV_v8/UKV_2023.zarr",
+    # "/mnt/uk-all-inputs-v3/nwp/ukv/UKV_v8/UKV_2024.zarr",
+]
+
+satellite_paths = [
+    "/mnt/uk-all-inputs-v3/sat/v3/2023-11_nonhrv.zarr",
+]
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -85,19 +95,135 @@ def adapt_data_config(config: dict) -> dict:
         adapted config
     """
 
-
-    if ecmwf_path and "ecmwf" in config["input_data"]["nwp"]:
-        config["input_data"]["nwp"]["ecmwf"]["nwp_zarr_path"] = ecmwf_path
-        log.info(f"Updated ecmwf path to {ecmwf_path}")
-    if gsp_path and "gsp" in config["input_data"]:
+    if "ecmwf" in config["input_data"]["nwp"]:
+        config["input_data"]["nwp"]["ecmwf"]["nwp_zarr_path"] = ecmwf_paths
+        log.info(f"Updated ecmwf path to include multiple zarr files: {ecmwf_paths}")
+    if "ukv" in config["input_data"]["nwp"]:
+        config["input_data"]["nwp"]["ukv"]["nwp_zarr_path"] = ukv_paths
+        log.info(f"Updated ukv path to include multiple zarr files: {ukv_paths}")
+    if "satellite" in config["input_data"]:
+        config["input_data"]["satellite"]["satellite_zarr_path"] = satellite_paths
+        log.info(f"Updated satellite path to include multiple zarr files: {satellite_paths}")
+    if "gsp" in config["input_data"]:
         config["input_data"]["gsp"]["gsp_zarr_path"] = gsp_path
         log.info(f"Updated gsp path to {gsp_path}")
 
-    if ensemble_member:
-        config["input_data"]["nwp"]["ecmwf"]["nwp_ensemble_member"] = ensemble_member
-        log.info(f"Updated ECMWF ensemble member to {ensemble_member}")
-
     return config
+
+
+def adapt_config_for_schema(config):
+    """
+    Adapt the configuration to match the expected schema.
+    This function translates between the field names in our config and what ocf_data_sampler expects.
+    """
+    import copy
+    adapted_config = copy.deepcopy(config)
+    
+    # ECMWF configuration
+    if "ecmwf" in adapted_config["input_data"]["nwp"]:
+        ecmwf_config = adapted_config["input_data"]["nwp"]["ecmwf"]
+        if "nwp_zarr_path" in ecmwf_config:
+            ecmwf_config["zarr_path"] = ecmwf_config.pop("nwp_zarr_path")
+        if "nwp_channels" in ecmwf_config:
+            channels = ecmwf_config.pop("nwp_channels")
+            if "sde" in channels:
+                channels[channels.index("sde")] = "sd"            
+            ecmwf_config["channels"] = channels
+        if "nwp_provider" in ecmwf_config:
+            ecmwf_config["provider"] = ecmwf_config.pop("nwp_provider")
+        if "nwp_image_size_pixels_height" in ecmwf_config:
+            ecmwf_config["image_size_pixels_height"] = ecmwf_config.pop("nwp_image_size_pixels_height")
+        if "nwp_image_size_pixels_width" in ecmwf_config:
+            ecmwf_config["image_size_pixels_width"] = ecmwf_config.pop("nwp_image_size_pixels_width")        
+        if "interval_start_minutes" not in ecmwf_config:
+            ecmwf_config["interval_start_minutes"] = -120
+        if "interval_end_minutes" not in ecmwf_config:
+            ecmwf_config["interval_end_minutes"] = 480
+        if "max_staleness_minutes" not in ecmwf_config:
+            ecmwf_config["max_staleness_minutes"] = None
+        if "forecast_minutes" in ecmwf_config:
+            del ecmwf_config["forecast_minutes"]
+        if "history_minutes" in ecmwf_config:
+            del ecmwf_config["history_minutes"]
+
+    # UKV configuration
+    if "ukv" in adapted_config["input_data"]["nwp"]:
+        ukv_config = adapted_config["input_data"]["nwp"]["ukv"]
+        if "nwp_zarr_path" in ukv_config:
+            ukv_config["zarr_path"] = ukv_config.pop("nwp_zarr_path")
+        if "nwp_channels" in ukv_config:          
+            ukv_config["channels"] = ukv_config.pop("nwp_channels")
+        if "nwp_provider" in ukv_config:
+            ukv_config["provider"] = ukv_config.pop("nwp_provider")
+        if "nwp_image_size_pixels_height" in ukv_config:
+            ukv_config["image_size_pixels_height"] = ukv_config.pop("nwp_image_size_pixels_height")
+        if "nwp_image_size_pixels_width" in ukv_config:
+            ukv_config["image_size_pixels_width"] = ukv_config.pop("nwp_image_size_pixels_width")        
+        if "interval_start_minutes" not in ukv_config:
+            ukv_config["interval_start_minutes"] = -120
+        if "interval_end_minutes" not in ukv_config:
+            ukv_config["interval_end_minutes"] = 480
+
+        ukv_config["time_resolution_minutes"] = 60
+
+        if "max_staleness_minutes" in ukv_config:
+            ukv_config["max_staleness_minutes"] = 1800
+        if "max_staleness_minutes" not in ukv_config:
+            ukv_config["max_staleness_minutes"] = 1800
+
+        if "forecast_minutes" in ukv_config:
+            del ukv_config["forecast_minutes"]
+        if "history_minutes" in ukv_config:
+            del ukv_config["history_minutes"]
+
+    # Satellite configuration
+    if "satellite" in adapted_config["input_data"]:
+        satellite_config = adapted_config["input_data"]["satellite"]   
+        if "satellite_zarr_path" in satellite_config:
+            satellite_config["zarr_path"] = satellite_config.pop("satellite_zarr_path")
+        if "satellite_channels" in satellite_config:
+            satellite_config["channels"] = satellite_config.pop("satellite_channels")
+        if "satellite_image_size_pixels_height" in satellite_config:
+            satellite_config["image_size_pixels_height"] = satellite_config.pop("satellite_image_size_pixels_height")
+        if "satellite_image_size_pixels_width" in satellite_config:
+            satellite_config["image_size_pixels_width"] = satellite_config.pop("satellite_image_size_pixels_width")
+        if "interval_start_minutes" not in satellite_config:
+            satellite_config["interval_start_minutes"] = -90
+        if "interval_end_minutes" not in satellite_config:
+            satellite_config["interval_end_minutes"] = 0  
+        if "forecast_minutes" in satellite_config:
+            del satellite_config["forecast_minutes"]
+        if "history_minutes" in satellite_config:
+            del satellite_config["history_minutes"]
+        if "dropout_timedeltas_minutes" in satellite_config and satellite_config["dropout_timedeltas_minutes"] is None:
+            satellite_config["dropout_timedeltas_minutes"] = []
+        elif "dropout_timedeltas_minutes" not in satellite_config:
+            satellite_config["dropout_timedeltas_minutes"] = []
+
+        if "live_delay_minutes" in satellite_config:
+            del satellite_config["live_delay_minutes"]
+
+    # GSP configuration
+    if "gsp" in adapted_config["input_data"]:
+        gsp_config = adapted_config["input_data"]["gsp"]        
+        if "gsp_zarr_path" in gsp_config:
+            gsp_config["zarr_path"] = gsp_config.pop("gsp_zarr_path")        
+        if "interval_start_minutes" not in gsp_config:
+            gsp_config["interval_start_minutes"] = -120
+        if "interval_end_minutes" not in gsp_config:
+            gsp_config["interval_end_minutes"] = 480
+        if "dropout_timedeltas_minutes" in gsp_config and gsp_config["dropout_timedeltas_minutes"] is None:
+            gsp_config["dropout_timedeltas_minutes"] = []
+        elif "dropout_timedeltas_minutes" not in gsp_config:
+            gsp_config["dropout_timedeltas_minutes"] = []
+        if "forecast_minutes" in gsp_config:
+            del gsp_config["forecast_minutes"]
+        if "history_minutes" in gsp_config:
+            del gsp_config["history_minutes"]
+    
+    # Uncomment below for current DA model
+    # adapted_config["input_data"]["satellite"] = None
+    return adapted_config
 
 
 def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model, str]:
@@ -120,7 +246,6 @@ def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model,
         token=token,
     )
 
-    # load config file
     config_file = hf_hub_download(
         repo_id=model_id,
         filename=CONFIG_NAME,
@@ -133,11 +258,10 @@ def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model,
 
     model = hydra.utils.instantiate(config)
 
-    state_dict = torch.load(model_file, map_location=torch.device("cuda"))
+    state_dict = torch.load(model_file, map_location=device)
     model.load_state_dict(state_dict)
     model.eval().to(device)
 
-    # load data config
     data_config_file = hf_hub_download(
         repo_id=model_id,
         filename="data_config.yaml",
@@ -148,10 +272,13 @@ def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model,
     with open(data_config_file, "r", encoding="utf-8") as f:
         data_config = yaml.load(f, Loader=yaml.FullLoader)
 
+    # Adapt config and correlate schema
+    adapted_config = adapt_data_config(data_config)    
+    schema_adapted_config = adapt_config_for_schema(adapted_config)
     data_config_path = f"{output_dir}/data_config.yaml"
 
     with open(data_config_path, "w") as file:
-        yaml.dump(adapt_data_config(data_config), file, default_flow_style=False)
+        yaml.dump(schema_adapted_config, file, default_flow_style=False)
 
     return model, data_config_path
 
@@ -165,13 +292,11 @@ def get_gsp_capacities(config_path: str) -> xr.DataArray:
     Returns:
         xarray.DataArray of PVLive capacities
     """
-
-    config = load_yaml_configuration(config_path)
-
-    # Load GSP generation xr.Dataset
-    ds = xr.open_zarr(config.input_data.gsp.gsp_zarr_path)
-
-    # Rename to standard time name
+    with open(config_path, 'r') as file:
+        raw_config = yaml.safe_load(file)
+    
+    gsp_zarr_path = raw_config['input_data']['gsp']['zarr_path']
+    ds = xr.open_zarr(gsp_zarr_path)
     ds = ds.rename({"datetime_gmt": "time_utc"})
 
     return ds.capacity_mwp
@@ -263,9 +388,9 @@ class ModelPipe:
         log.debug("Predicting batch")
 
         # Unpack some variables from the batch
-        id0 = int(batch[BatchKey.gsp_t0_idx])
-        t0 = batch[BatchKey.gsp_time_utc].astype("datetime64[ns]")[0, id0]
-        n_valid_times = len(batch[BatchKey.gsp_time_utc][0, id0 + 1 :])
+        id0 = int(batch[GSPSampleKey.t0_idx])
+        t0 = batch[GSPSampleKey.time_utc].astype("datetime64[ns]")[0, id0]
+        n_valid_times = len(batch[GSPSampleKey.time_utc][0, id0 + 1 :])
         gsp_capacities = self.gsp_capacities
         model = self.model
 
@@ -280,14 +405,14 @@ class ModelPipe:
 
         # Get effective capacities for this forecast
         gsp_capacities = gsp_capacities.sel(
-            time_utc=t0, gsp_id=batch[BatchKey.gsp_id]
+            time_utc=t0, gsp_id=batch[GSPSampleKey.gsp_id]
         ).values
 
         log.debug(f"GSP capacities identified. Shape: {gsp_capacities.shape}")
 
         # Get the solar elevations. We need to un-normalise these from the values in the batch
         # The new dataloader normalises the data to [0, 1]
-        elevation = (batch[BatchKey.gsp_solar_elevation] - 0.5) * 180
+        elevation = (batch[GSPSampleKey.solar_elevation] - 0.5) * 180
 
         log.debug(f"Denormalised solar elevation: {elevation}")
 
@@ -299,7 +424,7 @@ class ModelPipe:
             data=elevation < MIN_DAY_ELEVATION,
             dims=["gsp_id", "target_datetime_utc"],
             coords=dict(
-                gsp_id=batch[BatchKey.gsp_id],
+                gsp_id=batch[GSPSampleKey.gsp_id],
                 target_datetime_utc=valid_times,
             ),
         )
@@ -323,7 +448,7 @@ class ModelPipe:
             preds=y_normed_gsp, 
             model=model, 
             valid_times=valid_times, 
-            gsp_ids=batch[BatchKey.gsp_id].numpy())
+            gsp_ids=batch[GSPSampleKey.gsp_id].numpy())
 
         # Multiply normalised forecasts by capacities and clip negatives
         log.debug("Denormalising predictions...")
@@ -343,7 +468,6 @@ class ModelPipe:
         return da_abs_gsp
 
 
-
 @hydra.main(config_path="../configs/", config_name="config.yaml", version_base="1.2")
 def main(config: DictConfig) -> None:
     """ 
@@ -359,7 +483,6 @@ def main(config: DictConfig) -> None:
 
     # Set up output dir
     os.makedirs(output_dir)
-
     log.info(f"Output directory created: {output_dir}")
     
     # Load data from HuggingFace
@@ -370,22 +493,22 @@ def main(config: DictConfig) -> None:
 
     # Prepare DataLoader
     dataloader_kwargs = dict(
-        shuffle=False, # Go through samples t0-first (needs the swap in ocf-data-sampler pvnet_uk_regional L525)
+        shuffle=False,
         batch_size=batch_size,
         sampler=None,
         batch_sampler=None,
-        num_workers=config.datamodule.num_workers,
-        collate_fn=stack_np_examples_into_batch,
-        pin_memory=False,  # Only using CPU to prepare samples so pinning is not beneficial
+        # num_workers=config.datamodule.num_workers,
+        num_workers=2,
+        collate_fn=stack_np_samples_into_batch,
+        pin_memory=False,
         drop_last=False,
         timeout=0,
         worker_init_fn=None,
         prefetch_factor=config.datamodule.prefetch_factor,
-        persistent_workers=False,  # Not needed since we only enter the dataloader loop once
+        persistent_workers=False,
     )
 
-
-    # Get the dataset   
+    # Get dataset   
     dataset = PVNetUKRegionalDataset(
         config_filename=data_config_path, 
         start_time=start_time, 
@@ -395,16 +518,14 @@ def main(config: DictConfig) -> None:
 
     num_samples = dataset.__len__()
 
-    # Create a dataloader for the concurrent samples and use multiprocessing
     dataloader = DataLoader(dataset, **dataloader_kwargs)
+    # log.info(f"Dataloader created with batch size {config.datamodule.batch_size}, " 
+    # f"num_workers {config.datamodule.num_workers}, prefetch factor {config.datamodule.prefetch_factor}")
 
-    log.info(f"Dataloader created with batch size {config.datamodule.batch_size}, " 
-    f"num_workers {config.datamodule.num_workers}, prefetch factor {config.datamodule.prefetch_factor}")
-
-    # Load the GSP capacities as an xarray object
+    # Load GSP capacities as xarray object
     gsp_capacities = get_gsp_capacities(config.datamodule.configuration)
 
-    # Create object to make predictions for each input sample
+    # Create object - predictions for each input sample
     model_pipe = ModelPipe(model=model, gsp_capacities=gsp_capacities)
     log.info("Model Pipe initialised. Starting inference...")
 
@@ -412,19 +533,16 @@ def main(config: DictConfig) -> None:
     pbar = tqdm(total=num_samples//batch_size)
     for i, sample in zip(range(num_samples), dataloader):
 
-        # Make predictions for the init-time
         da_abs_gsp = model_pipe.predict_sample(sample)
-
-        # Save the predictions
         t0 = da_abs_gsp.init_time_utc.values[0]
 
-        filename = f"{t0.astype('datetime64[m]')}_ID_{'_'.join(sample[BatchKey.gsp_id].numpy().astype(str))}.nc"
+        gsp_ids = sample[GSPSampleKey.gsp_id].numpy()
+        filename = f"{t0.astype('datetime64[m]')}_batch_{i}_count_{len(gsp_ids)}.nc"
 
         da_abs_gsp.to_netcdf(f"{output_dir}/{filename}")
 
         pbar.update()
 
-    # Close down
     pbar.close()
     del dataloader
 
