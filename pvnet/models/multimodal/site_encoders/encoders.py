@@ -5,10 +5,13 @@
 import einops
 import torch
 from torch import nn
-#custom implementation
+
+
+# custom implementation
 class BatchKey:
     gsp_id = "gsp_id"
     pv = "pv"
+
 
 from pvnet.models.multimodal.linear_networks.networks import ResFCNet2
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
