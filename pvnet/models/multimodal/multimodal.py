@@ -348,16 +348,15 @@ class Model(MultimodalBaseModel):
 
         if self.include_sun:
             # Use only new direct keys
-            if "solar_azimuth" in x and "solar_elevation" in x:
-                sun = torch.cat(
-                    (
-                        x["solar_azimuth"],
-                        x["solar_elevation"],
-                    ),
-                    dim=1,
-                ).float()
-                sun = self.sun_fc1(sun)
-                modes["sun"] = sun
+            sun = torch.cat(
+                (
+                    x["solar_azimuth"],
+                    x["solar_elevation"],
+                ),
+                dim=1,
+            ).float()
+            sun = self.sun_fc1(sun)
+            modes["sun"] = sun
 
         if self.include_time:
             time = torch.cat(
