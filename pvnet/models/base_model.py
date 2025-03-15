@@ -50,8 +50,8 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     with open(input_path) as cfg:
         config = yaml.load(cfg, Loader=yaml.FullLoader)
 
-    if 'general' not in config:
-        config['general'] = {}
+    if "general" not in config:
+        config["general"] = {}
 
     config["general"]["description"] = "Config for training the saved PVNet model"
     config["general"]["name"] = "PVNet current"
@@ -347,6 +347,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             )
 
         return None
+
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     """Abstract base class for PVNet submodels"""
