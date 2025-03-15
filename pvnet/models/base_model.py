@@ -244,7 +244,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         model_to_save = self.module if hasattr(self, "module") else self  # type: ignore
         torch.save(model_to_save.state_dict(), save_directory / PYTORCH_WEIGHTS_NAME)
 
-     def save_pretrained(
+    def save_pretrained(
         self,
         save_directory: Union[str, Path],
         config: dict,
