@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import tempfile
+import pkg_resources
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -240,7 +241,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         model_to_save = self.module if hasattr(self, "module") else self  # type: ignore
         torch.save(model_to_save.state_dict(), save_directory / PYTORCH_WEIGHTS_NAME)
 
-    def save_pretrained(
+   def save_pretrained(
         self,
         save_directory: Union[str, Path],
         config: dict,
@@ -320,10 +321,15 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             link = f"https://wandb.ai/{wandb_repo}/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
+        # Get versions of relevant packages
+        packages = ["ocf_datapipes", "ocf_data_sampler", "torch", "lightning.pytorch"]
+        package_versions = {pkg: pkg_resources.get_distribution(pkg).version for pkg in packages}
+
         card = ModelCard.from_template(
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
+            software_versions=package_versions,  # Add software versions to the card
         )
 
         (save_directory / "README.md").write_text(str(card))
