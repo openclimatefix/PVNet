@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import tempfile
-import pkg_resources
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -11,6 +10,7 @@ import hydra
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import pandas as pd
+import pkg_resources
 import torch
 import torch.nn.functional as F
 import wandb
