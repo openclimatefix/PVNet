@@ -250,6 +250,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
+        branch: str = "main",
         **kwargs,
     ) -> Optional[str]:
         """
@@ -271,6 +272,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
+            branch (`str`, *optional*, defaults to `"main"`):
+                The branch to push the model to. Only used if `push_to_hub=True`.
             kwargs:
                 Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
@@ -335,6 +338,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 repo_id=repo_id,
                 repo_type="model",
                 folder_path=save_directory,
+                branch=branch,
             )
 
         return None
