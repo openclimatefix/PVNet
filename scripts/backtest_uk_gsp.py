@@ -14,6 +14,7 @@ from tqdm import tqdm
 import json
 import tempfile
 import yaml
+import copy
 
 import hydra
 from torch.utils.data import DataLoader, Dataset
@@ -43,7 +44,9 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 #_________VARIABLES_________
 
-output_dir = "/mnt/felix-output-real/backtest_intra"
+# output_dir = "/mnt/felix-output-real/backtest_intra"
+output_dir = "/mnt/felix-output-real/backtest_da"
+
 start_time = "2023-01-07"
 end_time = "2023-12-30"
 FREQ_MINS = 30
@@ -52,9 +55,8 @@ ALL_GSP_IDS = np.arange(1, 318)
 
 #_________MODEL VARIABLES_________
 
-# Intraday - ECMWF ONLY
-hf_model_id = "openclimatefix/pvnet_uk_region"
-hf_revision = "d81a9cf8adca49739ea6a3d031e36510f44744a1"
+hf_model_id = "openclimatefix/pvnet_uk_region_day_ahead"
+hf_revision = "263741ebb6b71559d113d799c9a579a973cc24ba"
 hf_token = None
 
 #_________DATA_PATHS_________
@@ -73,12 +75,22 @@ ecmwf_paths = [
 
 ukv_paths = [
     "/mnt/uk-all-inputs-v3/nwp/ukv/UKV_v8/UKV_2023.zarr",
-    # "/mnt/uk-all-inputs-v3/nwp/ukv/UKV_v8/UKV_2024.zarr",
 ]
 
-satellite_paths = [
-    "/mnt/uk-all-inputs-v3/sat/v3/2023-11_nonhrv.zarr",
-]
+# satellite_paths = [
+#     # "/mnt/uk-all-inputs-v3/sat/v2/2023-12_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-11_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-10_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-09_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-08_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-07_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-06_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-05_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-04_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-03_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-02_nonhrv.zarr",
+#     "/mnt/uk-all-inputs-v3/sat/v2/2023-01_nonhrv.zarr",
+# ]
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -101,9 +113,9 @@ def adapt_data_config(config: dict) -> dict:
     if "ukv" in config["input_data"]["nwp"]:
         config["input_data"]["nwp"]["ukv"]["nwp_zarr_path"] = ukv_paths
         log.info(f"Updated ukv path to include multiple zarr files: {ukv_paths}")
-    if "satellite" in config["input_data"]:
-        config["input_data"]["satellite"]["satellite_zarr_path"] = satellite_paths
-        log.info(f"Updated satellite path to include multiple zarr files: {satellite_paths}")
+    # if "satellite" in config["input_data"]:
+    #     config["input_data"]["satellite"]["satellite_zarr_path"] = satellite_paths
+    #     log.info(f"Updated satellite path to include multiple zarr files: {satellite_paths}")
     if "gsp" in config["input_data"]:
         config["input_data"]["gsp"]["gsp_zarr_path"] = gsp_path
         log.info(f"Updated gsp path to {gsp_path}")
@@ -116,7 +128,6 @@ def adapt_config_for_schema(config):
     Adapt the configuration to match the expected schema.
     This function translates between the field names in our config and what ocf_data_sampler expects.
     """
-    import copy
     adapted_config = copy.deepcopy(config)
     
     # ECMWF configuration
@@ -138,7 +149,7 @@ def adapt_config_for_schema(config):
         if "interval_start_minutes" not in ecmwf_config:
             ecmwf_config["interval_start_minutes"] = -120
         if "interval_end_minutes" not in ecmwf_config:
-            ecmwf_config["interval_end_minutes"] = 480
+            ecmwf_config["interval_end_minutes"] = 2220
         if "max_staleness_minutes" not in ecmwf_config:
             ecmwf_config["max_staleness_minutes"] = None
         if "forecast_minutes" in ecmwf_config:
@@ -162,46 +173,43 @@ def adapt_config_for_schema(config):
         if "interval_start_minutes" not in ukv_config:
             ukv_config["interval_start_minutes"] = -120
         if "interval_end_minutes" not in ukv_config:
-            ukv_config["interval_end_minutes"] = 480
-
-        ukv_config["time_resolution_minutes"] = 60
+            ukv_config["interval_end_minutes"] = 1800
 
         if "max_staleness_minutes" in ukv_config:
-            ukv_config["max_staleness_minutes"] = 1800
-        if "max_staleness_minutes" not in ukv_config:
-            ukv_config["max_staleness_minutes"] = 1800
+            ukv_config["max_staleness_minutes"] = 180
 
+        if "max_staleness_minutes" not in ukv_config:
+            ukv_config["max_staleness_minutes"] = None
         if "forecast_minutes" in ukv_config:
             del ukv_config["forecast_minutes"]
         if "history_minutes" in ukv_config:
             del ukv_config["history_minutes"]
 
-    # Satellite configuration
-    if "satellite" in adapted_config["input_data"]:
-        satellite_config = adapted_config["input_data"]["satellite"]   
-        if "satellite_zarr_path" in satellite_config:
-            satellite_config["zarr_path"] = satellite_config.pop("satellite_zarr_path")
-        if "satellite_channels" in satellite_config:
-            satellite_config["channels"] = satellite_config.pop("satellite_channels")
-        if "satellite_image_size_pixels_height" in satellite_config:
-            satellite_config["image_size_pixels_height"] = satellite_config.pop("satellite_image_size_pixels_height")
-        if "satellite_image_size_pixels_width" in satellite_config:
-            satellite_config["image_size_pixels_width"] = satellite_config.pop("satellite_image_size_pixels_width")
-        if "interval_start_minutes" not in satellite_config:
-            satellite_config["interval_start_minutes"] = -90
-        if "interval_end_minutes" not in satellite_config:
-            satellite_config["interval_end_minutes"] = 0  
-        if "forecast_minutes" in satellite_config:
-            del satellite_config["forecast_minutes"]
-        if "history_minutes" in satellite_config:
-            del satellite_config["history_minutes"]
-        if "dropout_timedeltas_minutes" in satellite_config and satellite_config["dropout_timedeltas_minutes"] is None:
-            satellite_config["dropout_timedeltas_minutes"] = []
-        elif "dropout_timedeltas_minutes" not in satellite_config:
-            satellite_config["dropout_timedeltas_minutes"] = []
-
-        if "live_delay_minutes" in satellite_config:
-            del satellite_config["live_delay_minutes"]
+    # # Satellite configuration
+    # if "satellite" in adapted_config["input_data"]:
+    #     satellite_config = adapted_config["input_data"]["satellite"]   
+    #     if "satellite_zarr_path" in satellite_config:
+    #         satellite_config["zarr_path"] = satellite_config.pop("satellite_zarr_path")
+    #     if "satellite_channels" in satellite_config:
+    #         satellite_config["channels"] = satellite_config.pop("satellite_channels")
+    #     if "satellite_image_size_pixels_height" in satellite_config:
+    #         satellite_config["image_size_pixels_height"] = satellite_config.pop("satellite_image_size_pixels_height")
+    #     if "satellite_image_size_pixels_width" in satellite_config:
+    #         satellite_config["image_size_pixels_width"] = satellite_config.pop("satellite_image_size_pixels_width")
+    #     if "interval_start_minutes" not in satellite_config:
+    #         satellite_config["interval_start_minutes"] = -90
+    #     if "interval_end_minutes" not in satellite_config:
+    #         satellite_config["interval_end_minutes"] = 0  
+    #     if "forecast_minutes" in satellite_config:
+    #         del satellite_config["forecast_minutes"]
+    #     if "history_minutes" in satellite_config:
+    #         del satellite_config["history_minutes"]
+    #     if "dropout_timedeltas_minutes" in satellite_config and satellite_config["dropout_timedeltas_minutes"] is None:
+    #         satellite_config["dropout_timedeltas_minutes"] = []
+    #     elif "dropout_timedeltas_minutes" not in satellite_config:
+    #         satellite_config["dropout_timedeltas_minutes"] = []
+    #     if "live_delay_minutes" in satellite_config:
+    #         del satellite_config["live_delay_minutes"]
 
     # GSP configuration
     if "gsp" in adapted_config["input_data"]:
@@ -211,7 +219,7 @@ def adapt_config_for_schema(config):
         if "interval_start_minutes" not in gsp_config:
             gsp_config["interval_start_minutes"] = -120
         if "interval_end_minutes" not in gsp_config:
-            gsp_config["interval_end_minutes"] = 480
+            gsp_config["interval_end_minutes"] = 2160
         if "dropout_timedeltas_minutes" in gsp_config and gsp_config["dropout_timedeltas_minutes"] is None:
             gsp_config["dropout_timedeltas_minutes"] = []
         elif "dropout_timedeltas_minutes" not in gsp_config:
@@ -221,8 +229,6 @@ def adapt_config_for_schema(config):
         if "history_minutes" in gsp_config:
             del gsp_config["history_minutes"]
     
-    # Uncomment below for current DA model
-    # adapted_config["input_data"]["satellite"] = None
     return adapted_config
 
 
@@ -257,7 +263,6 @@ def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model,
         config = json.load(f)
 
     model = hydra.utils.instantiate(config)
-
     state_dict = torch.load(model_file, map_location=device)
     model.load_state_dict(state_dict)
     model.eval().to(device)
@@ -413,7 +418,6 @@ class ModelPipe:
         # Get the solar elevations. We need to un-normalise these from the values in the batch
         # The new dataloader normalises the data to [0, 1]
         elevation = (batch[GSPSampleKey.solar_elevation] - 0.5) * 180
-
         log.debug(f"Denormalised solar elevation: {elevation}")
 
         # We only need elevation mask for forecasted values, not history
@@ -441,7 +445,6 @@ class ModelPipe:
 
         log.debug(f"Prediction complete!")
         log.debug(f"Prediction shape: {y_normed_gsp.shape}")
-
         log.debug("Converting to dataarray...")
 
         da_normed_gsp = preds_to_dataarray(
@@ -452,7 +455,6 @@ class ModelPipe:
 
         # Multiply normalised forecasts by capacities and clip negatives
         log.debug("Denormalising predictions...")
-
         da_abs_gsp = da_normed_gsp.clip(0, None) * gsp_capacities[:, None, None]
 
         # Apply sundown mask
@@ -497,8 +499,7 @@ def main(config: DictConfig) -> None:
         batch_size=batch_size,
         sampler=None,
         batch_sampler=None,
-        # num_workers=config.datamodule.num_workers,
-        num_workers=2,
+        num_workers=32,
         collate_fn=stack_np_samples_into_batch,
         pin_memory=False,
         drop_last=False,
@@ -508,7 +509,7 @@ def main(config: DictConfig) -> None:
         persistent_workers=False,
     )
 
-    # Get dataset   
+    # Obtain dataset   
     dataset = PVNetUKRegionalDataset(
         config_filename=data_config_path, 
         start_time=start_time, 
@@ -517,10 +518,7 @@ def main(config: DictConfig) -> None:
         )
 
     num_samples = dataset.__len__()
-
     dataloader = DataLoader(dataset, **dataloader_kwargs)
-    # log.info(f"Dataloader created with batch size {config.datamodule.batch_size}, " 
-    # f"num_workers {config.datamodule.num_workers}, prefetch factor {config.datamodule.prefetch_factor}")
 
     # Load GSP capacities as xarray object
     gsp_capacities = get_gsp_capacities(config.datamodule.configuration)
@@ -535,12 +533,9 @@ def main(config: DictConfig) -> None:
 
         da_abs_gsp = model_pipe.predict_sample(sample)
         t0 = da_abs_gsp.init_time_utc.values[0]
-
         gsp_ids = sample[GSPSampleKey.gsp_id].numpy()
         filename = f"{t0.astype('datetime64[m]')}_batch_{i}_count_{len(gsp_ids)}.nc"
-
         da_abs_gsp.to_netcdf(f"{output_dir}/{filename}")
-
         pbar.update()
 
     pbar.close()
