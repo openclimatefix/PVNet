@@ -1,4 +1,5 @@
 """Base model class for multimodal model and unimodal teacher"""
+
 import copy
 
 from torchvision.transforms.functional import center_crop
