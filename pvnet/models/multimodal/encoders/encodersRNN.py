@@ -1,5 +1,4 @@
-"""Encoder modules for the satellite/NWP data based on recursive and 2D convolutional layers.
-"""
+"""Encoder modules for the satellite/NWP data based on recursive and 2D convolutional layers."""
 
 import torch
 from torch import nn
