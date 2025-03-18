@@ -45,9 +45,7 @@ readme = {file = "README.md", content-type = "text/markdown"}
 [project.optional-dependencies]
 dev=[
     "pvlive-api",
-    "black",
-    "flake8",
-    "isort",
+    "ruff",
     "mypy",
     "pre-commit",
     "pytest",
@@ -58,9 +56,6 @@ all_models=[
     "efficientnet_pytorch"
 ]
 all=["PVNet[dev,all_models]"]
-
-[tool.isort]
-profile = "black"
 
 [tool.mypy]
 exclude = [
@@ -86,9 +81,6 @@ addopts = "-ra -q"
 testpaths = [
     "tests",
 ]
-
-[tool.black]
-line-length = 100
 
 [tool.ruff]
 line-length = 100
