@@ -1,6 +1,3 @@
-import satellite_patch
-import fix_optimizer
-
 try:
     import torch.multiprocessing as mp
     mp.set_start_method("spawn", force=True)
@@ -44,53 +41,26 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 #_________VARIABLES_________
 
-# output_dir = "/mnt/felix-output-real/backtest_intra"
-output_dir = "/mnt/felix-output-real/backtest_da"
-
-start_time = "2023-01-07"
-end_time = "2023-12-30"
+output_dir = "PLACEHOLDER"
+start_time = "PLACEHOLDER"
+end_time = "PLACEHOLDER"
 FREQ_MINS = 30
 MIN_DAY_ELEVATION = 0
 ALL_GSP_IDS = np.arange(1, 318)
 
 #_________MODEL VARIABLES_________
 
-hf_model_id = "openclimatefix/pvnet_uk_region_day_ahead"
-hf_revision = "263741ebb6b71559d113d799c9a579a973cc24ba"
+hf_model_id = "PLACEHOLDER"
+hf_revision = "PLACEHOLDER"
 hf_token = None
 
 #_________DATA_PATHS_________
 
 # paths to populate the config with after loading from HF 
-gsp_path = "/mnt/uk-all-inputs-v3/pv_gsp/pvlive_gsp.zarr"
-
-ecmwf_paths = [
-    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2019.zarr",
-    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2020.zarr",
-    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2021.zarr",
-    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2022.zarr",
-    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2023.zarr",
-    "/mnt/uk-all-inputs-v3/nwp/ecmwf/UK_v3/ECMWF_2024.zarr"
-]
-
-ukv_paths = [
-    "/mnt/uk-all-inputs-v3/nwp/ukv/UKV_v8/UKV_2023.zarr",
-]
-
-# satellite_paths = [
-#     # "/mnt/uk-all-inputs-v3/sat/v2/2023-12_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-11_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-10_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-09_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-08_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-07_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-06_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-05_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-04_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-03_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-02_nonhrv.zarr",
-#     "/mnt/uk-all-inputs-v3/sat/v2/2023-01_nonhrv.zarr",
-# ]
+gsp_path = "PLACEHOLDER"
+ecmwf_paths = "PLACEHOLDER"
+ukv_paths = "PLACEHOLDER"
+satellite_paths = "PLACEHOLDER"
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -113,9 +83,9 @@ def adapt_data_config(config: dict) -> dict:
     if "ukv" in config["input_data"]["nwp"]:
         config["input_data"]["nwp"]["ukv"]["nwp_zarr_path"] = ukv_paths
         log.info(f"Updated ukv path to include multiple zarr files: {ukv_paths}")
-    # if "satellite" in config["input_data"]:
-    #     config["input_data"]["satellite"]["satellite_zarr_path"] = satellite_paths
-    #     log.info(f"Updated satellite path to include multiple zarr files: {satellite_paths}")
+    if "satellite" in config["input_data"]:
+        config["input_data"]["satellite"]["satellite_zarr_path"] = satellite_paths
+        log.info(f"Updated satellite path to include multiple zarr files: {satellite_paths}")
     if "gsp" in config["input_data"]:
         config["input_data"]["gsp"]["gsp_zarr_path"] = gsp_path
         log.info(f"Updated gsp path to {gsp_path}")
@@ -129,7 +99,9 @@ def adapt_config_for_schema(config):
     This function translates between the field names in our config and what ocf_data_sampler expects.
     """
     adapted_config = copy.deepcopy(config)
-    
+
+
+    # Currently specified for day ahead PVNet
     # ECMWF configuration
     if "ecmwf" in adapted_config["input_data"]["nwp"]:
         ecmwf_config = adapted_config["input_data"]["nwp"]["ecmwf"]
@@ -174,10 +146,8 @@ def adapt_config_for_schema(config):
             ukv_config["interval_start_minutes"] = -120
         if "interval_end_minutes" not in ukv_config:
             ukv_config["interval_end_minutes"] = 1800
-
         if "max_staleness_minutes" in ukv_config:
             ukv_config["max_staleness_minutes"] = 180
-
         if "max_staleness_minutes" not in ukv_config:
             ukv_config["max_staleness_minutes"] = None
         if "forecast_minutes" in ukv_config:
@@ -185,31 +155,31 @@ def adapt_config_for_schema(config):
         if "history_minutes" in ukv_config:
             del ukv_config["history_minutes"]
 
-    # # Satellite configuration
-    # if "satellite" in adapted_config["input_data"]:
-    #     satellite_config = adapted_config["input_data"]["satellite"]   
-    #     if "satellite_zarr_path" in satellite_config:
-    #         satellite_config["zarr_path"] = satellite_config.pop("satellite_zarr_path")
-    #     if "satellite_channels" in satellite_config:
-    #         satellite_config["channels"] = satellite_config.pop("satellite_channels")
-    #     if "satellite_image_size_pixels_height" in satellite_config:
-    #         satellite_config["image_size_pixels_height"] = satellite_config.pop("satellite_image_size_pixels_height")
-    #     if "satellite_image_size_pixels_width" in satellite_config:
-    #         satellite_config["image_size_pixels_width"] = satellite_config.pop("satellite_image_size_pixels_width")
-    #     if "interval_start_minutes" not in satellite_config:
-    #         satellite_config["interval_start_minutes"] = -90
-    #     if "interval_end_minutes" not in satellite_config:
-    #         satellite_config["interval_end_minutes"] = 0  
-    #     if "forecast_minutes" in satellite_config:
-    #         del satellite_config["forecast_minutes"]
-    #     if "history_minutes" in satellite_config:
-    #         del satellite_config["history_minutes"]
-    #     if "dropout_timedeltas_minutes" in satellite_config and satellite_config["dropout_timedeltas_minutes"] is None:
-    #         satellite_config["dropout_timedeltas_minutes"] = []
-    #     elif "dropout_timedeltas_minutes" not in satellite_config:
-    #         satellite_config["dropout_timedeltas_minutes"] = []
-    #     if "live_delay_minutes" in satellite_config:
-    #         del satellite_config["live_delay_minutes"]
+    # Satellite configuration
+    if "satellite" in adapted_config["input_data"]:
+        satellite_config = adapted_config["input_data"]["satellite"]   
+        if "satellite_zarr_path" in satellite_config:
+            satellite_config["zarr_path"] = satellite_config.pop("satellite_zarr_path")
+        if "satellite_channels" in satellite_config:
+            satellite_config["channels"] = satellite_config.pop("satellite_channels")
+        if "satellite_image_size_pixels_height" in satellite_config:
+            satellite_config["image_size_pixels_height"] = satellite_config.pop("satellite_image_size_pixels_height")
+        if "satellite_image_size_pixels_width" in satellite_config:
+            satellite_config["image_size_pixels_width"] = satellite_config.pop("satellite_image_size_pixels_width")
+        if "interval_start_minutes" not in satellite_config:
+            satellite_config["interval_start_minutes"] = -90
+        if "interval_end_minutes" not in satellite_config:
+            satellite_config["interval_end_minutes"] = 0  
+        if "forecast_minutes" in satellite_config:
+            del satellite_config["forecast_minutes"]
+        if "history_minutes" in satellite_config:
+            del satellite_config["history_minutes"]
+        if "dropout_timedeltas_minutes" in satellite_config and satellite_config["dropout_timedeltas_minutes"] is None:
+            satellite_config["dropout_timedeltas_minutes"] = []
+        elif "dropout_timedeltas_minutes" not in satellite_config:
+            satellite_config["dropout_timedeltas_minutes"] = []
+        if "live_delay_minutes" in satellite_config:
+            del satellite_config["live_delay_minutes"]
 
     # GSP configuration
     if "gsp" in adapted_config["input_data"]:
