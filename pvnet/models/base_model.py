@@ -250,7 +250,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
-        branch: str = "main",
+        revision: str = "main",
         **kwargs,
     ) -> Optional[str]:
         """

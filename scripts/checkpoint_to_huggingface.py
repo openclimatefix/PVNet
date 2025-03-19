@@ -24,7 +24,7 @@ def push_to_huggingface(
     wandb_ids: list[str] = [],
     local_path: str = None,
     push_to_hub: bool = True,
-    branch: str = "main",
+    revision: str = "main",
 ):
     """Push a local model to a huggingface model repo
 
