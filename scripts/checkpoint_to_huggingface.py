@@ -36,7 +36,7 @@ def push_to_huggingface(
         wandb_ids: The wandb ID code(s)
         local_path: Where to save the local copy of the model
         push_to_hub: Whether to push the model to the hub or just create local version.
-        branch: The branch to push the model to. Only used if push_to_hub is True.
+        revision: The git revision to commit from. Only used if push_to_hub is True.
     """
 
     assert push_to_hub or local_path is not None
@@ -73,7 +73,7 @@ def push_to_huggingface(
         wandb_ids=wandb_ids,
         push_to_hub=push_to_hub,
         repo_id=huggingface_repo if push_to_hub else None,
-        branch=branch,
+        revision=revision,
     )
 
     if local_path is None:

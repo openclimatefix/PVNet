@@ -29,7 +29,7 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
         wandb_ids="excluded-for-text",
         push_to_hub=False,
         repo_id="openclimatefix/pvnet_uk_region",
-        branch="main",  # Add branch parameter with default value "main"
+        revision="main",  # Changed from branch to revision
     )
 
     # Load the model
