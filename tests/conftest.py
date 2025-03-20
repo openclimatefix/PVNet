@@ -94,36 +94,59 @@ def sat_data():
 
 
 @pytest.fixture()
-def sample_train_val_datamodule():
-    # duplicate the sample batcnes for more training/val data
-    n_duplicates = 10
-
+def sample_train_val_datamodule(multimodal_model):
     with tempfile.TemporaryDirectory() as tmpdirname:
-        os.makedirs(f"{tmpdirname}/train")
-        os.makedirs(f"{tmpdirname}/val")
+        
+        train_path = os.path.join(tmpdirname, "train")
+        val_path = os.path.join(tmpdirname, "val")
+        os.makedirs(train_path)
+        os.makedirs(val_path)
 
-        file_n = 0
+        batch_size = 2
+        forecast_len = multimodal_model.forecast_len
+        history_len = multimodal_model.history_len
+        seq_len = forecast_len + history_len + 1
 
-        for file_n, file in enumerate(
-            glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")
-        ):
-            sample = torch.load(file)
+        for file_n in range(2):
+            sample = {
+                "gsp": torch.randn(batch_size, seq_len),
+                "gsp_id": torch.randint(0, 340, (batch_size, 1)),
+                "gsp_time_utc": torch.randn(batch_size, seq_len),
+                "solar_azimuth": torch.rand((batch_size, seq_len)),
+                "solar_elevation": torch.rand((batch_size, seq_len)),
+                "nwp": {"ukv": {"nwp": torch.rand((batch_size, 10, 7, 24, 24))}},
+                "nwp_time_utc": torch.rand((batch_size, 7)),
+                "nwp_target_time_utc": torch.rand((batch_size, 41)),
+                'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
+                'satellite_time_utc': torch.rand((batch_size, 7)),
+            }
+            torch.save(sample, os.path.join(train_path, f"train_{file_n:03}.pt"))
 
-            for i in range(n_duplicates):
-                # Save fopr both train and val
-                torch.save(sample, f"{tmpdirname}/train/{file_n:06}.pt")
-                torch.save(sample, f"{tmpdirname}/val/{file_n:06}.pt")
+        for file_n in range(2):
+            sample = {
+                "gsp": torch.randn(batch_size, seq_len),
+                "gsp_id": torch.randint(0, 340, (batch_size, 1)),
+                "gsp_time_utc": torch.randn(batch_size, seq_len),
+                "solar_azimuth": torch.rand((batch_size, seq_len)),
+                "solar_elevation": torch.rand((batch_size, seq_len)),
+                "nwp": {"ukv": {"nwp": torch.rand((batch_size, 10, 7, 24, 24))}},
+                "nwp_time_utc": torch.rand((batch_size, 7)),
+                "nwp_target_time_utc": torch.rand((batch_size, 41)),
+                'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
+                'satellite_time_utc': torch.rand((batch_size, 7)),
+            }
+            torch.save(sample, os.path.join(val_path, f"val_{file_n:03}.pt"))
 
         dm = DataModule(
             configuration=None,
-            sample_dir=f"{tmpdirname}",
-            batch_size=2,
+            sample_dir=tmpdirname,
+            batch_size=batch_size,
             num_workers=0,
             prefetch_factor=None,
             train_period=[None, None],
             val_period=[None, None],
         )
-        yield dm
+        return dm
 
 
 @pytest.fixture()
