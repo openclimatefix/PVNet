@@ -107,7 +107,8 @@ def sample_train_val_datamodule(multimodal_model):
         history_len = multimodal_model.history_len
         seq_len = forecast_len + history_len + 1
 
-        for file_n in range(2):
+        # Create at least 5 samples for each set
+        for file_n in range(5):
             sample = {
                 "gsp": torch.randn(batch_size, seq_len),
                 "gsp_id": torch.randint(0, 340, (batch_size, 1)),
@@ -120,9 +121,11 @@ def sample_train_val_datamodule(multimodal_model):
                 'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
                 'satellite_time_utc': torch.rand((batch_size, 7)),
             }
-            torch.save(sample, os.path.join(train_path, f"train_{file_n:03}.pt"))
+            # Use a simple numeric naming pattern that the DataModule expects
+            torch.save(sample, os.path.join(train_path, f"{file_n:06d}.pt"))
 
-        for file_n in range(2):
+        # Same for validation
+        for file_n in range(5):
             sample = {
                 "gsp": torch.randn(batch_size, seq_len),
                 "gsp_id": torch.randint(0, 340, (batch_size, 1)),
@@ -135,7 +138,8 @@ def sample_train_val_datamodule(multimodal_model):
                 'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
                 'satellite_time_utc': torch.rand((batch_size, 7)),
             }
-            torch.save(sample, os.path.join(val_path, f"val_{file_n:03}.pt"))
+            # Use the same naming convention for validation files
+            torch.save(sample, os.path.join(val_path, f"{file_n:06d}.pt"))
 
         dm = DataModule(
             configuration=None,
@@ -147,7 +151,6 @@ def sample_train_val_datamodule(multimodal_model):
             val_period=[None, None],
         )
         return dm
-
 
 @pytest.fixture()
 def sample_datamodule():
