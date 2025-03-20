@@ -718,19 +718,26 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         try:
             # join together validation results, and save to wandb
             validation_results_df = pd.concat(self.validation_epoch_results)
-            validation_results_df["error"] = validation_results_df["y"] - validation_results_df["y_quantile_0.5"]
+            validation_results_df["error"] = (
+                validation_results_df["y"] - validation_results_df["y_quantile_0.5"]
+            )
 
             if isinstance(self.logger, pl.loggers.WandbLogger):
-
-                # log error distribution metrics 
-                wandb.log({
-                    "95th_percentile_error": validation_results_df["error"].quantile(0.95),
-                    "5th_percentile_error": validation_results_df["error"].quantile(0.05),
-                    "98th_percentile_error": validation_results_df["error"].quantile(0.98),
-                    "2nd_percentile_error": validation_results_df["error"].quantile(0.02),
-                    "95th_percentile_absolute_error": abs(validation_results_df["error"]).quantile(0.95),
-                    "98th_percentile_absolute_error": abs(validation_results_df["error"]).quantile(0.98)
-                })
+                # log error distribution metrics
+                wandb.log(
+                    {
+                        "95th_percentile_error": validation_results_df["error"].quantile(0.95),
+                        "5th_percentile_error": validation_results_df["error"].quantile(0.05),
+                        "98th_percentile_error": validation_results_df["error"].quantile(0.98),
+                        "2nd_percentile_error": validation_results_df["error"].quantile(0.02),
+                        "95th_percentile_absolute_error": abs(
+                            validation_results_df["error"]
+                        ).quantile(0.95),
+                        "98th_percentile_absolute_error": abs(
+                            validation_results_df["error"]
+                        ).quantile(0.98),
+                    }
+                )
 
             with tempfile.TemporaryDirectory() as tempdir:
                 filename = os.path.join(tempdir, f"validation_results_{self.current_epoch}.csv")
