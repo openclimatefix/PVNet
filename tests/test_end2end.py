@@ -17,7 +17,7 @@ def test_model_trainer_fit(multimodal_model, sample_batch):
     y = multimodal_model(sample_batch)
     print(f"Forward pass output shape: {y.shape}")
     
-    # Simple dataset - sample_batch
+    # Simple Dataset - sample_batch
     class SimpleDataset(Dataset):
         def __len__(self):
             return 10

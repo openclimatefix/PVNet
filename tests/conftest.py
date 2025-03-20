@@ -97,6 +97,8 @@ def sat_data():
 def sample_train_val_datamodule(multimodal_model):
     with tempfile.TemporaryDirectory() as tmpdirname:
         
+        # Not currently utilised - worth keeping
+        # Perhaps for future migration away from stored samples
         train_path = os.path.join(tmpdirname, "train")
         val_path = os.path.join(tmpdirname, "val")
         os.makedirs(train_path)
@@ -107,7 +109,7 @@ def sample_train_val_datamodule(multimodal_model):
         history_len = multimodal_model.history_len
         seq_len = forecast_len + history_len + 1
 
-        # Create at least 5 samples for each set
+        # Directly specify train and val to use
         for file_n in range(5):
             sample = {
                 "gsp": torch.randn(batch_size, seq_len),
@@ -121,10 +123,8 @@ def sample_train_val_datamodule(multimodal_model):
                 'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
                 'satellite_time_utc': torch.rand((batch_size, 7)),
             }
-            # Use a simple numeric naming pattern that the DataModule expects
             torch.save(sample, os.path.join(train_path, f"{file_n:06d}.pt"))
 
-        # Same for validation
         for file_n in range(5):
             sample = {
                 "gsp": torch.randn(batch_size, seq_len),
@@ -138,7 +138,6 @@ def sample_train_val_datamodule(multimodal_model):
                 'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
                 'satellite_time_utc': torch.rand((batch_size, 7)),
             }
-            # Use the same naming convention for validation files
             torch.save(sample, os.path.join(val_path, f"{file_n:06d}.pt"))
 
         dm = DataModule(
@@ -151,6 +150,7 @@ def sample_train_val_datamodule(multimodal_model):
             val_period=[None, None],
         )
         return dm
+
 
 @pytest.fixture()
 def sample_datamodule():
