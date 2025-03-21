@@ -19,6 +19,8 @@ import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
 
+import lightning
+from torch.utils.data import Dataset, DataLoader
 
 xr.set_options(keep_attrs=True)
 
@@ -94,62 +96,33 @@ def sat_data():
 
 
 @pytest.fixture()
-def sample_train_val_datamodule(multimodal_model):
-    with tempfile.TemporaryDirectory() as tmpdirname:
-
-        # Not currently utilised - worth keeping
-        # Perhaps for future migration away from stored samples
-        train_path = os.path.join(tmpdirname, "train")
-        val_path = os.path.join(tmpdirname, "val")
-        os.makedirs(train_path)
-        os.makedirs(val_path)
-
-        batch_size = 2
-        forecast_len = multimodal_model.forecast_len
-        history_len = multimodal_model.history_len
-        seq_len = forecast_len + history_len + 1
-
-        # Directly specify train and val to use
-        for file_n in range(5):
-            sample = {
-                "gsp": torch.randn(batch_size, seq_len),
-                "gsp_id": torch.randint(0, 340, (batch_size, 1)),
-                "gsp_time_utc": torch.randn(batch_size, seq_len),
-                "solar_azimuth": torch.rand((batch_size, seq_len)),
-                "solar_elevation": torch.rand((batch_size, seq_len)),
-                "nwp": {"ukv": {"nwp": torch.rand((batch_size, 10, 7, 24, 24))}},
-                "nwp_time_utc": torch.rand((batch_size, 7)),
-                "nwp_target_time_utc": torch.rand((batch_size, 41)),
-                'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
-                'satellite_time_utc': torch.rand((batch_size, 7)),
-            }
-            torch.save(sample, os.path.join(train_path, f"{file_n:06d}.pt"))
-
-        for file_n in range(5):
-            sample = {
-                "gsp": torch.randn(batch_size, seq_len),
-                "gsp_id": torch.randint(0, 340, (batch_size, 1)),
-                "gsp_time_utc": torch.randn(batch_size, seq_len),
-                "solar_azimuth": torch.rand((batch_size, seq_len)),
-                "solar_elevation": torch.rand((batch_size, seq_len)),
-                "nwp": {"ukv": {"nwp": torch.rand((batch_size, 10, 7, 24, 24))}},
-                "nwp_time_utc": torch.rand((batch_size, 7)),
-                "nwp_target_time_utc": torch.rand((batch_size, 41)),
-                'satellite_actual': torch.rand((batch_size, 7, 11, 24, 24)),
-                'satellite_time_utc': torch.rand((batch_size, 7)),
-            }
-            torch.save(sample, os.path.join(val_path, f"{file_n:06d}.pt"))
-
-        dm = DataModule(
-            configuration=None,
-            sample_dir=tmpdirname,
-            batch_size=batch_size,
-            num_workers=0,
-            prefetch_factor=None,
-            train_period=[None, None],
-            val_period=[None, None],
-        )
-        return dm
+def sample_train_val_datamodule(multimodal_model, sample_batch):
+    """Provides a simple data module for testing model training with solar coordinates."""
+    
+    # Simple Dataset that just provides indices
+    class SimpleDataset(Dataset):
+        def __len__(self):
+            return 10
+            
+        def __getitem__(self, idx):
+            return idx
+    
+    # Create a dataloader that always returns sample_batch
+    dataloader = DataLoader(
+        SimpleDataset(),
+        batch_size=1,
+        collate_fn=lambda x: sample_batch
+    )
+    
+    # Lightning DataModule
+    class SimpleDataModule(lightning.LightningDataModule):
+        def train_dataloader(self):
+            return dataloader
+            
+        def val_dataloader(self):
+            return dataloader
+    
+    return SimpleDataModule()
 
 
 @pytest.fixture()
