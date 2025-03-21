@@ -2,7 +2,7 @@ from torch.optim import SGD
 import pytest
 import torch
 
-from pvnet.models.multimodal.multimodal import Model  # Import MultimodalModel
+from pvnet.models.multimodal.multimodal import Model
 
 def test_model_forward(multimodal_model, sample_batch):
     y = multimodal_model(sample_batch)
@@ -54,12 +54,6 @@ def test_model_with_solar_position_config(multimodal_model_kwargs, sample_batch)
     # Modify model kwargs - include solar position config
     model_kwargs = multimodal_model_kwargs.copy()
     model_kwargs["include_sun"] = True
-    model_kwargs["solar_position_config"] = {
-        "enabled": True,
-        "interval_start_minutes": -60,
-        "interval_end_minutes": 60,
-        "time_resolution_minutes": 30,
-    }
 
     # Create model with the solar config
     model = Model(**model_kwargs)
