@@ -46,11 +46,10 @@ class MultimodalBaseModel(BaseModel):
                 )[:, : self.nwp_encoders_dict[nwp_source].sequence_length]
 
         if self.include_sun:
-            # Slice off the end of the solar coords data
+            sun_len = self.forecast_len + self.history_len + 1
+            # Slice off end of solar coords
             for s in ["solar_azimuth", "solar_elevation"]:
-                key = f"{self._target_key}_{s}"
-                if key in new_batch.keys():
-                    sun_len = self.forecast_len + self.history_len + 1
-                    new_batch[key] = new_batch[key][:, :sun_len]
+                if s in new_batch.keys():
+                    new_batch[s] = new_batch[s][:, :sun_len]
 
         return new_batch

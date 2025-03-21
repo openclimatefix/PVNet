@@ -305,10 +305,11 @@ class Model(MultimodalBaseModel):
             modes["id"] = id_embedding
 
         if self.include_sun:
+            # Use only new direct keys
             sun = torch.cat(
                 (
-                    x["gsp_solar_azimuth"],
-                    x["gsp_solar_elevation"],
+                    x["solar_azimuth"],
+                    x["solar_elevation"],
                 ),
                 dim=1,
             ).float()

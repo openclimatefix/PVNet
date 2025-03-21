@@ -19,6 +19,8 @@ import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
 
+import lightning
+from torch.utils.data import Dataset, DataLoader
 
 xr.set_options(keep_attrs=True)
 
@@ -94,36 +96,33 @@ def sat_data():
 
 
 @pytest.fixture()
-def sample_train_val_datamodule():
-    # duplicate the sample batcnes for more training/val data
-    n_duplicates = 10
+def sample_train_val_datamodule(multimodal_model, sample_batch):
+    """Provides a simple data module for testing model training with solar coordinates."""
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        os.makedirs(f"{tmpdirname}/train")
-        os.makedirs(f"{tmpdirname}/val")
+    # Simple Dataset that just provides indices
+    class SimpleDataset(Dataset):
+        def __len__(self):
+            return 10
 
-        file_n = 0
+        def __getitem__(self, idx):
+            return idx
 
-        for file_n, file in enumerate(
-            glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")
-        ):
-            sample = torch.load(file)
+    # Create a dataloader that always returns sample_batch
+    dataloader = DataLoader(
+        SimpleDataset(),
+        batch_size=1,
+        collate_fn=lambda x: sample_batch
+    )
 
-            for i in range(n_duplicates):
-                # Save fopr both train and val
-                torch.save(sample, f"{tmpdirname}/train/{file_n:06}.pt")
-                torch.save(sample, f"{tmpdirname}/val/{file_n:06}.pt")
+    # Lightning DataModule
+    class SimpleDataModule(lightning.LightningDataModule):
+        def train_dataloader(self):
+            return dataloader
 
-        dm = DataModule(
-            configuration=None,
-            sample_dir=f"{tmpdirname}",
-            batch_size=2,
-            num_workers=0,
-            prefetch_factor=None,
-            train_period=[None, None],
-            val_period=[None, None],
-        )
-        yield dm
+        def val_dataloader(self):
+            return dataloader
+
+    return SimpleDataModule()
 
 
 @pytest.fixture()
@@ -143,6 +142,16 @@ def sample_datamodule():
 @pytest.fixture()
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
+
+    # Add solar position data
+    batch_size = batch["gsp"].shape[0]
+    seq_len = batch["gsp"].shape[1]
+
+    # Create solar position data
+    if "solar_azimuth" not in batch or "solar_elevation" not in batch:
+        batch["solar_azimuth"] = torch.rand((batch_size, seq_len))
+        batch["solar_elevation"] = torch.rand((batch_size, seq_len))
+
     return batch
 
 
