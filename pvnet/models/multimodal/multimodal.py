@@ -68,7 +68,6 @@ class Model(MultimodalBaseModel):
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
         forecast_minutes_ignore: Optional[int] = 0,
-        solar_position_config: Optional[dict] = None,
     ):
         """Neural network which combines information from different sources.
 
@@ -128,7 +127,6 @@ class Model(MultimodalBaseModel):
                 data we need for a model run.
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
-            solar_position_config: Inclusion of configured solar coordinates
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
@@ -143,7 +141,6 @@ class Model(MultimodalBaseModel):
         self.interval_minutes = interval_minutes
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
-        self.solar_position_config = solar_position_config
 
         super().__init__(
             history_minutes=history_minutes,
