@@ -98,30 +98,30 @@ def sat_data():
 @pytest.fixture()
 def sample_train_val_datamodule(multimodal_model, sample_batch):
     """Provides a simple data module for testing model training with solar coordinates."""
-    
+
     # Simple Dataset that just provides indices
     class SimpleDataset(Dataset):
         def __len__(self):
             return 10
-            
+
         def __getitem__(self, idx):
             return idx
-    
+
     # Create a dataloader that always returns sample_batch
     dataloader = DataLoader(
         SimpleDataset(),
         batch_size=1,
         collate_fn=lambda x: sample_batch
     )
-    
+
     # Lightning DataModule
     class SimpleDataModule(lightning.LightningDataModule):
         def train_dataloader(self):
             return dataloader
-            
+
         def val_dataloader(self):
             return dataloader
-    
+
     return SimpleDataModule()
 
 
