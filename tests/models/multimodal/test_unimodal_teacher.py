@@ -111,7 +111,7 @@ def test_unimodal_model_with_solar_position(unimodal_model_kwargs, sample_batch)
     # Modify model kwargs - ensure sun is included
     model_kwargs = unimodal_model_kwargs.copy()
     model_kwargs["include_sun"] = True
-    
+
     # Create model with sun enabled
     model = Model(**model_kwargs)
 

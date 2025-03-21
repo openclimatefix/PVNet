@@ -96,7 +96,7 @@ def sat_data():
 @pytest.fixture()
 def sample_train_val_datamodule(multimodal_model):
     with tempfile.TemporaryDirectory() as tmpdirname:
-        
+
         # Not currently utilised - worth keeping
         # Perhaps for future migration away from stored samples
         train_path = os.path.join(tmpdirname, "train")
@@ -169,16 +169,16 @@ def sample_datamodule():
 @pytest.fixture()
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
-    
+
     # Add solar position data
     batch_size = batch["gsp"].shape[0]
     seq_len = batch["gsp"].shape[1]
-    
+
     # Create solar position data
     if "solar_azimuth" not in batch or "solar_elevation" not in batch:
         batch["solar_azimuth"] = torch.rand((batch_size, seq_len))
         batch["solar_elevation"] = torch.rand((batch_size, seq_len))
-    
+
     return batch
 
 
