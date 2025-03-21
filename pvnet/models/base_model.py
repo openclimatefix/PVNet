@@ -1,4 +1,5 @@
 """Base model for all PVNet submodels"""
+
 import json
 import logging
 import os
@@ -726,10 +727,18 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 # log error distribution metrics
                 wandb.log(
                     {
-                        "2nd_percentile_median_forecast_error": validation_results_df["error"].quantile(0.02),
-                        "5th_percentile_median_forecast_error": validation_results_df["error"].quantile(0.05),
-                        "95th_percentile_median_forecast_error": validation_results_df["error"].quantile(0.95),
-                        "98th_percentile_median_forecast_error": validation_results_df["error"].quantile(0.98),
+                        "2nd_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.02),
+                        "5th_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.05),
+                        "95th_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.95),
+                        "98th_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.98),
                         "95th_percentile_median_forecast_absolute_error": abs(
                             validation_results_df["error"]
                         ).quantile(0.95),
