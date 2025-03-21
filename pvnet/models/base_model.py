@@ -18,7 +18,7 @@ from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-from ocf_datapipes.batch import copy_batch_to_device
+from ocf_data_sampler.sample.base import copy_batch_to_device
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -250,6 +250,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
+        revision: str = "main",
         **kwargs,
     ) -> Optional[str]:
         """
@@ -271,6 +272,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
+            revision (`str`, *optional*, defaults to `"main"`):
+                The revision to push the model to. Only used if `push_to_hub=True`.
             kwargs:
                 Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
@@ -335,6 +338,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 repo_id=repo_id,
                 repo_type="model",
                 folder_path=save_directory,
+                revision=revision,
             )
 
         return None

@@ -1,4 +1,0 @@
-[flake8]
-max-line-length = 88
-exclude = .tox,.eggs,ci/templates,build,dist, __init__.py
-ignore = E741,F403,E265,W504,E226,W503,E501,E203

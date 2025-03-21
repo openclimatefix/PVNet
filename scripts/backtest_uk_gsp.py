@@ -33,11 +33,10 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+from ocf_data_sampler.sample.base import batch_to_tensor, copy_batch_to_device
 from ocf_datapipes.batch import (
     BatchKey,
     NumpyBatch,
-    batch_to_tensor,
-    copy_batch_to_device,
 )
 from ocf_datapipes.config.load import load_yaml_configuration
 from ocf_datapipes.load import OpenGSP
