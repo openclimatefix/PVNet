@@ -128,6 +128,7 @@ class Model(MultimodalBaseModel):
                 data we need for a model run.
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
+            solar_position_config: Inclusion of configured solar coordinates
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
