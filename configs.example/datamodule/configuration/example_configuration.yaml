@@ -71,6 +71,13 @@ input_data:
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0 # Fraction of samples with dropout
       max_staleness_minutes: null
+      # Normalization constants for ECMWF data.
+      normalisation_constants:
+        ecmwf:
+          temperature: {mean: 280.0, std: 6.0}
+          humidity:    {mean: 0.75, std: 0.1}
+          pressure:    {mean: 1015.0, std: 15.0}
+          wind_speed:  {mean: 5.0, std: 2.0}
 
     ukv:
       provider: ukv
@@ -106,6 +113,13 @@ input_data:
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0 # Fraction of samples with dropout
       max_staleness_minutes: null
+      # Normalization constants for UKV data.
+      normalisation_constants:
+        ukv:
+          temperature: {mean: 282.0, std: 5.5}
+          humidity:    {mean: 0.78, std: 0.09}
+          pressure:    {mean: 1013.0, std: 14.0}
+          wind_speed:  {mean: 4.5, std: 1.8}
 
   satellite:
     # Path to Satellite data (non-HRV) in zarr format
@@ -130,3 +144,8 @@ input_data:
     image_size_pixels_width: 24
     dropout_timedeltas_minutes: null
     dropout_fraction: 0 # Fraction of samples with dropout
+    # Normalization constants for Satellite data.
+    normalisation_constants:
+      satellite:
+        brightness_temperature: {mean: 300.0, std: 20.0}
+        reflectance:            {mean: 0.3, std: 0.05}
