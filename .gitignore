@@ -141,3 +141,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .DS_Store
+
+# vim
+*swp

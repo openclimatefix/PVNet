@@ -1,4 +1,5 @@
 """Base model for all PVNet submodels"""
+
 import json
 import logging
 import os
@@ -254,6 +255,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path=None,
+        revision: str = "main",
         **kwargs,
     ) -> Optional[str]:
         """
@@ -275,6 +277,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
+            revision (`str`, *optional*, defaults to `"main"`):
+                The revision to push the model to. Only used if `push_to_hub=True`.
             kwargs:
                 Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
@@ -344,6 +348,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 repo_id=repo_id,
                 repo_type="model",
                 folder_path=save_directory,
+                revision=revision,
             )
 
         return None
@@ -727,6 +732,35 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         try:
             # join together validation results, and save to wandb
             validation_results_df = pd.concat(self.validation_epoch_results)
+            validation_results_df["error"] = (
+                validation_results_df["y"] - validation_results_df["y_quantile_0.5"]
+            )
+
+            if isinstance(self.logger, pl.loggers.WandbLogger):
+                # log error distribution metrics
+                wandb.log(
+                    {
+                        "2nd_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.02),
+                        "5th_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.05),
+                        "95th_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.95),
+                        "98th_percentile_median_forecast_error": validation_results_df[
+                            "error"
+                        ].quantile(0.98),
+                        "95th_percentile_median_forecast_absolute_error": abs(
+                            validation_results_df["error"]
+                        ).quantile(0.95),
+                        "98th_percentile_median_forecast_absolute_error": abs(
+                            validation_results_df["error"]
+                        ).quantile(0.98),
+                    }
+                )
+
             with tempfile.TemporaryDirectory() as tempdir:
                 filename = os.path.join(tempdir, f"validation_results_{self.current_epoch}.csv")
                 validation_results_df.to_csv(filename, index=False)
