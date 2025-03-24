@@ -333,7 +333,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
-            software_versions=package_versions,  # Add software versions to model card   
+            software_versions=package_versions,  # Add software versions to model card
         )
 
         (save_directory / "README.md").write_text(str(card))
