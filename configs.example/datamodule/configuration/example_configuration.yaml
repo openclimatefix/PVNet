@@ -71,6 +71,58 @@ input_data:
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0 # Fraction of samples with dropout
       max_staleness_minutes: null
+      normalisation_constants:
+        t2m:
+          mean: 281.85
+          std: 6.28
+        dswrf:
+          mean: 162.81
+          std: 221.77
+        dlwrf:
+          mean: 307.33
+          std: 53.21
+        hcc:
+          mean: 0.23
+          std: 0.31
+        mcc:
+          mean: 0.19
+          std: 0.29
+        lcc:
+          mean: 0.34
+          std: 0.38
+        tcc:
+          mean: 0.64
+          std: 0.34
+        sde:
+          mean: 0.01
+          std: 0.03
+        sr:
+          mean: 98.42
+          std: 186.53
+        duvrs:
+          mean: 5.27
+          std: 10.34
+        prate:
+          mean: 0.07
+          std: 0.31
+        u10:
+          mean: 0.21
+          std: 3.87
+        u100:
+          mean: 0.43
+          std: 5.12
+        u200:
+          mean: 0.56
+          std: 5.89
+        v10:
+          mean: 0.18
+          std: 3.62
+        v100:
+          mean: 0.31
+          std: 4.87
+        v200:
+          mean: 0.39
+          std: 5.43
 
     ukv:
       provider: ukv
@@ -106,6 +158,58 @@ input_data:
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0 # Fraction of samples with dropout
       max_staleness_minutes: null
+      normalisation_constants:
+        t:
+          mean: 282.80
+          std: 5.95
+        dswrf:
+          mean: 167.35
+          std: 227.82
+        dlwrf:
+          mean: 312.86
+          std: 48.73
+        hcc:
+          mean: 0.26
+          std: 0.33
+        mcc:
+          mean: 0.21
+          std: 0.31
+        lcc:
+          mean: 0.38
+          std: 0.41
+        sde:
+          mean: 0.008
+          std: 0.025
+        r:
+          mean: 79.34
+          std: 15.67
+        vis:
+          mean: 18763.42
+          std: 9821.53
+        si10:
+          mean: 5.23
+          std: 2.86
+        wdir10:
+          mean: 187.62
+          std: 92.14
+        prate:
+          mean: 0.09
+          std: 0.37
+        hcct:
+          mean: 8432.16
+          std: 3215.74
+        cdcb:
+          mean: 1243.87
+          std: 876.32
+        dpt:
+          mean: 278.45
+          std: 5.32
+        prmsl:
+          mean: 101325.0
+          std: 1200.0
+        h:
+          mean: 156.78
+          std: 134.21
 
   satellite:
     # Path to Satellite data (non-HRV) in zarr format
@@ -130,3 +234,37 @@ input_data:
     image_size_pixels_width: 24
     dropout_timedeltas_minutes: null
     dropout_fraction: 0 # Fraction of samples with dropout
+    normalisation_constants:
+      IR_016:
+        mean: 0.08
+        std: 0.05
+      IR_039:
+        mean: 273.25
+        std: 14.63
+      IR_087:
+        mean: 268.74
+        std: 16.21
+      IR_097:
+        mean: 246.32
+        std: 10.87
+      IR_108:
+        mean: 270.56
+        std: 17.34
+      IR_120:
+        mean: 269.87
+        std: 17.12
+      IR_134:
+        mean: 236.42
+        std: 11.53
+      VIS006:
+        mean: 0.12
+        std: 0.09
+      VIS008:
+        mean: 0.14
+        std: 0.11
+      WV_062:
+        mean: 232.78
+        std: 9.86
+      WV_073:
+        mean: 248.34
+        std: 12.57
