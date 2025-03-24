@@ -11,6 +11,7 @@ import hydra
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import pandas as pd
+import pkg_resources
 import torch
 import torch.nn.functional as F
 import wandb
@@ -324,10 +325,15 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             link = f"https://wandb.ai/{wandb_repo}/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
+        # Get versions of relevant packages
+        packages = ["ocf_datapipes", "ocf_data_sampler", "torch", "lightning.pytorch"]
+        package_versions = {pkg: pkg_resources.get_distribution(pkg).version for pkg in packages}
+
         card = ModelCard.from_template(
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
+            software_versions=package_versions,  # Add software versions to model card
         )
 
         (save_directory / "README.md").write_text(str(card))
