@@ -19,8 +19,6 @@ import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
 
-import lightning
-from torch.utils.data import Dataset, DataLoader
 
 xr.set_options(keep_attrs=True)
 

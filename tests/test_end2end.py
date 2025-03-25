@@ -1,7 +1,7 @@
 import lightning
 
 def test_model_trainer_fit(multimodal_model, sample_train_val_datamodule):
-    """Test end-to-end training with solar coordinates included."""
+    """Test end-to-end training."""
     # Get a sample batch for testing
     batch = next(iter(sample_train_val_datamodule.train_dataloader()))
 

@@ -1,8 +1,6 @@
 from torch.optim import SGD
 import pytest
-import torch
 
-from pvnet.models.multimodal.multimodal import Model
 
 def test_model_forward(multimodal_model, sample_batch):
     y = multimodal_model(sample_batch)
