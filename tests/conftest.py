@@ -153,19 +153,16 @@ def sample_satellite_batch(sample_batch):
     return torch.swapaxes(sat_image, 1, 2)
 
 
-# @pytest.fixture()
-# def sample_pv_batch():
-#     # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
-#     # old batches. For now we use the old batches to test the site encoder models
-#     return torch.load("tests/test_data/presaved_batches/train/000000.pt")
-
-
 @pytest.fixture()
 def sample_pv_batch():
     """
     Currently overrides utilising reference .pt for updated gsp_id and pv
     Intermediate change
     """
+
+    # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
+    # old batches. For now we use the old batches to test the site encoder models
+    
     file_path = "tests/test_data/presaved_batches/train/000000.pt"
     old_batch = torch.load(file_path)
     new_batch = {}
