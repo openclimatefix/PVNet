@@ -111,8 +111,8 @@ def sample_train_val_datamodule():
 
             for i in range(n_duplicates):
                 # Save fopr both train and val
-                torch.save(sample, f"{tmpdirname}/train/{file_n:06}.pt")
-                torch.save(sample, f"{tmpdirname}/val/{file_n:06}.pt")
+                torch.save(sample, f"{tmpdirname}/train/{file_n:08}.pt")
+                torch.save(sample, f"{tmpdirname}/val/{file_n:08}.pt")
 
         dm = DataModule(
             configuration=None,
