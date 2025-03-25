@@ -93,51 +93,179 @@ def sat_data():
     return ds
 
 
+def generate_synthetic_sample():
+    """
+    Generate a synthetic sample contrary to utilising reference .pt files
+    """
+    now = pd.Timestamp.now(tz='UTC')    
+    sample = {}
+    
+    # NWP
+    sample["nwp"] = {
+        "ukv": {
+            "nwp": torch.rand(11, 11, 24, 24),
+            "nwp_init_time_utc": torch.tensor(
+                [(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)]
+            ),
+            "nwp_step": torch.arange(11, dtype=torch.float32),
+            "nwp_target_time_utc": torch.tensor(
+                [(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]
+            ),
+            "nwp_y_osgb": torch.linspace(0, 100, 24),
+            "nwp_x_osgb": torch.linspace(0, 100, 24),
+        },
+        "ecmwf": {
+            "nwp": torch.rand(11, 12, 12, 12),
+            "nwp_init_time_utc": torch.tensor(
+                [(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)]
+            ),
+            "nwp_step": torch.arange(11, dtype=torch.float32),
+            "nwp_target_time_utc": torch.tensor(
+                [(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]
+            ),
+        },
+        "sat_pred": {
+            "nwp": torch.rand(12, 11, 24, 24),
+            "nwp_init_time_utc": torch.tensor(
+                [(now - pd.Timedelta(hours=i)).timestamp() for i in range(12)]
+            ),
+            "nwp_step": torch.arange(12, dtype=torch.float32),
+            "nwp_target_time_utc": torch.tensor(
+                [(now + pd.Timedelta(hours=i)).timestamp() for i in range(12)]
+            ),
+        },
+    }
+    
+    # Satellite
+    sample["satellite_actual"] = torch.rand(7, 11, 24, 24)
+    sample["satellite_time_utc"] = torch.tensor(
+        [(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)]
+    )
+    sample["satellite_x_geostationary"] = torch.linspace(0, 100, 24)
+    sample["satellite_y_geostationary"] = torch.linspace(0, 100, 24)
+    
+    # GSP
+    sample["gsp"] = torch.rand(21)
+    sample["gsp_nominal_capacity_mwp"] = torch.tensor(100.0)
+    sample["gsp_effective_capacity_mwp"] = torch.tensor(85.0)
+    sample["gsp_time_utc"] = torch.tensor(
+        [(now + pd.Timedelta(minutes=30*i)).timestamp() for i in range(21)]
+    )
+    sample["gsp_t0_idx"] = float(7)
+    sample["gsp_id"] = 12
+    sample["gsp_x_osgb"] = 123456.0
+    sample["gsp_y_osgb"] = 654321.0
+    
+    # Solar position
+    sample["solar_azimuth"] = torch.linspace(0, 180, 21)
+    sample["solar_elevation"] = torch.linspace(-10, 60, 21)
+    
+    return sample
+
+
+def generate_synthetic_site_sample():
+    """
+    Generate synthetic site sample
+    """
+    now = pd.Timestamp.now(tz='UTC')
+    
+    sample = {
+        "site": torch.rand(5, 1),
+        "time_utc": torch.tensor(
+            [(now - pd.Timedelta(minutes=15*i)).timestamp() for i in range(5)]
+        ),
+        "site_id": torch.tensor(1),
+        "x_osgb": torch.tensor(100.0),
+        "y_osgb": torch.tensor(300.0),
+        "capacity_mwp": torch.tensor(10.0),
+    }
+    
+    return sample
+
+
 @pytest.fixture()
 def sample_train_val_datamodule():
-    # duplicate the sample batcnes for more training/val data
-    n_duplicates = 10
-
+    """
+    Create a DataModule with synthetic data files for training and validation
+    """
+    
     with tempfile.TemporaryDirectory() as tmpdirname:
-        os.makedirs(f"{tmpdirname}/train")
-        os.makedirs(f"{tmpdirname}/val")
-
-        file_n = 0
-
-        for file_n, file in enumerate(
-            glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")
-        ):
-            sample = torch.load(file)
-
-            for i in range(n_duplicates):
-                # Save fopr both train and val
-                torch.save(sample, f"{tmpdirname}/train/{file_n:08}.pt")
-                torch.save(sample, f"{tmpdirname}/val/{file_n:08}.pt")
-
+        # Create train and val directories
+        os.makedirs(f"{tmpdirname}/train", exist_ok=True)
+        os.makedirs(f"{tmpdirname}/val", exist_ok=True)
+        
+        # Generate and save synthetic samples
+        base_sample = generate_synthetic_sample()
+        
+        for i in range(10):
+            # Create modified copy for each sample
+            sample = {}
+            for key, value in base_sample.items():
+                if isinstance(value, dict):
+                    sample[key] = {}
+                    for subkey, subvalue in value.items():
+                        if isinstance(subvalue, dict):
+                            sample[key][subkey] = {}
+                            for subsubkey, subsubvalue in subvalue.items():
+                                if isinstance(subsubvalue, torch.Tensor) and subsubvalue.dtype.is_floating_point:
+                                    sample[key][subkey][subsubkey] = subsubvalue + torch.randn_like(subsubvalue) * 0.01
+                                else:
+                                    sample[key][subkey][subsubkey] = subsubvalue
+                        elif isinstance(subvalue, torch.Tensor) and subvalue.dtype.is_floating_point:
+                            sample[key][subkey] = subvalue + torch.randn_like(subvalue) * 0.01
+                        else:
+                            sample[key][subkey] = subvalue
+                elif isinstance(value, torch.Tensor) and value.dtype.is_floating_point:
+                    sample[key] = value + torch.randn_like(value) * 0.01
+                else:
+                    sample[key] = value
+            
+            # Save for both train and val
+            torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
+            torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
+        
+        # Define DataModule with temporary directory
         dm = DataModule(
             configuration=None,
-            sample_dir=f"{tmpdirname}",
+            sample_dir=tmpdirname,
             batch_size=2,
             num_workers=0,
             prefetch_factor=None,
             train_period=[None, None],
             val_period=[None, None],
         )
+        
         yield dm
 
 
 @pytest.fixture()
 def sample_datamodule():
-    dm = DataModule(
-        sample_dir="tests/test_data/presaved_samples_uk_regional",
-        configuration=None,
-        batch_size=2,
-        num_workers=0,
-        prefetch_factor=None,
-        train_period=[None, None],
-        val_period=[None, None],
-    )
-    return dm
+    """
+    Create a DataModule with synthetic data files
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create train and val directories
+        os.makedirs(f"{tmpdirname}/train", exist_ok=True)
+        os.makedirs(f"{tmpdirname}/val", exist_ok=True)
+        
+        # Generate and save synthetic samples
+        for i in range(10):
+            sample = generate_synthetic_sample()
+            torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
+            torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
+        
+        # Define DataModule with temporary directory
+        dm = DataModule(
+            configuration=None,
+            sample_dir=tmpdirname,
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            train_period=[None, None],
+            val_period=[None, None],
+        )
+        
+        yield dm
 
 
 @pytest.fixture()
@@ -161,17 +289,41 @@ def sample_pv_batch():
 
 @pytest.fixture()
 def sample_site_batch():
-    dm = SiteDataModule(
-        configuration=None,
-        batch_size=2,
-        num_workers=0,
-        prefetch_factor=None,
-        train_period=[None, None],
-        val_period=[None, None],
-        sample_dir="tests/test_data/presaved_samples_site",
-    )
-    batch = next(iter(dm.train_dataloader()))
-    return batch
+    """
+    Create a SiteDataModule with synthetic site data
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create directories
+        os.makedirs(f"{tmpdirname}/train", exist_ok=True)
+        os.makedirs(f"{tmpdirname}/val", exist_ok=True)
+        
+        # Generate and save synthetic site samples
+        for i in range(5):
+            sample = generate_synthetic_site_sample()
+            # Variations to each sample after initial
+            if i > 0:
+                for key, value in sample.items():
+                    if isinstance(value, torch.Tensor) and value.dtype.is_floating_point:
+                        sample[key] = value + torch.randn_like(value) * 0.01
+            
+            torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
+            torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
+        
+        # Define SiteDataModule with the temporary directory
+        dm = SiteDataModule(
+            configuration=None,
+            sample_dir=tmpdirname,
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            train_period=[None, None],
+            val_period=[None, None],
+        )
+        
+        # Get a batch from the dataloader
+        batch = next(iter(dm.train_dataloader()))
+        
+        return batch
 
 
 @pytest.fixture()
