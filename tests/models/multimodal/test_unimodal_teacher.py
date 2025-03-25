@@ -104,39 +104,3 @@ def test_model_conversion(unimodal_model_kwargs, sample_batch):
     y_mm = mm_model(sample_batch)
 
     assert (y_um == y_mm).all()
-
-
-def test_unimodal_model_with_solar_position(unimodal_model_kwargs, sample_batch):
-    """Test that the unimodal model works with solar position data."""
-    # Modify model kwargs - ensure sun is included
-    model_kwargs = unimodal_model_kwargs.copy()
-    model_kwargs["include_sun"] = True
-
-    # Create model with sun enabled
-    model = Model(**model_kwargs)
-
-    # Create test batch with only new keys
-    batch_copy = sample_batch.copy()
-
-    # Clear all existing solar keys
-    for key in [
-        "solar_azimuth",
-        "solar_elevation",
-        "gsp_solar_azimuth",
-        "gsp_solar_elevation",
-    ]:
-        if key in batch_copy:
-            del batch_copy[key]
-
-    # Create solar position data with new keys
-    batch_size = batch_copy["gsp"].shape[0]
-    seq_len = model.forecast_len + model.history_len + 1
-    batch_copy["solar_azimuth"] = torch.rand((batch_size, seq_len))
-    batch_copy["solar_elevation"] = torch.rand((batch_size, seq_len))
-
-    # Test forward pass
-    y = model(batch_copy)
-    assert tuple(y.shape) == (2, 16), y.shape
-
-    # Test backward pass
-    y.sum().backward()

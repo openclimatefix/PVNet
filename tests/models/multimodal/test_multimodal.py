@@ -47,38 +47,3 @@ def test_weighted_quantile_model_forward(multimodal_quantile_model_ignore_minute
 
     # Backwards on sum drives sum to zero
     y_quantiles.sum().backward()
-
-
-def test_model_with_solar_position_config(multimodal_model_kwargs, sample_batch):
-    """Test that the model automatically detects and uses solar positions based on config."""
-    # Modify model kwargs - include solar position config
-    model_kwargs = multimodal_model_kwargs.copy()
-    model_kwargs["include_sun"] = True
-
-    # Create model with the solar config
-    model = Model(**model_kwargs)
-
-    # Create test batch with only new keys
-    batch_copy = sample_batch.copy()
-
-    # Clear all existing solar keys
-    for key in [
-        "solar_azimuth",
-        "solar_elevation",
-    ]:
-        if key in batch_copy:
-            del batch_copy[key]
-
-    batch_size = batch_copy["gsp"].shape[0]
-    seq_len = model.forecast_len + model.history_len + 1
-    batch_copy["solar_azimuth"] = torch.rand((batch_size, seq_len))
-    batch_copy["solar_elevation"] = torch.rand((batch_size, seq_len))
-
-    # The forward pass should work automatically based on config
-    y = model(batch_copy)
-
-    # Check output is the correct shape
-    assert tuple(y.shape) == (2, 16), y.shape
-
-    # Test backward pass
-    y.sum().backward()

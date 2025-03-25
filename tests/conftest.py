@@ -96,33 +96,36 @@ def sat_data():
 
 
 @pytest.fixture()
-def sample_train_val_datamodule(multimodal_model, sample_batch):
-    """Provides a simple data module for testing model training with solar coordinates."""
+def sample_train_val_datamodule():
+    # duplicate the sample batcnes for more training/val data
+    n_duplicates = 10
 
-    # Simple Dataset that just provides indices
-    class SimpleDataset(Dataset):
-        def __len__(self):
-            return 10
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        os.makedirs(f"{tmpdirname}/train")
+        os.makedirs(f"{tmpdirname}/val")
 
-        def __getitem__(self, idx):
-            return idx
+        file_n = 0
 
-    # Create a dataloader that always returns sample_batch
-    dataloader = DataLoader(
-        SimpleDataset(),
-        batch_size=1,
-        collate_fn=lambda x: sample_batch
-    )
+        for file_n, file in enumerate(
+            glob.glob("tests/test_data/presaved_samples_uk_regional/train/*.pt")
+        ):
+            sample = torch.load(file)
 
-    # Lightning DataModule
-    class SimpleDataModule(lightning.LightningDataModule):
-        def train_dataloader(self):
-            return dataloader
+            for i in range(n_duplicates):
+                # Save fopr both train and val
+                torch.save(sample, f"{tmpdirname}/train/{file_n:08}.pt")
+                torch.save(sample, f"{tmpdirname}/val/{file_n:08}.pt")
 
-        def val_dataloader(self):
-            return dataloader
-
-    return SimpleDataModule()
+        dm = DataModule(
+            configuration=None,
+            sample_dir=f"{tmpdirname}",
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            train_period=[None, None],
+            val_period=[None, None],
+        )
+        yield dm
 
 
 @pytest.fixture()
@@ -142,16 +145,6 @@ def sample_datamodule():
 @pytest.fixture()
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
-
-    # Add solar position data
-    batch_size = batch["gsp"].shape[0]
-    seq_len = batch["gsp"].shape[1]
-
-    # Create solar position data
-    if "solar_azimuth" not in batch or "solar_elevation" not in batch:
-        batch["solar_azimuth"] = torch.rand((batch_size, seq_len))
-        batch["solar_elevation"] = torch.rand((batch_size, seq_len))
-
     return batch
 
 
