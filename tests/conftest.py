@@ -19,6 +19,7 @@ import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
 
+from ocf_datapipes.batch import BatchKey
 
 xr.set_options(keep_attrs=True)
 
@@ -152,11 +153,36 @@ def sample_satellite_batch(sample_batch):
     return torch.swapaxes(sat_image, 1, 2)
 
 
+# @pytest.fixture()
+# def sample_pv_batch():
+#     # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
+#     # old batches. For now we use the old batches to test the site encoder models
+#     return torch.load("tests/test_data/presaved_batches/train/000000.pt")
+
+
 @pytest.fixture()
 def sample_pv_batch():
-    # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
-    # old batches. For now we use the old batches to test the site encoder models
-    return torch.load("tests/test_data/presaved_batches/train/000000.pt")
+    """
+    Currently overrides utilising reference .pt for updated gsp_id and pv
+    Intermediate change
+    """
+    file_path = "tests/test_data/presaved_batches/train/000000.pt"
+    old_batch = torch.load(file_path)
+    new_batch = {}
+    key_pv_found = False
+    key_gsp_id_found = False
+
+    for key, value in old_batch.items():
+        if key == BatchKey.pv:
+            new_batch["pv"] = value
+            key_pv_found = True
+        elif key == BatchKey.gsp_id:
+            new_batch["gsp_id"] = value
+            key_gsp_id_found = True
+        else:
+            new_batch[key] = value
+
+    return new_batch
 
 
 @pytest.fixture()
