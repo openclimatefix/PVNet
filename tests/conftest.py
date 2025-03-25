@@ -19,6 +19,8 @@ import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
 
+from ocf_datapipes.batch import BatchKey
+
 
 xr.set_options(keep_attrs=True)
 
@@ -100,7 +102,7 @@ def generate_synthetic_sample():
     now = pd.Timestamp.now(tz='UTC')    
     sample = {}
     
-    # NWP
+    # NWP define
     sample["nwp"] = {
         "ukv": {
             "nwp": torch.rand(11, 11, 24, 24),
@@ -136,7 +138,7 @@ def generate_synthetic_sample():
         },
     }
     
-    # Satellite
+    # Satellite define
     sample["satellite_actual"] = torch.rand(7, 11, 24, 24)
     sample["satellite_time_utc"] = torch.tensor(
         [(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)]
@@ -144,7 +146,7 @@ def generate_synthetic_sample():
     sample["satellite_x_geostationary"] = torch.linspace(0, 100, 24)
     sample["satellite_y_geostationary"] = torch.linspace(0, 100, 24)
     
-    # GSP
+    # GSP define
     sample["gsp"] = torch.rand(21)
     sample["gsp_nominal_capacity_mwp"] = torch.tensor(100.0)
     sample["gsp_effective_capacity_mwp"] = torch.tensor(85.0)
@@ -156,7 +158,7 @@ def generate_synthetic_sample():
     sample["gsp_x_osgb"] = 123456.0
     sample["gsp_y_osgb"] = 654321.0
     
-    # Solar position
+    # Solar position define
     sample["solar_azimuth"] = torch.linspace(0, 180, 21)
     sample["solar_elevation"] = torch.linspace(-10, 60, 21)
     
@@ -181,6 +183,18 @@ def generate_synthetic_site_sample():
     }
     
     return sample
+
+
+def generate_synthetic_pv_batch():
+    """
+    Generate a synthetic PV batch for SimpleLearnedAggregator tests
+    """
+    # 3D tensor of shape [batch_size, sequence_length, num_sites]
+    batch_size = 8
+    sequence_length = 180 // 5 + 1
+    num_sites = 349    
+
+    return torch.rand(batch_size, sequence_length, num_sites)
 
 
 @pytest.fixture()
@@ -282,48 +296,38 @@ def sample_satellite_batch(sample_batch):
 
 @pytest.fixture()
 def sample_pv_batch():
-    # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
-    # old batches. For now we use the old batches to test the site encoder models
-    return torch.load("tests/test_data/presaved_batches/train/000000.pt")
+    """
+    Create a synthetic PV batch directly
+    TODO: Once PV site inputs available from ocf-data-sampler, change approach
+    Currently, site encoders rely on ocf_datapipes.batch.BatchKey
+    """
+    
+    batch_size = 8
+    sequence_length = 180 // 5 + 1
+    num_sites = 349
+    
+    # Create tensor data
+    pv_tensor = torch.rand(batch_size, sequence_length, num_sites)
+    
+    # Create random GSP IDs (values should be in range 0-317 based on embedding size)
+    gsp_ids = torch.randint(0, 317, (batch_size,))
+    
+    return {
+        BatchKey.pv: pv_tensor,
+        BatchKey.gsp_id: gsp_ids
+    }
 
 
 @pytest.fixture()
 def sample_site_batch():
     """
-    Create a SiteDataModule with synthetic site data
+    Create a batch of site data for SingleAttentionNetwork tests    
     """
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        # Create directories
-        os.makedirs(f"{tmpdirname}/train", exist_ok=True)
-        os.makedirs(f"{tmpdirname}/val", exist_ok=True)
-        
-        # Generate and save synthetic site samples
-        for i in range(5):
-            sample = generate_synthetic_site_sample()
-            # Variations to each sample after initial
-            if i > 0:
-                for key, value in sample.items():
-                    if isinstance(value, torch.Tensor) and value.dtype.is_floating_point:
-                        sample[key] = value + torch.randn_like(value) * 0.01
-            
-            torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
-            torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
-        
-        # Define SiteDataModule with the temporary directory
-        dm = SiteDataModule(
-            configuration=None,
-            sample_dir=tmpdirname,
-            batch_size=2,
-            num_workers=0,
-            prefetch_factor=None,
-            train_period=[None, None],
-            val_period=[None, None],
-        )
-        
-        # Get a batch from the dataloader
-        batch = next(iter(dm.train_dataloader()))
-        
-        return batch
+    site_tensor = torch.rand(2, 5, 1)    
+    return {
+        "site": site_tensor,
+        "site_id": torch.tensor([1, 2]),
+    }
 
 
 @pytest.fixture()
