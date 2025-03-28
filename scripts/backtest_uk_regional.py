@@ -25,12 +25,15 @@ import xarray as xr
 
 from pvnet.load_model import get_model_from_checkpoints
 from pvnet.models.multimodal.multimodal import Model
+from pvnet.models.base_model import BaseModel as PVNetBaseModel
 
-from ocf_datapipes.batch import BatchKey, NumpyBatch, stack_np_examples_into_batch, batch_to_tensor, copy_batch_to_device
-from ocf_datapipes.config.load import load_yaml_configuration
+from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
+from ocf_datapipes.batch import batch_to_tensor, copy_batch_to_device, BatchKey, NWPBatchKey
+from ocf_data_sampler.config.load import load_yaml_configuration
+from ocf_data_sampler.config.save import save_yaml_configuration
 from ocf_datapipes.utils.consts import ELEVATION_MEAN, ELEVATION_STD 
 
-from ocf_data_sampler.torch_datasets.pvnet_uk_regional import PVNetUKRegionalDataset
+from ocf_data_sampler.torch_datasets.datasets.pvnet_uk import PVNetUKConcurrentDataset
 
 import logging
 
@@ -40,11 +43,12 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 #_________VARIABLES_________
 
+
 output_dir = "PLACEHOLDER" # directory where to store predictions
 
 # Time window for which to run the backtest
-start_time = "2024-12-31"
-end_time = "2025-01-05"
+start_time = "2024-05-31"
+end_time = "2024-06-05"
 
 # The frequency at which to create forecast horizons
 FREQ_MINS = 30
@@ -57,21 +61,134 @@ ALL_GSP_IDS = np.arange(1, 318)
 
 #_________MODEL VARIABLES_________
 
-hf_model_id = "openclimatefix/PLACEHOLDER"
-hf_revision = "PLACEHOLDER"
+ECMWF_intra = dict(
+    hf_model_id = "openclimatefix/pvnet_uk_region",
+    hf_revision = "20b882bd4ceaee190a1c994d861f8e5d553ea843", #ECMWF-only pvnet 8h
+    hf_summation_model_id = "openclimatefix/pvnet_v2_summation",
+    hf_summation_revision = "b40867abbc2e5163c9a665daf511cbf372cc5ac9", #ecmwf-only summation 8h
+)
+
+ECMWF_UKV_DA = dict(
+    hf_model_id = "openclimatefix/pvnet_uk_region_day_ahead",
+    hf_revision = "263741ebb6b71559d113d799c9a579a973cc24ba", #EMCWF+UKV DA
+    hf_summation_model_id = "openclimatefix/pvnet_summation_uk_national_day_ahead",
+    hf_summation_revision = "7a2f26b94ac261160358b224944ef32998bd60ce"
+)
+
 hf_token = None
 
 #_________DATA_PATHS_________
 
 # paths to populate the config with after loading from HF 
+ecmwf_path_ens = "PLACEHOLDER-ens.zarr"
 ecmwf_path = "PLACEHOLDER.zarr"
 gsp_path = "PLACEHOLDER.zarr"
+ukv_path = "PLACEHOLDER.zarr"
 
-# member if using ECMWF ensambles. Set to None to ignore
-ensemble_member = 1
+#_________SELECTION___________
+use_ensemble_ecmwf = False
+model_dict = ECMWF_UKV_DA
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def reformat_config_data_sampler(config: dict) -> dict:
+    """Reformat config
+
+    This is to keep the configurations from ocf-data-sampler==0.0.19 working,
+    we need to upgrade them a bit to the configuration in ocf-data-sampler>=0.1.5
+
+    Args:
+        config: The data config
+    """
+    # Replace satellite
+    if "satellite" in config["input_data"]:
+
+        satellite_config = config["input_data"]["satellite"]
+
+        if satellite_config["satellite_zarr_path"] != "":
+
+            rename_pairs = [
+                ("satellite_image_size_pixels_width", "image_size_pixels_width"),
+                ("satellite_image_size_pixels_height", "image_size_pixels_height"),
+                ("forecast_minutes", "interval_end_minutes"),
+                ("satellite_zarr_path", "zarr_path"),
+                ("satellite_channels", "channels"),
+            ]
+
+            update_config(
+                rename_pairs=rename_pairs,
+                config=satellite_config,
+                remove_keys=["live_delay_minutes"]
+            )
+
+    # NWP is nested so must be treated separately
+    if "nwp" in config["input_data"]:
+        nwp_config = config["input_data"]["nwp"]
+        for nwp_source in nwp_config.keys():
+            if nwp_config[nwp_source]["nwp_zarr_path"] != "":
+
+                rename_pairs = [
+                    ("nwp_image_size_pixels_width", "image_size_pixels_width"),
+                    ("nwp_image_size_pixels_height", "image_size_pixels_height"),
+                    ("forecast_minutes", "interval_end_minutes"),
+                    ("nwp_zarr_path", "zarr_path"),
+                    ("nwp_accum_channels", "accum_channels"),
+                    ("nwp_channels", "channels"),
+                    ("nwp_provider", "provider"),
+                ]
+
+                update_config(rename_pairs=rename_pairs, config=nwp_config[nwp_source])
+
+    if "gsp" in config["input_data"]:
+
+        gsp_config = config["input_data"]["gsp"]
+
+        rename_pairs = [
+            ("forecast_minutes", "interval_end_minutes"),
+            ("gsp_zarr_path", "zarr_path"),
+        ]
+
+        update_config(rename_pairs=rename_pairs, config=gsp_config)
+
+    update_config(
+        rename_pairs=[],
+        config=config["input_data"],
+        change_history_minutes=False,
+        remove_keys=["default_forecast_minutes", "default_history_minutes"]
+    )
+
+    return config
+
+
+def update_config(rename_pairs: list, config: dict, change_history_minutes: bool = True, remove_keys=None):
+    """Update the config in place with rename pairs, and remove keys if they exist
+
+    1. Rename keys in the config
+    2. Change history minutes to interval start minutes, with a negative value
+    3. Remove keys from the config
+
+    Args:
+        rename_pairs: list of pairs to rename
+        config: the config dict
+        change_history_minutes: option to change history minutes to interval start minutes
+        remove_keys: list of key to remove
+    """
+    for old, new in rename_pairs:
+        if old in config:
+            config[new] = config[old]
+            del config[old]
+
+    if change_history_minutes:
+        if "history_minutes" in config:
+            config["interval_start_minutes"] = -config["history_minutes"]
+            del config["history_minutes"]
+
+    if remove_keys is not None:
+        for key in remove_keys:
+            if key in config:
+                del config[key]
 
 
 def adapt_data_config(config: dict) -> dict:
@@ -89,18 +206,33 @@ def adapt_data_config(config: dict) -> dict:
     if ecmwf_path and "ecmwf" in config["input_data"]["nwp"]:
         config["input_data"]["nwp"]["ecmwf"]["nwp_zarr_path"] = ecmwf_path
         log.info(f"Updated ecmwf path to {ecmwf_path}")
+    if ukv_path and "ukv" in config["input_data"]["nwp"]:
+        config["input_data"]["nwp"]["ukv"]["nwp_zarr_path"] = ukv_path
+        log.info(f"Updated ecmwf path to {ecmwf_path}")
     if gsp_path and "gsp" in config["input_data"]:
         config["input_data"]["gsp"]["gsp_zarr_path"] = gsp_path
         log.info(f"Updated gsp path to {gsp_path}")
 
-    if ensemble_member:
-        config["input_data"]["nwp"]["ecmwf"]["nwp_ensemble_member"] = ensemble_member
-        log.info(f"Updated ECMWF ensemble member to {ensemble_member}")
-
-    return config
+    return reformat_config_data_sampler(config)
 
 
-def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model, str]:
+def add_ensemble_member_to_config(data_config_path, ensemble_member: int):
+    config = load_yaml_configuration(data_config_path)
+
+    config.input_data.nwp.ecmwf.ensemble_member = ensemble_member
+    log.info(f"Updated ECMWF ensemble member to {ensemble_member}")
+
+
+    config.input_data.nwp.ecmwf.zarr_path = ecmwf_path_ens
+    log.info(f"Updated ecmwf path to {ecmwf_path}")
+
+    save_yaml_configuration(configuration=config, filename=data_config_path)
+
+
+def load_model_from_hf(model_id: str, 
+                       revision: str, 
+                       token: str,
+                       summation: bool = False) -> tuple[Model, str]:
     """Loads model and data config from HuggingFace
     Adapts and saves data config to be used by datasampler. 
 
@@ -113,45 +245,30 @@ def load_model_from_hf(model_id: str, revision: str, token: str) -> tuple[Model,
         model on device and path to adapted data config
     """
 
-    model_file = hf_hub_download(
-        repo_id=model_id,
-        filename=PYTORCH_WEIGHTS_NAME,
+    model = PVNetBaseModel.from_pretrained(
+        model_id=model_id,
         revision=revision,
         token=token,
     )
 
-    # load config file
-    config_file = hf_hub_download(
-        repo_id=model_id,
-        filename=CONFIG_NAME,
-        revision=revision,
-        token=token,
-    )
-
-    with open(config_file, "r", encoding="utf-8") as f:
-        config = json.load(f)
-
-    model = hydra.utils.instantiate(config)
-
-    state_dict = torch.load(model_file, map_location=torch.device("cuda"))
-    model.load_state_dict(state_dict)
     model.eval().to(device)
 
-    # load data config
-    data_config_file = hf_hub_download(
-        repo_id=model_id,
-        filename="data_config.yaml",
-        revision=revision,
-        token=token,
-    )
+    data_config_path = None
 
-    with open(data_config_file, "r", encoding="utf-8") as f:
-        data_config = yaml.load(f, Loader=yaml.FullLoader)
+    if not summation:
+        data_config_file = PVNetBaseModel.get_data_config(
+            model_id=model_id,
+            revision=revision,
+            token=token,
+        )
 
-    data_config_path = f"{output_dir}/data_config.yaml"
+        with open(data_config_file, "r", encoding="utf-8") as f:
+            data_config = yaml.load(f, Loader=yaml.FullLoader)
 
-    with open(data_config_path, "w") as file:
-        yaml.dump(adapt_data_config(data_config), file, default_flow_style=False)
+        data_config_path = f"{output_dir}/data_config.yaml"
+
+        with open(data_config_path, "w") as file:
+            yaml.dump(adapt_data_config(data_config), file, default_flow_style=False)
 
     return model, data_config_path
 
@@ -169,7 +286,7 @@ def get_gsp_capacities(config_path: str) -> xr.DataArray:
     config = load_yaml_configuration(config_path)
 
     # Load GSP generation xr.Dataset
-    ds = xr.open_zarr(config.input_data.gsp.gsp_zarr_path)
+    ds = xr.open_zarr(config.input_data.gsp.zarr_path)
 
     # Rename to standard time name
     ds = ds.rename({"datetime_gmt": "time_utc"})
@@ -199,6 +316,36 @@ def copy_sample_to_device(sample: dict, device: torch.device) -> dict:
         else:
             sample_copy[k] = v
     return sample_copy
+
+
+def change_keys_to_ocf_datapipes_keys(batch):
+    """Change string keys from ocf-data-sampler to BatchKey from ocf-datapipes
+
+    The key change is done in-place
+
+    Until PVNet is merged from dev-data-sampler, we need to do this.
+    After this, we might need to change the other way around, for the legacy models.
+    """
+    keys_to_rename = [
+        BatchKey.satellite_actual,
+        BatchKey.nwp,
+        BatchKey.gsp_solar_elevation,
+        BatchKey.gsp_solar_azimuth,
+        BatchKey.gsp_id,
+        BatchKey.gsp_t0_idx,
+        BatchKey.gsp_time_utc,
+    ]
+
+    for key in keys_to_rename:
+        if key.name in batch:
+            batch[key] = batch[key.name]
+            del batch[key.name]
+
+    if BatchKey.nwp in batch.keys():
+        nwp_batch = batch[BatchKey.nwp]
+        for nwp_source in nwp_batch.keys():
+            nwp_batch[nwp_source][NWPBatchKey.nwp] = nwp_batch[nwp_source]["nwp"]
+            del nwp_batch[nwp_source]["nwp"]
 
 
 def preds_to_dataarray(
@@ -240,7 +387,7 @@ def preds_to_dataarray(
 class ModelPipe:
     """A class to conveniently make and process predictions from batches"""
 
-    def __init__(self, model: Model, gsp_capacities: xr.DataArray):
+    def __init__(self, model: Model, summation_model: Model, gsp_capacities: xr.DataArray):
         """A class to conveniently make and process predictions from batches
 
         Args:
@@ -249,8 +396,9 @@ class ModelPipe:
         """
         self.model = model
         self.gsp_capacities = gsp_capacities
+        self.summation_model = summation_model
 
-    def predict_sample(self, batch: NumpyBatch) -> xr.Dataset:
+    def predict_sample(self, batch: dict) -> xr.Dataset:
         """Run the batch through the model and compile the predictions into an xarray DataArray
 
         Args:
@@ -262,12 +410,15 @@ class ModelPipe:
 
         log.debug("Predicting batch")
 
+        change_keys_to_ocf_datapipes_keys(batch)
+
         # Unpack some variables from the batch
         id0 = int(batch[BatchKey.gsp_t0_idx])
-        t0 = batch[BatchKey.gsp_time_utc].astype("datetime64[ns]")[0, id0]
+        t0 = batch[BatchKey.gsp_time_utc].numpy().astype("datetime64[ns]")[0, id0]
         n_valid_times = len(batch[BatchKey.gsp_time_utc][0, id0 + 1 :])
         gsp_capacities = self.gsp_capacities
         model = self.model
+        summation_model = self.summation_model
 
         log.debug(f"Found t0 {t0}. Will forecast for {n_valid_times} points at frequency {FREQ_MINS} minutes")
 
@@ -279,9 +430,12 @@ class ModelPipe:
         log.debug(f"Valid times to forecast for: {valid_times}")
 
         # Get effective capacities for this forecast
+        national_capacity = gsp_capacities.sel(time_utc=t0, gsp_id=0).values
         gsp_capacities = gsp_capacities.sel(
             time_utc=t0, gsp_id=batch[BatchKey.gsp_id]
         ).values
+
+        log.debug(f"GSP capacities identified. Shape: {gsp_capacities.shape}")
 
         log.debug(f"GSP capacities identified. Shape: {gsp_capacities.shape}")
 
@@ -334,14 +488,125 @@ class ModelPipe:
         log.debug("Upplying sundown mask...")
 
         da_abs_gsp = da_abs_gsp.where(~da_sundown_mask).fillna(0.0)
-        da_abs_gsp = da_abs_gsp.expand_dims(dim="init_time_utc", axis=0).assign_coords(
+        # Make national predictions using summation model
+        if summation_model is not None:
+            with torch.no_grad():
+                # Construct sample for the summation model
+                summation_inputs = {
+                    "pvnet_outputs": torch.Tensor(y_normed_gsp[np.newaxis]).to(device),
+                    "effective_capacity": (
+                        torch.Tensor(gsp_capacities / national_capacity)
+                        .to(device)
+                        .unsqueeze(0)
+                        .unsqueeze(-1)
+                    ),
+                }
+
+                # Run batch through the summation model
+                y_normed_national = (
+                    summation_model(summation_inputs).detach().squeeze().cpu().numpy()
+                )
+
+            # Convert national predictions to DataArray
+            da_normed_national = preds_to_dataarray(
+                y_normed_national[np.newaxis], summation_model, valid_times, gsp_ids=[0]
+            )
+
+            # Multiply normalised forecasts by capacities and clip negatives
+            da_abs_national = da_normed_national.clip(0, None) * national_capacity
+
+            # Apply sundown mask - All GSPs must be masked to mask national
+            da_abs_national = da_abs_national.where(~da_sundown_mask.all(dim="gsp_id")).fillna(0.0)
+
+        # If no summation model, make national predictions using simple sum
+        else:
+            da_abs_national = (
+                da_abs_gsp.sum(dim="gsp_id")
+                .expand_dims(dim="gsp_id", axis=0)
+                .assign_coords(gsp_id=[0])
+            )
+
+        # Concat the regional GSP and national predictions
+        da_abs_all = xr.concat([da_abs_national, da_abs_gsp], dim="gsp_id")
+        ds_abs_all = da_abs_all.to_dataset(name="hindcast")
+
+        ds_abs_all = ds_abs_all.expand_dims(dim="init_time_utc", axis=0).assign_coords(
             init_time_utc=[t0]
         )
 
         log.debug("Prediction ready to save!")
 
-        return da_abs_gsp
+        return da_abs_all
 
+
+def run_inference(
+        config: DictConfig,
+        model: Model, 
+        summation_model: Model,
+        output_dir: str,
+        ):
+        # Prepare DataLoader
+        dataloader_kwargs = dict(
+            shuffle=False, # Go through samples t0-first (needs the swap in ocf-data-sampler pvnet_uk_regional L525)
+            batch_size=None,
+            sampler=None,
+            batch_sampler=None,
+            num_workers=config.datamodule.num_workers,
+            collate_fn=None,
+            pin_memory=False,  # Only using CPU to prepare samples so pinning is not beneficial
+            drop_last=False,
+            timeout=0,
+            worker_init_fn=None,
+            prefetch_factor=config.datamodule.prefetch_factor,
+            persistent_workers=False,  # Not needed since we only enter the dataloader loop once
+        )
+
+
+        # Get the dataset   
+        # dataset = PVNetUKRegionalDataset(
+        dataset = PVNetUKConcurrentDataset(
+            # config_filename=data_config_path,
+            config_filename=config.datamodule.configuration, 
+            start_time=start_time, 
+            end_time=end_time,
+            gsp_ids=ALL_GSP_IDS,
+            )
+
+        num_samples = dataset.__len__()
+
+        # Create a dataloader for the concurrent samples and use multiprocessing
+        dataloader = DataLoader(dataset, **dataloader_kwargs)
+
+        log.info(f"Dataloader created with batch size {config.datamodule.batch_size}, " 
+        f"num_workers {config.datamodule.num_workers}, prefetch factor {config.datamodule.prefetch_factor}")
+
+        # Load the GSP capacities as an xarray object
+        gsp_capacities = get_gsp_capacities(config.datamodule.configuration)
+
+        # Create object to make predictions for each input sample
+        model_pipe = ModelPipe(model=model, summation_model=summation_model, gsp_capacities=gsp_capacities)
+        log.info("Model Pipe initialised. Starting inference...")
+
+        # Loop through the samplees
+        pbar = tqdm(total=num_samples)
+        # for i, sample in zip(range(num_samples), dataloader):
+        for sample in dataloader:
+
+            # Make predictions for the init-time
+            da_abs_gsp = model_pipe.predict_sample(sample)
+
+            # Save the predictions
+            t0 = da_abs_gsp.target_datetime_utc.values[int(sample[BatchKey.gsp_t0_idx])]
+
+            filename = f"{t0.astype('datetime64[m]')}.nc"
+
+            da_abs_gsp.to_netcdf(f"{output_dir}/{filename}")
+
+            pbar.update()
+
+        # Close down
+        pbar.close()
+        del dataloader
 
 
 @hydra.main(config_path="../configs/", config_name="config.yaml", version_base="1.2")
@@ -350,6 +615,8 @@ def main(config: DictConfig) -> None:
     Opens model, constructs dataloader, feeds created samples through the model 
     and saves predictions
     """
+    
+    os.makedirs(f"{output_dir}")
 
     log.info(
         f"Backtest initiated. Selected time window: {start_time} to {end_time}. "
@@ -357,76 +624,41 @@ def main(config: DictConfig) -> None:
     )
     log.info(f"Device used: {device}")
 
-    # Set up output dir
-    os.makedirs(output_dir)
-
-    log.info(f"Output directory created: {output_dir}")
-    
     # Load data from HuggingFace
-    model, data_config_path = load_model_from_hf(hf_model_id, hf_revision, hf_token)
-    log.info(f"Model loaded from HuggingFace: {hf_model_id}/{hf_revision}")
-
-    batch_size = config.datamodule.batch_size
-
-    # Prepare DataLoader
-    dataloader_kwargs = dict(
-        shuffle=False, # Go through samples t0-first (needs the swap in ocf-data-sampler pvnet_uk_regional L525)
-        batch_size=batch_size,
-        sampler=None,
-        batch_sampler=None,
-        num_workers=config.datamodule.num_workers,
-        collate_fn=stack_np_examples_into_batch,
-        pin_memory=False,  # Only using CPU to prepare samples so pinning is not beneficial
-        drop_last=False,
-        timeout=0,
-        worker_init_fn=None,
-        prefetch_factor=config.datamodule.prefetch_factor,
-        persistent_workers=False,  # Not needed since we only enter the dataloader loop once
-    )
-
-
-    # Get the dataset   
-    dataset = PVNetUKRegionalDataset(
-        config_filename=data_config_path, 
-        start_time=start_time, 
-        end_time=end_time,
-        gsp_ids=ALL_GSP_IDS,
+    model, data_config_path = load_model_from_hf(
+        model_dict["hf_model_id"], 
+        model_dict["hf_revision"], 
+        hf_token,
         )
+    config.datamodule.configuration = data_config_path
+    log.info(f"Model loaded from HuggingFace: {model_dict['hf_model_id']}/{model_dict['hf_revision']}")
 
-    num_samples = dataset.__len__()
+    if model_dict["hf_summation_model_id"]:
+        summation_model, _ = load_model_from_hf(
+            model_id=model_dict["hf_summation_model_id"], 
+            revision=model_dict["hf_summation_revision"], 
+            token=hf_token,
+            summation=True,
+            )
+        log.info(f"Summation model loaded from HuggingFace: {model_dict['hf_summation_model_id']}/{model_dict['hf_summation_revision']}")
+    else:
+        summation_model = None
+        log.info("Summation model not found. Will use sum for national prediction")
 
-    # Create a dataloader for the concurrent samples and use multiprocessing
-    dataloader = DataLoader(dataset, **dataloader_kwargs)
+    if use_ensemble_ecmwf:
+        for i in range(1, 51):
+            os.makedirs(f"{output_dir}/ens_{i}")
 
-    log.info(f"Dataloader created with batch size {config.datamodule.batch_size}, " 
-    f"num_workers {config.datamodule.num_workers}, prefetch factor {config.datamodule.prefetch_factor}")
+            log.info(f"Output directory created: {output_dir}/ens_{i}")
 
-    # Load the GSP capacities as an xarray object
-    gsp_capacities = get_gsp_capacities(config.datamodule.configuration)
+            add_ensemble_member_to_config(data_config_path, ensemble_member=i)
 
-    # Create object to make predictions for each input sample
-    model_pipe = ModelPipe(model=model, gsp_capacities=gsp_capacities)
-    log.info("Model Pipe initialised. Starting inference...")
+            run_inference(config=config, model=model, summation_model=summation_model, output_dir=f"{output_dir}/ens_{i}")
+    else:
+        os.makedirs(f"{output_dir}/pvnet")
+        run_inference(config=config, model=model, summation_model=summation_model, output_dir=f"{output_dir}/pvnet")
 
-    # Loop through the samplees
-    pbar = tqdm(total=num_samples//batch_size)
-    for i, sample in zip(range(num_samples), dataloader):
 
-        # Make predictions for the init-time
-        da_abs_gsp = model_pipe.predict_sample(sample)
-
-        # Save the predictions
-        t0 = da_abs_gsp.init_time_utc.values[0]
-
-        filename = f"{t0.astype('datetime64[m]')}_ID_{'_'.join(sample[BatchKey.gsp_id].numpy().astype(str))}.nc"
-
-        da_abs_gsp.to_netcdf(f"{output_dir}/{filename}")
-
-        pbar.update()
-
-    # Close down
-    pbar.close()
-    del dataloader
 
 
 if __name__ == "__main__":
