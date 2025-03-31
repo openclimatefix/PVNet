@@ -71,6 +71,29 @@ input_data:
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0 # Fraction of samples with dropout
       max_staleness_minutes: null
+      normalisation_constants:
+        t2m: { mean: 283.48333740234375, std: 3.692270040512085 }
+        dswrf: { mean: 11458988.0, std: 13025427.0 }
+        dlwrf: { mean: 27187026.0, std: 15855867.0 }
+        hcc: { mean: 0.3961029052734375, std: 0.42244860529899597 }
+        mcc: { mean: 0.3288780450820923, std: 0.38039860129356384 }
+        lcc: { mean: 0.44901806116104126, std: 0.3791404366493225 }
+        tcc: { mean: 0.7049227356910706, std: 0.37487083673477173 }
+        sde: { mean: 8.107526082312688e-05, std: 0.000913831521756947 }  # Mapped from "sd" in the Python file
+        sr: { mean: 12905302.0, std: 16294988.0 }
+        duvrs: { mean: 1305651.25, std: 1445635.25 }
+        prate: { mean: 3.108070450252853e-05, std: 9.81039775069803e-05 }
+        u10: { mean: 1.7677178382873535, std: 5.531515598297119 }
+        u100: { mean: 2.393547296524048, std: 7.2320556640625 }
+        u200: { mean: 2.7963004112243652, std: 8.049470901489258 }
+        v10: { mean: 0.985887885093689, std: 5.411230564117432 }
+        v100: { mean: 1.4244288206100464, std: 6.944501876831055 }
+        v200: { mean: 1.6010299921035767, std: 7.561611652374268 }
+        # Added diff_ keys for the channels under accum_channels:
+        diff_dlwrf: { mean: 1136464.0, std: 131942.03125 }
+        diff_dswrf: { mean: 420584.6875, std: 715366.3125 }
+        diff_duvrs: { mean: 48265.4765625, std: 81605.25 }
+        diff_sr: { mean: 469169.5, std: 818950.6875 }
 
     ukv:
       provider: ukv
@@ -106,6 +129,24 @@ input_data:
       dropout_timedeltas_minutes: [-360]
       dropout_fraction: 1.0 # Fraction of samples with dropout
       max_staleness_minutes: null
+      normalisation_constants:
+        t: { mean: 283.64913206, std: 4.38818501 }
+        dswrf: { mean: 111.28265039, std: 190.47216887 }
+        dlwrf: { mean: 325.03130139, std: 39.45988077 }
+        hcc: { mean: 29.11949682, std: 38.07184418 }
+        mcc: { mean: 40.88984494, std: 41.91144559 }
+        lcc: { mean: 50.08362643, std: 39.33210726 }
+        sde: { mean: 0.00289545, std: 0.1029753 }
+        r: { mean: 81.79229501, std: 11.45012499 }
+        vis: { mean: 32262.03285118, std: 21578.97975625 }
+        si10: { mean: 6.88348448, std: 3.94718813 }
+        wdir10: { mean: 199.41891636, std: 94.08407495 }
+        prate: { mean: 3.45793433e-05, std: 0.00021497 }
+        hcct: { mean: -18345.97478167, std: 18382.63958991 }
+        cdcb: { mean: 1412.26599062, std: 2126.99350113 }
+        dpt: { mean: 280.54379901, std: 4.57250482 }
+        prmsl: { mean: 101321.61574029, std: 1252.71790539 }
+        h: { mean: 2096.51991356, std: 1075.77812282 }
 
   satellite:
     # Path to Satellite data (non-HRV) in zarr format
@@ -130,3 +171,15 @@ input_data:
     image_size_pixels_width: 24
     dropout_timedeltas_minutes: null
     dropout_fraction: 0 # Fraction of samples with dropout
+    normalisation_constants:
+      IR_016: { mean: 0.17594202, std: 0.21462157 }
+      IR_039: { mean: 0.86167645, std: 0.04618041 }
+      IR_087: { mean: 0.7719318, std: 0.06687243 }
+      IR_097: { mean: 0.8014212, std: 0.0468558 }
+      IR_108: { mean: 0.71254843, std: 0.17482725 }
+      IR_120: { mean: 0.89058584, std: 0.06115861 }
+      IR_134: { mean: 0.944365, std: 0.04492306 }
+      VIS006: { mean: 0.09633306, std: 0.12184761 }
+      VIS008: { mean: 0.11426069, std: 0.13090034 }
+      WV_062: { mean: 0.7359355, std: 0.16111417 }
+      WV_073: { mean: 0.62479186, std: 0.12924142 }
