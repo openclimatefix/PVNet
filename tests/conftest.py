@@ -166,8 +166,6 @@ def sample_pv_batch():
     file_path = "tests/test_data/presaved_batches/train/000000.pt"
     old_batch = torch.load(file_path)
     new_batch = {}
-    key_pv_found = False
-    key_gsp_id_found = False
 
     for key, value in old_batch.items():
         if key == BatchKey.pv:
