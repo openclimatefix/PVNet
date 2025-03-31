@@ -79,7 +79,7 @@ input_data:
         mcc: { mean: 0.3288780450820923, std: 0.38039860129356384 }
         lcc: { mean: 0.44901806116104126, std: 0.3791404366493225 }
         tcc: { mean: 0.7049227356910706, std: 0.37487083673477173 }
-        sde: { mean: 8.107526082312688e-05, std: 0.000913831521756947 }  # Using "sd" values from the Python file
+        sde: { mean: 8.107526082312688e-05, std: 0.000913831521756947 }  # Mapped from "sd" in the Python file
         sr: { mean: 12905302.0, std: 16294988.0 }
         duvrs: { mean: 1305651.25, std: 1445635.25 }
         prate: { mean: 3.108070450252853e-05, std: 9.81039775069803e-05 }
@@ -89,6 +89,11 @@ input_data:
         v10: { mean: 0.985887885093689, std: 5.411230564117432 }
         v100: { mean: 1.4244288206100464, std: 6.944501876831055 }
         v200: { mean: 1.6010299921035767, std: 7.561611652374268 }
+        # Added diff_ keys for the channels under accum_channels:
+        diff_dlwrf: { mean: 1136464.0, std: 131942.03125 }
+        diff_dswrf: { mean: 420584.6875, std: 715366.3125 }
+        diff_duvrs: { mean: 48265.4765625, std: 81605.25 }
+        diff_sr: { mean: 469169.5, std: 818950.6875 }
 
     ukv:
       provider: ukv
