@@ -1,6 +1,7 @@
 """Base model for all PVNet submodels"""
 
 import json
+import time
 import logging
 import os
 import tempfile
@@ -141,6 +142,47 @@ def minimize_data_config(input_path, output_path, model):
         yaml.dump(config, outfile, default_flow_style=False)
 
 
+
+def download_hf_hub_with_retries(repo_id, filename, revision, cache_dir, force_download, proxies, resume_download, token, local_files_only, max_retries=5, wait_time=60):
+    """
+    Tries to download a file from HuggingFace up to max_retries times.
+
+    Args:
+        repo_id (str): HuggingFace repo ID
+        filename (str): Name of the file to download
+        revision (str): Specific model revision
+        cache_dir (str): Cache directory
+        force_download (bool): Whether to force a new download
+        proxies (dict): Proxy settings
+        resume_download (bool): Resume interrupted downloads
+        token (str): HuggingFace auth token
+        local_files_only (bool): Use local files only
+        max_retries (int): Maximum number of retry attempts
+        wait_time (int): Wait time (in seconds) before retrying
+    
+    Returns:
+        str: The local file path of the downloaded file
+    """
+    for attempt in range(1, max_retries + 1):
+        try:
+            return hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                revision=revision,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                token=token,
+                local_files_only=local_files_only,
+            )
+        except Exception as e:
+            logging.warning(f"Attempt {attempt}/{max_retries} failed to download {filename}. Retrying in {wait_time} seconds...")
+            if attempt == max_retries:
+                raise Exception(f"Failed to download {filename} from {repo_id} after {max_retries} attempts.") from e
+            time.sleep(wait_time)
+
+
 class PVNetModelHubMixin(PyTorchModelHubMixin):
     """
     Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities.
@@ -169,7 +211,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             config_file = os.path.join(model_id, CONFIG_NAME)
         else:
             # load model file
-            model_file = hf_hub_download(
+            model_file = download_hf_hub_with_retries(
                 repo_id=model_id,
                 filename=PYTORCH_WEIGHTS_NAME,
                 revision=revision,
@@ -179,12 +221,14 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 resume_download=resume_download,
                 token=token,
                 local_files_only=local_files_only,
+                max_retries=5,
+                wait_time=60,
             )
-
+            
             # load config file
-            config_file = hf_hub_download(
+            config_file = download_hf_hub_with_retries(
                 repo_id=model_id,
-                filename=CONFIG_NAME,
+                filename=DATA_CONFIG_NAME,
                 revision=revision,
                 cache_dir=cache_dir,
                 force_download=force_download,
@@ -192,7 +236,10 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 resume_download=resume_download,
                 token=token,
                 local_files_only=local_files_only,
+                max_retries=5,
+                wait_time=60,
             )
+
 
         with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
@@ -222,7 +269,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             print("Loading data config from local directory")
             data_config_file = os.path.join(model_id, DATA_CONFIG_NAME)
         else:
-            data_config_file = hf_hub_download(
+            data_config_file = download_hf_hub_with_retries(
                 repo_id=model_id,
                 filename=DATA_CONFIG_NAME,
                 revision=revision,
@@ -232,6 +279,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 resume_download=resume_download,
                 token=token,
                 local_files_only=local_files_only,
+                max_retries=5,
+                wait_time=60,
             )
 
         return data_config_file
