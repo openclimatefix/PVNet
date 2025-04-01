@@ -1,10 +1,10 @@
 """Base model for all PVNet submodels"""
 
 import json
-import time
 import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -159,7 +159,7 @@ def download_hf_hub_with_retries(repo_id, filename, revision, cache_dir, force_d
         local_files_only (bool): Use local files only
         max_retries (int): Maximum number of retry attempts
         wait_time (int): Wait time (in seconds) before retrying
-    
+
     Returns:
         str: The local file path of the downloaded file
     """
@@ -224,7 +224,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 max_retries=5,
                 wait_time=60,
             )
-            
+
             # load config file
             config_file = download_hf_hub_with_retries(
                 repo_id=model_id,
