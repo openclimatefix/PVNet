@@ -1,10 +1,10 @@
 """Base model for all PVNet submodels"""
 
 import json
-import time
 import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Dict, Optional, Union
 
