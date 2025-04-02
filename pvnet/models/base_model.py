@@ -194,8 +194,8 @@ def download_hf_hub_with_retries(
                 ) from e
             logging.warning(
                 (
-                    f"Attempt {attempt}/{max_retries} failed to download {filename}. "
-                    f"Retrying in {wait_time} seconds..."
+                    f"Attempt {attempt}/{max_retries} failed to download {filename} "
+                    f"from {repo_id}. Retrying in {wait_time} seconds..."
                 )
             )
             time.sleep(wait_time)
