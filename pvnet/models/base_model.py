@@ -142,8 +142,19 @@ def minimize_data_config(input_path, output_path, model):
         yaml.dump(config, outfile, default_flow_style=False)
 
 
-
-def download_hf_hub_with_retries(repo_id, filename, revision, cache_dir, force_download, proxies, resume_download, token, local_files_only, max_retries=5, wait_time=60):
+def download_hf_hub_with_retries(
+    repo_id,
+    filename,
+    revision,
+    cache_dir,
+    force_download,
+    proxies,
+    resume_download,
+    token,
+    local_files_only,
+    max_retries=5,
+    wait_time=60,
+):
     """
     Tries to download a file from HuggingFace up to max_retries times.
 
@@ -159,7 +170,7 @@ def download_hf_hub_with_retries(repo_id, filename, revision, cache_dir, force_d
         local_files_only (bool): Use local files only
         max_retries (int): Maximum number of retry attempts
         wait_time (int): Wait time (in seconds) before retrying
-    
+
     Returns:
         str: The local file path of the downloaded file
     """
@@ -177,9 +188,13 @@ def download_hf_hub_with_retries(repo_id, filename, revision, cache_dir, force_d
                 local_files_only=local_files_only,
             )
         except Exception as e:
-            logging.warning(f"Attempt {attempt}/{max_retries} failed to download {filename}. Retrying in {wait_time} seconds...")
+            logging.warning(
+                f"Attempt {attempt}/{max_retries} failed to download {filename}. Retrying in {wait_time} seconds..."
+            )
             if attempt == max_retries:
-                raise Exception(f"Failed to download {filename} from {repo_id} after {max_retries} attempts.") from e
+                raise Exception(
+                    f"Failed to download {filename} from {repo_id} after {max_retries} attempts."
+                ) from e
             time.sleep(wait_time)
 
 
@@ -224,7 +239,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 max_retries=5,
                 wait_time=60,
             )
-            
+
             # load config file
             config_file = download_hf_hub_with_retries(
                 repo_id=model_id,
@@ -239,7 +254,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 max_retries=5,
                 wait_time=60,
             )
-
 
         with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
