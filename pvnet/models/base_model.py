@@ -189,7 +189,10 @@ def download_hf_hub_with_retries(
             )
         except Exception as e:
             logging.warning(
-                f"Attempt {attempt}/{max_retries} failed to download {filename}. Retrying in {wait_time} seconds..."
+                (
+                    f"Attempt {attempt}/{max_retries} failed to download {filename}. "
+                    f"Retrying in {wait_time} seconds..."
+                )
             )
             if attempt == max_retries:
                 raise Exception(
