@@ -240,7 +240,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 token=token,
                 local_files_only=local_files_only,
                 max_retries=5,
-                wait_time=60,
+                wait_time=10,
             )
 
             # load config file
@@ -255,7 +255,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 token=token,
                 local_files_only=local_files_only,
                 max_retries=5,
-                wait_time=60,
+                wait_time=10,
             )
 
         with open(config_file, "r", encoding="utf-8") as f:
@@ -297,7 +297,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 token=token,
                 local_files_only=local_files_only,
                 max_retries=5,
-                wait_time=60,
+                wait_time=10,
             )
 
         return data_config_file
