@@ -282,6 +282,36 @@ def sample_datamodule():
 
 
 @pytest.fixture()
+def sample_site_datamodule():
+    """
+    Create a SiteDataModule with synthetic site data files
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create train and val directories
+        os.makedirs(f"{tmpdirname}/train", exist_ok=True)
+        os.makedirs(f"{tmpdirname}/val", exist_ok=True)
+        
+        # Generate and save synthetic site samples
+        for i in range(10):
+            sample = generate_synthetic_site_sample()
+            torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
+            torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
+        
+        # Define SiteDataModule with temporary directory
+        dm = SiteDataModule(
+            configuration=None,
+            sample_dir=tmpdirname,
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            train_period=[None, None],
+            val_period=[None, None],
+        )
+        
+        yield dm
+
+
+@pytest.fixture()
 def sample_batch(sample_datamodule):
     batch = next(iter(sample_datamodule.train_dataloader()))
     return batch
@@ -320,16 +350,22 @@ def sample_pv_batch():
     return new_batch
 
 
+# @pytest.fixture()
+# def sample_site_batch():
+#     """
+#     Create a batch of site data for SingleAttentionNetwork tests    
+#     """
+#     site_tensor = torch.rand(2, 5, 1)    
+#     return {
+#         "site": site_tensor,
+#         "site_id": torch.tensor([1, 2]),
+#     }
+
+
 @pytest.fixture()
-def sample_site_batch():
-    """
-    Create a batch of site data for SingleAttentionNetwork tests    
-    """
-    site_tensor = torch.rand(2, 5, 1)    
-    return {
-        "site": site_tensor,
-        "site_id": torch.tensor([1, 2]),
-    }
+def sample_site_batch(sample_site_datamodule):
+    batch = next(iter(sample_site_datamodule.train_dataloader()))
+    return batch
 
 
 @pytest.fixture()
