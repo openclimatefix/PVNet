@@ -96,7 +96,7 @@ def sat_data():
 
 def generate_synthetic_sample():
     """
-    Generate a synthetic sample contrary to utilising reference .pt files
+    Generate synthetic sample for testing
     """
     now = pd.Timestamp.now(tz='UTC')    
     sample = {}
@@ -166,22 +166,100 @@ def generate_synthetic_sample():
 
 def generate_synthetic_site_sample():
     """
-    Generate synthetic site sample
+    Generate synthetic site sample that matches the actual site sample structure
+    Returns an xarray Dataset that can be saved as .nc file
     """
     now = pd.Timestamp.now(tz='UTC')
     
-    sample = {
-        "site": torch.rand(5, 1),
-        "time_utc": torch.tensor(
-            [(now - pd.Timedelta(minutes=15*i)).timestamp() for i in range(5)]
-        ),
-        "site_id": torch.tensor(1),
-        "x_osgb": torch.tensor(100.0),
-        "y_osgb": torch.tensor(300.0),
-        "capacity_mwp": torch.tensor(10.0),
+    # Create time coordinates
+    site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
+    nwp_time_coords = pd.date_range(start=now, periods=50, freq="1H")
+    
+    # Create NWP data
+    # Generate synthetic NWP data with the correct dimensions
+    nwp_lat = np.linspace(50.0, 60.0, 24)
+    nwp_lon = np.linspace(-10.0, 2.0, 24)
+    nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
+    
+    # Create init times and steps for NWP
+    nwp_init_time = pd.date_range(
+        start=now - pd.Timedelta(hours=12), 
+        periods=1, 
+        freq="12H"
+    ).repeat(50)
+    
+    nwp_steps = pd.timedelta_range(
+        start=pd.Timedelta(hours=0),
+        periods=50,
+        freq="1H"
+    )
+    
+    # Generate random NWP data
+    nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
+    
+    # Generate site-specific data
+    site_data = np.random.rand(197)
+    
+    # Calculate solar position (simplified)
+    site_lat = 52.5
+    site_lon = -1.5
+    site_solar_azimuth = np.linspace(0, 360, 197)
+    site_solar_elevation = 15 * np.sin(np.linspace(0, 2*np.pi, 197))
+    
+    # Calculate time features
+    days_since_jan1 = (site_time_coords.dayofyear - 1) / 365.0
+    site_date_sin = np.sin(2 * np.pi * days_since_jan1)
+    site_date_cos = np.cos(2 * np.pi * days_since_jan1)
+    
+    hours_since_midnight = (site_time_coords.hour + site_time_coords.minute / 60.0) / 24.0
+    site_time_sin = np.sin(2 * np.pi * hours_since_midnight)
+    site_time_cos = np.cos(2 * np.pi * hours_since_midnight)
+    
+    # Create xarray Dataset with proper structure and naming conventions
+    site_data_ds = xr.Dataset(
+        data_vars={
+            # NWP data
+            "nwp-ecmwf": (
+                ["nwp-ecmwf__target_time_utc", "nwp-ecmwf__channel", "nwp-ecmwf__longitude", "nwp-ecmwf__latitude"], 
+                nwp_data
+            ),
+            # Site data
+            "site": (["site__time_utc"], site_data),
+        },
+        coords={
+            # NWP coordinates
+            "nwp-ecmwf__latitude": nwp_lat,
+            "nwp-ecmwf__longitude": nwp_lon,
+            "nwp-ecmwf__channel": nwp_channels,
+            "nwp-ecmwf__target_time_utc": nwp_time_coords,
+            "nwp-ecmwf__init_time_utc": (["nwp-ecmwf__target_time_utc"], nwp_init_time),
+            "nwp-ecmwf__step": (["nwp-ecmwf__target_time_utc"], nwp_steps),
+            
+            # Site coordinates
+            "site__site_id": np.int32(1),
+            "site__latitude": site_lat,
+            "site__longitude": site_lon,
+            "site__capacity_kwp": 10000.0,
+            "site__time_utc": site_time_coords,
+            "site__date_sin": (["site__time_utc"], site_date_sin),
+            "site__date_cos": (["site__time_utc"], site_date_cos),
+            "site__time_sin": (["site__time_utc"], site_time_sin),
+            "site__time_cos": (["site__time_utc"], site_time_cos),
+            "site__solar_azimuth": (["site__time_utc"], site_solar_azimuth),
+            "site__solar_elevation": (["site__time_utc"], site_solar_elevation),
+        }
+    )
+    
+    # Add NWP attributes
+    site_data_ds["nwp-ecmwf"].attrs = {
+        "Conventions": "CF-1.7",
+        "GRIB_centre": "ecmf",
+        "GRIB_centreDescription": "European Centre for Medium-Range Weather Forecasts",
+        "GRIB_subCentre": "0",
+        "institution": "European Centre for Medium-Range Weather Forecasts"
     }
     
-    return sample
+    return site_data_ds
 
 
 def generate_synthetic_pv_batch():
@@ -284,18 +362,39 @@ def sample_datamodule():
 @pytest.fixture()
 def sample_site_datamodule():
     """
-    Create a SiteDataModule with synthetic site data files
+    Create a SiteDataModule with synthetic site data in netCDF format
+    that matches the structure of the actual site samples
     """
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Create train and val directories
         os.makedirs(f"{tmpdirname}/train", exist_ok=True)
         os.makedirs(f"{tmpdirname}/val", exist_ok=True)
         
-        # Generate and save synthetic site samples
+        # Generate and save synthetic samples
         for i in range(10):
-            sample = generate_synthetic_site_sample()
-            torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
-            torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
+            # Generate a synthetic site sample as xarray Dataset
+            site_data = generate_synthetic_site_sample()
+            
+            # Add variability to the sample
+            # Modify site ID to create some variety
+            site_data = site_data.assign_coords(site__site_id=np.int32(i % 3 + 1))
+            
+            # Vary the location slightly
+            site_data = site_data.assign_coords(site__latitude=52.5 + i * 0.1)
+            site_data = site_data.assign_coords(site__longitude=-1.5 - i * 0.05)
+            
+            # Vary the capacity
+            site_data = site_data.assign_coords(site__capacity_kwp=10000.0 * (1.0 + i * 0.01))
+            
+            # Add random noise to the site data
+            site_data["site"] = site_data["site"] + np.random.randn(*site_data["site"].shape) * 0.01
+            
+            # Add some variability to the NWP data
+            site_data["nwp-ecmwf"] = site_data["nwp-ecmwf"] + np.random.randn(*site_data["nwp-ecmwf"].shape).astype(np.float32) * 0.01
+            
+            # Save as netCDF format
+            site_data.to_netcdf(f"{tmpdirname}/train/{i:08d}.nc", mode="w", engine="h5netcdf")
+            site_data.to_netcdf(f"{tmpdirname}/val/{i:08d}.nc", mode="w", engine="h5netcdf")
         
         # Define SiteDataModule with temporary directory
         dm = SiteDataModule(
