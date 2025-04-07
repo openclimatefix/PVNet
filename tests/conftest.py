@@ -445,28 +445,29 @@ def encoder_model_kwargs():
 
 @pytest.fixture()
 def site_encoder_model_kwargs():
-    # Used to test site encoder model on PV data
-    kwargs = dict(
+    """Used to test site encoder model on PV data"""
+    return dict(
         sequence_length=180 // 5 + 1,
         num_sites=349,
         out_features=128,
     )
-    return kwargs
 
 
 @pytest.fixture()
 def site_encoder_model_kwargs_dsampler():
-    # Used to test site encoder model on PV data
-    kwargs = dict(
-        sequence_length=60 // 15 + 1, num_sites=1, out_features=128, target_key_to_use="site"
+    """Used to test site encoder model on PV data with data sampler"""
+    return dict(
+        sequence_length=60 // 15 + 1, 
+        num_sites=1, 
+        out_features=128, 
+        target_key_to_use="site"
     )
-    return kwargs
 
 
 @pytest.fixture()
 def site_encoder_sensor_model_kwargs():
-    # Used to test site encoder model on PV data
-    kwargs = dict(
+    """Used to test site encoder model for sensor data"""
+    return dict(
         sequence_length=180 // 5 + 1,
         num_sites=26,
         out_features=128,
@@ -474,7 +475,6 @@ def site_encoder_sensor_model_kwargs():
         target_key_to_use="wind",
         input_key_to_use="sensor",
     )
-    return kwargs
 
 
 @pytest.fixture()
