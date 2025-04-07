@@ -19,7 +19,6 @@ import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
 
-from ocf_datapipes.batch import BatchKey
 
 xr.set_options(keep_attrs=True)
 
@@ -171,17 +170,16 @@ def generate_synthetic_site_sample():
     """
     now = pd.Timestamp.now(tz='UTC')
     
-    # Create time coordinates
+    # Create time coords
     site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
     nwp_time_coords = pd.date_range(start=now, periods=50, freq="1H")
     
-    # Create NWP data
-    # Generate synthetic NWP data with the correct dimensions
+    # NWP define
     nwp_lat = np.linspace(50.0, 60.0, 24)
     nwp_lon = np.linspace(-10.0, 2.0, 24)
     nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
     
-    # Create init times and steps for NWP
+    # Define init times and steps for NWP
     nwp_init_time = pd.date_range(
         start=now - pd.Timedelta(hours=12), 
         periods=1, 
@@ -194,28 +192,20 @@ def generate_synthetic_site_sample():
         freq="1H"
     )
     
-    # Generate random NWP data
     nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
-    
-    # Generate site-specific data
-    site_data = np.random.rand(197)
-    
-    # Calculate solar position (simplified)
+    site_data = np.random.rand(197)    
     site_lat = 52.5
     site_lon = -1.5
     site_solar_azimuth = np.linspace(0, 360, 197)
-    site_solar_elevation = 15 * np.sin(np.linspace(0, 2*np.pi, 197))
-    
-    # Calculate time features
+    site_solar_elevation = 15 * np.sin(np.linspace(0, 2*np.pi, 197))    
     days_since_jan1 = (site_time_coords.dayofyear - 1) / 365.0
     site_date_sin = np.sin(2 * np.pi * days_since_jan1)
     site_date_cos = np.cos(2 * np.pi * days_since_jan1)
-    
     hours_since_midnight = (site_time_coords.hour + site_time_coords.minute / 60.0) / 24.0
     site_time_sin = np.sin(2 * np.pi * hours_since_midnight)
     site_time_cos = np.cos(2 * np.pi * hours_since_midnight)
     
-    # Create xarray Dataset with proper structure and naming conventions
+    # Create xarray Dataset
     site_data_ds = xr.Dataset(
         data_vars={
             # NWP data
@@ -227,7 +217,7 @@ def generate_synthetic_site_sample():
             "site": (["site__time_utc"], site_data),
         },
         coords={
-            # NWP coordinates
+            # NWP coords
             "nwp-ecmwf__latitude": nwp_lat,
             "nwp-ecmwf__longitude": nwp_lon,
             "nwp-ecmwf__channel": nwp_channels,
@@ -235,7 +225,7 @@ def generate_synthetic_site_sample():
             "nwp-ecmwf__init_time_utc": (["nwp-ecmwf__target_time_utc"], nwp_init_time),
             "nwp-ecmwf__step": (["nwp-ecmwf__target_time_utc"], nwp_steps),
             
-            # Site coordinates
+            # Site coords
             "site__site_id": np.int32(1),
             "site__latitude": site_lat,
             "site__longitude": site_lon,
@@ -250,7 +240,6 @@ def generate_synthetic_site_sample():
         }
     )
     
-    # Add NWP attributes
     site_data_ds["nwp-ecmwf"].attrs = {
         "Conventions": "CF-1.7",
         "GRIB_centre": "ecmf",
@@ -262,42 +251,16 @@ def generate_synthetic_site_sample():
     return site_data_ds
 
 
-# def generate_synthetic_pv_batch():
-#     """
-#     Generate a synthetic PV batch for SimpleLearnedAggregator tests
-#     """
-#     # 3D tensor of shape [batch_size, sequence_length, num_sites]
-#     batch_size = 8
-#     sequence_length = 180 // 5 + 1
-#     num_sites = 349    
-
-#     return torch.rand(batch_size, sequence_length, num_sites)
-
-def generate_synthetic_pv_batch(batch_size=2, num_sites=349, sequence_length=37):
+def generate_synthetic_pv_batch():
     """
-    Generate synthetic PV site batch for testing
-    
-    Args:
-        batch_size: Number of samples in the batch
-        num_sites: Number of PV sites
-        sequence_length: Number of time steps (180 // 5 + 1 = 37 by default)
-        
-    Returns:
-        Dictionary with synthetic PV batch data
+    Generate a synthetic PV batch for SimpleLearnedAggregator tests
     """
-    # Generate random site data with proper dimensions
-    pv_data = torch.rand(batch_size, sequence_length, num_sites)
-    
-    # Create synthetic gsp_ids (one for each batch item)
-    gsp_ids = torch.randint(low=1, high=350, size=(batch_size,))
-    
-    # Create batch dictionary with appropriate keys
-    batch = {
-        "pv": pv_data,
-        "gsp_id": gsp_ids,
-    }
-    
-    return batch
+    # 3D tensor of shape [batch_size, sequence_length, num_sites]
+    batch_size = 8
+    sequence_length = 180 // 5 + 1
+    num_sites = 349    
+
+    return torch.rand(batch_size, sequence_length, num_sites)
 
 
 @pytest.fixture()
@@ -448,49 +411,28 @@ def sample_satellite_batch(sample_batch):
     return torch.swapaxes(sat_image, 1, 2)
 
 
-# @pytest.fixture()
-# def sample_pv_batch():
-#     """
-#     Currently overrides utilising reference .pt for updated gsp_id and pv
-#     Intermediate change
-#     """
-
-#     # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
-#     # old batches. For now we use the old batches to test the site encoder models
-
-#     file_path = "tests/test_data/presaved_batches/train/000000.pt"
-#     old_batch = torch.load(file_path)
-#     new_batch = {}
-
-#     for key, value in old_batch.items():
-#         if key == BatchKey.pv:
-#             new_batch["pv"] = value
-#             key_pv_found = True
-#         elif key == BatchKey.gsp_id:
-#             new_batch["gsp_id"] = value
-#             key_gsp_id_found = True
-#         else:
-#             new_batch[key] = value
-
-#     return new_batch
-
 @pytest.fixture()
 def sample_pv_batch():
     """
-    Create a batch of PV site data for PV encoder model tests
-    
-    Returns:
-        Dictionary containing a synthetic PV batch
+    Create a batch of PV site data for testing site encoder models
     """
-    # Generate synthetic batch using the parameters from site_encoder_model_kwargs
-    sequence_length = 180 // 5 + 1  # 37 time steps
-    num_sites = 349
+    # Use the existing generate_synthetic_pv_batch function for PV data
+    pv_tensor = generate_synthetic_pv_batch()
     
-    return generate_synthetic_pv_site_batch(
-        batch_size=2,
-        num_sites=num_sites,
-        sequence_length=sequence_length
-    )
+    # Get parameters from the tensor
+    batch_size = pv_tensor.shape[0]  # Should be 8
+    
+    # Create synthetic gsp_ids with a much more limited range (0-9)
+    # This ensures we won't exceed the embedding matrix size
+    gsp_ids = torch.randint(low=0, high=10, size=(batch_size,))
+    
+    # Create batch dictionary with appropriate keys
+    batch = {
+        "pv": pv_tensor,
+        "gsp_id": gsp_ids,
+    }
+    
+    return batch
 
 
 @pytest.fixture()
