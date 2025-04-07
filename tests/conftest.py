@@ -359,16 +359,25 @@ def sample_site_datamodule():
         for i in range(10):
             site_data = generate_synthetic_site_sample()
             
-            site_data = site_data.assign_coords(site__site_id=np.int32(i % 3 + 1))            
-            site_data = site_data.assign_coords(site__latitude=52.5 + i * 0.1)
-            site_data = site_data.assign_coords(site__longitude=-1.5 - i * 0.05)            
-            site_data = site_data.assign_coords(site__capacity_kwp=10000.0 * (1.0 + i * 0.01))
+            # Add variability to coordinates and data
+            coords_updates = {
+                "site__site_id": np.int32(i % 3 + 1),
+                "site__latitude": 52.5 + i * 0.1,
+                "site__longitude": -1.5 - i * 0.05,
+                "site__capacity_kwp": 10000.0 * (1.0 + i * 0.01)
+            }
+            site_data = site_data.assign_coords(coords_updates)
             
-            site_data["site"] = site_data["site"] + np.random.randn(*site_data["site"].shape) * 0.01            
-            site_data["nwp-ecmwf"] = site_data["nwp-ecmwf"] + np.random.randn(*site_data["nwp-ecmwf"].shape).astype(np.float32) * 0.01
+            # Add random noise to data variables
+            for var in ["site", "nwp-ecmwf"]:
+                noise_shape = site_data[var].shape
+                noise = np.random.randn(*noise_shape).astype(site_data[var].dtype) * 0.01
+                site_data[var] = site_data[var] + noise
             
-            site_data.to_netcdf(f"{tmpdirname}/train/{i:08d}.nc", mode="w", engine="h5netcdf")
-            site_data.to_netcdf(f"{tmpdirname}/val/{i:08d}.nc", mode="w", engine="h5netcdf")
+            # Save as netCDF format for both train and val
+            for subset in ["train", "val"]:
+                file_path = f"{tmpdirname}/{subset}/{i:08d}.nc"
+                site_data.to_netcdf(file_path, mode="w", engine="h5netcdf")
         
         # Define SiteDataModule with temporary directory
         dm = SiteDataModule(
