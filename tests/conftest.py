@@ -262,16 +262,42 @@ def generate_synthetic_site_sample():
     return site_data_ds
 
 
-def generate_synthetic_pv_batch():
-    """
-    Generate a synthetic PV batch for SimpleLearnedAggregator tests
-    """
-    # 3D tensor of shape [batch_size, sequence_length, num_sites]
-    batch_size = 8
-    sequence_length = 180 // 5 + 1
-    num_sites = 349    
+# def generate_synthetic_pv_batch():
+#     """
+#     Generate a synthetic PV batch for SimpleLearnedAggregator tests
+#     """
+#     # 3D tensor of shape [batch_size, sequence_length, num_sites]
+#     batch_size = 8
+#     sequence_length = 180 // 5 + 1
+#     num_sites = 349    
 
-    return torch.rand(batch_size, sequence_length, num_sites)
+#     return torch.rand(batch_size, sequence_length, num_sites)
+
+def generate_synthetic_pv_batch(batch_size=2, num_sites=349, sequence_length=37):
+    """
+    Generate synthetic PV site batch for testing
+    
+    Args:
+        batch_size: Number of samples in the batch
+        num_sites: Number of PV sites
+        sequence_length: Number of time steps (180 // 5 + 1 = 37 by default)
+        
+    Returns:
+        Dictionary with synthetic PV batch data
+    """
+    # Generate random site data with proper dimensions
+    pv_data = torch.rand(batch_size, sequence_length, num_sites)
+    
+    # Create synthetic gsp_ids (one for each batch item)
+    gsp_ids = torch.randint(low=1, high=350, size=(batch_size,))
+    
+    # Create batch dictionary with appropriate keys
+    batch = {
+        "pv": pv_data,
+        "gsp_id": gsp_ids,
+    }
+    
+    return batch
 
 
 @pytest.fixture()
@@ -422,43 +448,49 @@ def sample_satellite_batch(sample_batch):
     return torch.swapaxes(sat_image, 1, 2)
 
 
+# @pytest.fixture()
+# def sample_pv_batch():
+#     """
+#     Currently overrides utilising reference .pt for updated gsp_id and pv
+#     Intermediate change
+#     """
+
+#     # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
+#     # old batches. For now we use the old batches to test the site encoder models
+
+#     file_path = "tests/test_data/presaved_batches/train/000000.pt"
+#     old_batch = torch.load(file_path)
+#     new_batch = {}
+
+#     for key, value in old_batch.items():
+#         if key == BatchKey.pv:
+#             new_batch["pv"] = value
+#             key_pv_found = True
+#         elif key == BatchKey.gsp_id:
+#             new_batch["gsp_id"] = value
+#             key_gsp_id_found = True
+#         else:
+#             new_batch[key] = value
+
+#     return new_batch
+
 @pytest.fixture()
 def sample_pv_batch():
     """
-    Currently overrides utilising reference .pt for updated gsp_id and pv
-    Intermediate change
+    Create a batch of PV site data for PV encoder model tests
+    
+    Returns:
+        Dictionary containing a synthetic PV batch
     """
-
-    # TODO: Once PV site inputs are available from ocf-data-sampler UK regional remove these
-    # old batches. For now we use the old batches to test the site encoder models
-
-    file_path = "tests/test_data/presaved_batches/train/000000.pt"
-    old_batch = torch.load(file_path)
-    new_batch = {}
-
-    for key, value in old_batch.items():
-        if key == BatchKey.pv:
-            new_batch["pv"] = value
-            key_pv_found = True
-        elif key == BatchKey.gsp_id:
-            new_batch["gsp_id"] = value
-            key_gsp_id_found = True
-        else:
-            new_batch[key] = value
-
-    return new_batch
-
-
-# @pytest.fixture()
-# def sample_site_batch():
-#     """
-#     Create a batch of site data for SingleAttentionNetwork tests    
-#     """
-#     site_tensor = torch.rand(2, 5, 1)    
-#     return {
-#         "site": site_tensor,
-#         "site_id": torch.tensor([1, 2]),
-#     }
+    # Generate synthetic batch using the parameters from site_encoder_model_kwargs
+    sequence_length = 180 // 5 + 1  # 37 time steps
+    num_sites = 349
+    
+    return generate_synthetic_pv_site_batch(
+        batch_size=2,
+        num_sites=num_sites,
+        sequence_length=sequence_length
+    )
 
 
 @pytest.fixture()
