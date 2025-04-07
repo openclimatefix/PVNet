@@ -93,9 +93,9 @@ def generate_synthetic_sample():
     """
     Generate synthetic sample for testing
     """
-    now = pd.Timestamp.now(tz='UTC')    
+    now = pd.Timestamp.now(tz='UTC')
     sample = {}
-    
+
     # NWP define
     sample["nwp"] = {
         "ukv": {
@@ -131,7 +131,7 @@ def generate_synthetic_sample():
             ),
         },
     }
-    
+
     # Satellite define
     sample["satellite_actual"] = torch.rand(7, 11, 24, 24)
     sample["satellite_time_utc"] = torch.tensor(
@@ -139,7 +139,7 @@ def generate_synthetic_sample():
     )
     sample["satellite_x_geostationary"] = torch.linspace(0, 100, 24)
     sample["satellite_y_geostationary"] = torch.linspace(0, 100, 24)
-    
+
     # GSP define
     sample["gsp"] = torch.rand(21)
     sample["gsp_nominal_capacity_mwp"] = torch.tensor(100.0)
@@ -151,11 +151,11 @@ def generate_synthetic_sample():
     sample["gsp_id"] = 12
     sample["gsp_x_osgb"] = 123456.0
     sample["gsp_y_osgb"] = 654321.0
-    
+
     # Solar position define
     sample["solar_azimuth"] = torch.linspace(0, 180, 21)
     sample["solar_elevation"] = torch.linspace(-10, 60, 21)
-    
+
     return sample
 
 
@@ -165,27 +165,27 @@ def generate_synthetic_site_sample():
     Returns an xarray Dataset that can be saved as .nc file
     """
     now = pd.Timestamp.now(tz='UTC')
-    
+
     # Create time and space coordinates
     site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
     nwp_time_coords = pd.date_range(start=now, periods=50, freq="1h")
     nwp_lat = np.linspace(50.0, 60.0, 24)
     nwp_lon = np.linspace(-10.0, 2.0, 24)
     nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
-    
+
     # Generate NWP data
     nwp_init_time = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
     nwp_steps = pd.timedelta_range(start=pd.Timedelta(hours=0), periods=50, freq="1h")
     nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
-    
+
     # Generate site data and solar position
-    site_data = np.random.rand(197)    
+    site_data = np.random.rand(197)
     site_lat, site_lon = 52.5, -1.5
-    
+
     # Calculate time features
     days_since_jan1 = (site_time_coords.dayofyear - 1) / 365.0
     hours_since_midnight = (site_time_coords.hour + site_time_coords.minute / 60.0) / 24.0
-    
+
     # Calculate trigonometric features
     site_solar_azimuth = np.linspace(0, 360, 197)
     site_solar_elevation = 15 * np.sin(np.linspace(0, 2*np.pi, 197))
@@ -195,11 +195,11 @@ def generate_synthetic_site_sample():
         "time_sin": np.sin(2 * np.pi * hours_since_midnight),
         "time_cos": np.cos(2 * np.pi * hours_since_midnight),
     }
-    
+
     # Create xarray Dataset with all coordinates
     site_data_ds = xr.Dataset(
         data_vars={
-            "nwp-ecmwf": (["nwp-ecmwf__target_time_utc", "nwp-ecmwf__channel", 
+            "nwp-ecmwf": (["nwp-ecmwf__target_time_utc", "nwp-ecmwf__channel",
                            "nwp-ecmwf__longitude", "nwp-ecmwf__latitude"], nwp_data),
             "site": (["site__time_utc"], site_data),
         },
@@ -211,7 +211,7 @@ def generate_synthetic_site_sample():
             "nwp-ecmwf__target_time_utc": nwp_time_coords,
             "nwp-ecmwf__init_time_utc": (["nwp-ecmwf__target_time_utc"], nwp_init_time),
             "nwp-ecmwf__step": (["nwp-ecmwf__target_time_utc"], nwp_steps),
-            
+
             # Site coordinates
             "site__site_id": np.int32(1),
             "site__latitude": site_lat,
@@ -223,7 +223,7 @@ def generate_synthetic_site_sample():
             **{f"site__{k}": (["site__time_utc"], v) for k, v in trig_features.items()}
         }
     )
-    
+
     # Add NWP attributes
     site_data_ds["nwp-ecmwf"].attrs = {
         "Conventions": "CF-1.7",
@@ -232,7 +232,7 @@ def generate_synthetic_site_sample():
         "GRIB_subCentre": "0",
         "institution": "European Centre for Medium-Range Weather Forecasts"
     }
-    
+
     return site_data_ds
 
 
@@ -243,7 +243,7 @@ def generate_synthetic_pv_batch():
     # 3D tensor of shape [batch_size, sequence_length, num_sites]
     batch_size = 8
     sequence_length = 180 // 5 + 1
-    num_sites = 349    
+    num_sites = 349
 
     return torch.rand(batch_size, sequence_length, num_sites)
 
@@ -257,13 +257,13 @@ def sample_train_val_datamodule():
         # Create train and val directories
         os.makedirs(f"{tmpdirname}/train", exist_ok=True)
         os.makedirs(f"{tmpdirname}/val", exist_ok=True)
-        
+
         # Generate and save synthetic samples
         for i in range(10):
             sample = generate_synthetic_sample()
             torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
             torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
-        
+
         # Define DataModule with temporary directory
         dm = DataModule(
             configuration=None,
@@ -274,7 +274,7 @@ def sample_train_val_datamodule():
             train_period=[None, None],
             val_period=[None, None],
         )
-        
+
         yield dm
 
 
@@ -287,13 +287,13 @@ def sample_datamodule():
         # Create train and val directories
         os.makedirs(f"{tmpdirname}/train", exist_ok=True)
         os.makedirs(f"{tmpdirname}/val", exist_ok=True)
-        
+
         # Generate and save synthetic samples
         for i in range(10):
             sample = generate_synthetic_sample()
             torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
             torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
-        
+
         # Define DataModule with temporary directory
         dm = DataModule(
             configuration=None,
@@ -304,7 +304,7 @@ def sample_datamodule():
             train_period=[None, None],
             val_period=[None, None],
         )
-        
+
         yield dm
 
 
@@ -318,11 +318,11 @@ def sample_site_datamodule():
         # Create train and val directories
         os.makedirs(f"{tmpdirname}/train", exist_ok=True)
         os.makedirs(f"{tmpdirname}/val", exist_ok=True)
-        
+
         # Generate and save synthetic samples
         for i in range(10):
             site_data = generate_synthetic_site_sample()
-            
+
             # Add variability to coordinates and data
             coords_updates = {
                 "site__site_id": np.int32(i % 3 + 1),
@@ -331,18 +331,18 @@ def sample_site_datamodule():
                 "site__capacity_kwp": 10000.0 * (1.0 + i * 0.01)
             }
             site_data = site_data.assign_coords(coords_updates)
-            
+
             # Add random noise to data variables
             for var in ["site", "nwp-ecmwf"]:
                 noise_shape = site_data[var].shape
                 noise = np.random.randn(*noise_shape).astype(site_data[var].dtype) * 0.01
                 site_data[var] = site_data[var] + noise
-            
+
             # Save as netCDF format for both train and val
             for subset in ["train", "val"]:
                 file_path = f"{tmpdirname}/{subset}/{i:08d}.nc"
                 site_data.to_netcdf(file_path, mode="w", engine="h5netcdf")
-        
+
         # Define SiteDataModule with temporary directory
         dm = SiteDataModule(
             configuration=None,
@@ -353,7 +353,7 @@ def sample_site_datamodule():
             train_period=[None, None],
             val_period=[None, None],
         )
-        
+
         yield dm
 
 
@@ -375,17 +375,17 @@ def sample_pv_batch():
     Create a batch of PV site data for testing site encoder models
     """
     pv_tensor = generate_synthetic_pv_batch()
-    
+
     # Get params from the tensor
     batch_size = pv_tensor.shape[0]
     gsp_ids = torch.randint(low=0, high=10, size=(batch_size,))
-    
+
     # Create batch dictionary - appropriate keys
     batch = {
         "pv": pv_tensor,
         "gsp_id": gsp_ids,
     }
-    
+
     return batch
 
 
@@ -430,9 +430,9 @@ def site_encoder_model_kwargs():
 def site_encoder_model_kwargs_dsampler():
     """Used to test site encoder model on PV data with data sampler"""
     return dict(
-        sequence_length=60 // 15 + 1, 
-        num_sites=1, 
-        out_features=128, 
+        sequence_length=60 // 15 + 1,
+        num_sites=1,
+        out_features=128,
         target_key_to_use="site"
     )
 
