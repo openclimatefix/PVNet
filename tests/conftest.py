@@ -166,54 +166,45 @@ def generate_synthetic_site_sample():
     """
     now = pd.Timestamp.now(tz='UTC')
     
-    # Create time coords
+    # Create time and space coordinates
     site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
-    nwp_time_coords = pd.date_range(start=now, periods=50, freq="1H")
-    
-    # NWP define
+    nwp_time_coords = pd.date_range(start=now, periods=50, freq="1h")
     nwp_lat = np.linspace(50.0, 60.0, 24)
     nwp_lon = np.linspace(-10.0, 2.0, 24)
     nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
     
-    # Define init times and steps for NWP
-    nwp_init_time = pd.date_range(
-        start=now - pd.Timedelta(hours=12), 
-        periods=1, 
-        freq="12H"
-    ).repeat(50)
-    
-    nwp_steps = pd.timedelta_range(
-        start=pd.Timedelta(hours=0),
-        periods=50,
-        freq="1H"
-    )
-    
+    # Generate NWP data
+    nwp_init_time = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
+    nwp_steps = pd.timedelta_range(start=pd.Timedelta(hours=0), periods=50, freq="1h")
     nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
-    site_data = np.random.rand(197)    
-    site_lat = 52.5
-    site_lon = -1.5
-    site_solar_azimuth = np.linspace(0, 360, 197)
-    site_solar_elevation = 15 * np.sin(np.linspace(0, 2*np.pi, 197))    
-    days_since_jan1 = (site_time_coords.dayofyear - 1) / 365.0
-    site_date_sin = np.sin(2 * np.pi * days_since_jan1)
-    site_date_cos = np.cos(2 * np.pi * days_since_jan1)
-    hours_since_midnight = (site_time_coords.hour + site_time_coords.minute / 60.0) / 24.0
-    site_time_sin = np.sin(2 * np.pi * hours_since_midnight)
-    site_time_cos = np.cos(2 * np.pi * hours_since_midnight)
     
-    # Create xarray Dataset
+    # Generate site data and solar position
+    site_data = np.random.rand(197)    
+    site_lat, site_lon = 52.5, -1.5
+    
+    # Calculate time features
+    days_since_jan1 = (site_time_coords.dayofyear - 1) / 365.0
+    hours_since_midnight = (site_time_coords.hour + site_time_coords.minute / 60.0) / 24.0
+    
+    # Calculate trigonometric features
+    site_solar_azimuth = np.linspace(0, 360, 197)
+    site_solar_elevation = 15 * np.sin(np.linspace(0, 2*np.pi, 197))
+    trig_features = {
+        "date_sin": np.sin(2 * np.pi * days_since_jan1),
+        "date_cos": np.cos(2 * np.pi * days_since_jan1),
+        "time_sin": np.sin(2 * np.pi * hours_since_midnight),
+        "time_cos": np.cos(2 * np.pi * hours_since_midnight),
+    }
+    
+    # Create xarray Dataset with all coordinates
     site_data_ds = xr.Dataset(
         data_vars={
-            # NWP data
-            "nwp-ecmwf": (
-                ["nwp-ecmwf__target_time_utc", "nwp-ecmwf__channel", "nwp-ecmwf__longitude", "nwp-ecmwf__latitude"], 
-                nwp_data
-            ),
-            # Site data
+            "nwp-ecmwf": (["nwp-ecmwf__target_time_utc", "nwp-ecmwf__channel", 
+                           "nwp-ecmwf__longitude", "nwp-ecmwf__latitude"], nwp_data),
             "site": (["site__time_utc"], site_data),
         },
         coords={
-            # NWP coords
+            # NWP coordinates
             "nwp-ecmwf__latitude": nwp_lat,
             "nwp-ecmwf__longitude": nwp_lon,
             "nwp-ecmwf__channel": nwp_channels,
@@ -221,21 +212,19 @@ def generate_synthetic_site_sample():
             "nwp-ecmwf__init_time_utc": (["nwp-ecmwf__target_time_utc"], nwp_init_time),
             "nwp-ecmwf__step": (["nwp-ecmwf__target_time_utc"], nwp_steps),
             
-            # Site coords
+            # Site coordinates
             "site__site_id": np.int32(1),
             "site__latitude": site_lat,
             "site__longitude": site_lon,
             "site__capacity_kwp": 10000.0,
             "site__time_utc": site_time_coords,
-            "site__date_sin": (["site__time_utc"], site_date_sin),
-            "site__date_cos": (["site__time_utc"], site_date_cos),
-            "site__time_sin": (["site__time_utc"], site_time_sin),
-            "site__time_cos": (["site__time_utc"], site_time_cos),
             "site__solar_azimuth": (["site__time_utc"], site_solar_azimuth),
             "site__solar_elevation": (["site__time_utc"], site_solar_elevation),
+            **{f"site__{k}": (["site__time_utc"], v) for k, v in trig_features.items()}
         }
     )
     
+    # Add NWP attributes
     site_data_ds["nwp-ecmwf"].attrs = {
         "Conventions": "CF-1.7",
         "GRIB_centre": "ecmf",
