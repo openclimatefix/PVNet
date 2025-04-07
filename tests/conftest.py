@@ -1,6 +1,6 @@
 import os
-import glob
 import tempfile
+from datetime import timedelta
 
 import pytest
 import pandas as pd
@@ -9,11 +9,7 @@ import xarray as xr
 import torch
 import hydra
 
-from datetime import timedelta
-
-import pvnet
 from pvnet.data import DataModule, SiteDataModule
-
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
@@ -361,27 +357,16 @@ def sample_site_datamodule():
         
         # Generate and save synthetic samples
         for i in range(10):
-            # Generate a synthetic site sample as xarray Dataset
             site_data = generate_synthetic_site_sample()
             
-            # Add variability to the sample
-            # Modify site ID to create some variety
-            site_data = site_data.assign_coords(site__site_id=np.int32(i % 3 + 1))
-            
-            # Vary the location slightly
+            site_data = site_data.assign_coords(site__site_id=np.int32(i % 3 + 1))            
             site_data = site_data.assign_coords(site__latitude=52.5 + i * 0.1)
-            site_data = site_data.assign_coords(site__longitude=-1.5 - i * 0.05)
-            
-            # Vary the capacity
+            site_data = site_data.assign_coords(site__longitude=-1.5 - i * 0.05)            
             site_data = site_data.assign_coords(site__capacity_kwp=10000.0 * (1.0 + i * 0.01))
             
-            # Add random noise to the site data
-            site_data["site"] = site_data["site"] + np.random.randn(*site_data["site"].shape) * 0.01
-            
-            # Add some variability to the NWP data
+            site_data["site"] = site_data["site"] + np.random.randn(*site_data["site"].shape) * 0.01            
             site_data["nwp-ecmwf"] = site_data["nwp-ecmwf"] + np.random.randn(*site_data["nwp-ecmwf"].shape).astype(np.float32) * 0.01
             
-            # Save as netCDF format
             site_data.to_netcdf(f"{tmpdirname}/train/{i:08d}.nc", mode="w", engine="h5netcdf")
             site_data.to_netcdf(f"{tmpdirname}/val/{i:08d}.nc", mode="w", engine="h5netcdf")
         
@@ -416,17 +401,13 @@ def sample_pv_batch():
     """
     Create a batch of PV site data for testing site encoder models
     """
-    # Use the existing generate_synthetic_pv_batch function for PV data
     pv_tensor = generate_synthetic_pv_batch()
     
-    # Get parameters from the tensor
-    batch_size = pv_tensor.shape[0]  # Should be 8
-    
-    # Create synthetic gsp_ids with a much more limited range (0-9)
-    # This ensures we won't exceed the embedding matrix size
+    # Get params from the tensor
+    batch_size = pv_tensor.shape[0]
     gsp_ids = torch.randint(low=0, high=10, size=(batch_size,))
     
-    # Create batch dictionary with appropriate keys
+    # Create batch dictionary - appropriate keys
     batch = {
         "pv": pv_tensor,
         "gsp_id": gsp_ids,
