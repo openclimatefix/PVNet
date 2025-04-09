@@ -6,14 +6,11 @@ dynamic = ["version", "readme"]
 license={file="LICENCE"}
 
 dependencies = [
-    "ocf-data-sampler==0.1.16",
-    "ocf_datapipes>=3.3.34",
-    "ocf_ml_metrics>=0.0.11",
+    "ocf-data-sampler>=0.2.10",
     "numpy",
     "pandas",
     "matplotlib",
     "xarray",
-    "ipykernel",
     "h5netcdf",
     "torch>=2.0.0",
     "lightning",
@@ -25,14 +22,12 @@ dependencies = [
     "fsspec[s3]",
     "wandb",
     "huggingface-hub",
-    "tensorboard",
     "tqdm",
     "omegaconf",
     "hydra-core",
     "python-dotenv",
     "hydra-optuna-sweeper",
     "rich",
-    "gcsfs",# gcsfs is only needed when getting data from Google Cloud Storage
 ]
 
 [tool.setuptools.dynamic]

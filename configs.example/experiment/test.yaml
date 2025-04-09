@@ -6,7 +6,7 @@
 defaults:
   - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
   - override /model: test.yaml
-  - override /datamodule: ocf_datapipes.yaml
+  - override /datamodule: premade_samples.yaml
   - override /callbacks: default.yaml
 
 # all parameters below will be merged with parameters from default configurations set above
