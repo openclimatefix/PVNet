@@ -18,7 +18,7 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
         # Get sample directory from the datamodule
         sample_dir = sample_datamodule.sample_dir
-        
+
         # Create config with matching structure
         data_config = {
             "general": {
@@ -66,7 +66,7 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
             "val_period": [None, None],
             "test_period": [None, None]
         }
-        
+
         yaml.dump(data_config, temp_file)
         data_config_path = temp_file.name
 

@@ -14,7 +14,7 @@ def temp_pt_sample_dir():
         # Create train and val directories
         os.makedirs(f"{tmpdirname}/train", exist_ok=True)
         os.makedirs(f"{tmpdirname}/val", exist_ok=True)
-        
+
         # Generate and save synthetic samples
         for i in range(5):
             sample = {
@@ -25,7 +25,7 @@ def temp_pt_sample_dir():
             }
             torch.save(sample, f"{tmpdirname}/train/{i:08d}.pt")
             torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
-        
+
         yield tmpdirname
 
 
@@ -36,12 +36,12 @@ def temp_nc_sample_dir():
         # Create train and val directories
         os.makedirs(f"{tmpdirname}/train", exist_ok=True)
         os.makedirs(f"{tmpdirname}/val", exist_ok=True)
-        
+
         # Create config file
         config_path = f"{tmpdirname}/data_configuration.yaml"
         with open(config_path, "w") as f:
             f.write(f"sample_dir: {tmpdirname}\n")
-        
+
         # Generate and save synthetic site samples
         for i in range(5):
             site_time = pd.date_range("2023-01-01", periods=10, freq="15min")
@@ -57,10 +57,10 @@ def temp_nc_sample_dir():
                     "site__capacity_kwp": 10000.0,
                 }
             )
-            
+
             ds.to_netcdf(f"{tmpdirname}/train/{i:08d}.nc", mode="w", engine="h5netcdf")
             ds.to_netcdf(f"{tmpdirname}/val/{i:08d}.nc", mode="w", engine="h5netcdf")
-        
+
         yield tmpdirname
 
 
@@ -75,7 +75,7 @@ def test_init(temp_pt_sample_dir):
         train_period=[None, None],
         val_period=[None, None],
     )
-    
+
     # Verify datamodule initialisation
     assert dm is not None
     assert hasattr(dm, "train_dataloader")
@@ -92,7 +92,7 @@ def test_iter(temp_pt_sample_dir):
         train_period=[None, None],
         val_period=[None, None],
     )
-    
+
     # Verify existing keys
     batch = next(iter(dm.train_dataloader()))
     assert batch is not None
@@ -133,7 +133,7 @@ def test_site_init_sample_dir(temp_nc_sample_dir):
         train_period=[None, None],
         val_period=[None, None],
     )
-    
+
     # Verify datamodule initialisation
     assert dm is not None
     assert hasattr(dm, "train_dataloader")
@@ -142,7 +142,7 @@ def test_site_init_sample_dir(temp_nc_sample_dir):
 def test_site_init_config(temp_nc_sample_dir):
     """Test SiteDataModule initialization with config file"""
     config_path = f"{temp_nc_sample_dir}/data_configuration.yaml"
-    
+
     dm = SiteDataModule(
         configuration=config_path,
         batch_size=2,
@@ -152,7 +152,7 @@ def test_site_init_config(temp_nc_sample_dir):
         val_period=[None, None],
         sample_dir=None,
     )
-    
+
     # Verify datamodule initialisation w/ config
     assert dm is not None
     assert hasattr(dm, "train_dataloader")
