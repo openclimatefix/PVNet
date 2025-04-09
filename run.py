@@ -19,7 +19,6 @@ import sys
 # Tired of seeing these warnings
 import warnings
 
-import dotenv
 import hydra
 from omegaconf import DictConfig
 from sqlalchemy import exc as sa_exc
@@ -33,10 +32,6 @@ os.environ["HYDRA_FULL_ERROR"] = "1"
 
 # this file can be run for example using
 #  python run.py experiment=example_simple
-
-# load environment variables from `.env` file if it exists
-# recursively searches for `.env` in all folders starting from work dir
-dotenv.load_dotenv(override=True)
 
 
 @hydra.main(config_path="configs/", config_name="config.yaml", version_base="1.2")
