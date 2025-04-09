@@ -1,5 +1,7 @@
 from pvnet.models.base_model import BaseModel
 from pathlib import Path
+import yaml
+import tempfile
 
 
 def test_from_pretrained():
@@ -12,8 +14,61 @@ def test_from_pretrained():
     )
 
 
-def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs):
-    data_config_path = "tests/test_data/presaved_samples_uk_regional/data_configuration.yaml"
+def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs, sample_datamodule):
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+        # Get sample directory from the datamodule
+        sample_dir = sample_datamodule.sample_dir
+
+        # Create config with matching structure
+        data_config = {
+            "general": {
+                "description": "Config for training the saved PVNet model",
+                "name": "test_pvnet"
+            },
+            "input_data": {
+                "gsp": {
+                    "zarr_path": sample_dir,
+                    "interval_start_minutes": -120,
+                    "interval_end_minutes": 480,
+                    "time_resolution_minutes": 30,
+                    "dropout_timedeltas_minutes": None,
+                    "dropout_fraction": 0
+                },
+                "nwp": {
+                    "ukv": {
+                        "provider": "ukv",
+                        "zarr_path": sample_dir,
+                        "interval_start_minutes": -120,
+                        "interval_end_minutes": 480,
+                        "time_resolution_minutes": 60,
+                        "channels": ["t", "dswrf", "dlwrf"],
+                        "image_size_pixels_height": 24,
+                        "image_size_pixels_width": 24,
+                        "dropout_timedeltas_minutes": None,
+                        "dropout_fraction": 0,
+                        "max_staleness_minutes": None
+                    }
+                },
+                "satellite": {
+                    "zarr_path": sample_dir,
+                    "interval_start_minutes": -30,
+                    "interval_end_minutes": 0,
+                    "time_resolution_minutes": 5,
+                    "channels": ["IR_016", "IR_039", "IR_087"],
+                    "image_size_pixels_height": 24,
+                    "image_size_pixels_width": 24,
+                    "dropout_timedeltas_minutes": None,
+                    "dropout_fraction": 0
+                }
+            },
+            "sample_dir": sample_dir,
+            "train_period": [None, None],
+            "val_period": [None, None],
+            "test_period": [None, None]
+        }
+
+        yaml.dump(data_config, temp_file)
+        data_config_path = temp_file.name
 
     # Construct the model config
     model_config = {"_target_": "pvnet.models.multimodal.multimodal.Model"}
