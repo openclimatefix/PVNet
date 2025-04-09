@@ -145,10 +145,11 @@ def train(config: DictConfig) -> Optional[float]:
         callbacks=callbacks,
     )
 
+    # TODO: remove this option
     if should_pretrain:
         # Pre-train the model
         raise NotImplementedError("Pre-training is not yet supported")
-        # The parameter `block_nwp_and_sat` has been removed from datapipes
+        # The parameter `block_nwp_and_sat` is not available in data-sampler
         # If pretraining is re-supported in the future it is likely any pre-training logic should
         # go here or perhaps in the callbacks
         # datamodule.block_nwp_and_sat = True
