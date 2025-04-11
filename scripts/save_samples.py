@@ -80,10 +80,10 @@ class SaveFuncFactory:
         save_path = f"{self.save_dir}/{sample_num:08}"
 
         if self.renewable == "pv_uk":
-            sample_class = UKRegionalSample()
+            sample_class = UKRegionalSample(sample)
             filename = f"{save_path}.pt"
         elif self.renewable == "site":
-            sample_class = SiteSample()
+            sample_class = SiteSample(sample)
             filename = f"{save_path}.nc"
         else:
             raise ValueError(f"Unknown renewable: {self.renewable}")
