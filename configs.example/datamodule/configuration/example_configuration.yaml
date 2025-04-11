@@ -14,7 +14,7 @@ input_data:
     interval_start_minutes: -60
     # Specified for intraday currently
     interval_end_minutes: 480
-    dropout_timedeltas_minutes: null
+    dropout_timedeltas_minutes: []
     dropout_fraction: 0 # Fraction of samples with dropout
 
   gsp:
@@ -28,7 +28,7 @@ input_data:
     # Random value from the list below will be chosen as the delay when dropout is used
     # If set to null no dropout is applied. Only values before t0 are dropped out for GSP.
     # Values after t0 are assumed as targets and cannot be dropped.
-    dropout_timedeltas_minutes: null
+    dropout_timedeltas_minutes: []
     dropout_fraction: 0 # Fraction of samples with dropout
 
   nwp:
@@ -169,7 +169,7 @@ input_data:
       - WV_073 # Water vapor, atmospheric instability, upper-level dynamics
     image_size_pixels_height: 24
     image_size_pixels_width: 24
-    dropout_timedeltas_minutes: null
+    dropout_timedeltas_minutes: []
     dropout_fraction: 0 # Fraction of samples with dropout
     normalisation_constants:
       IR_016: { mean: 0.17594202, std: 0.21462157 }
