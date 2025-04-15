@@ -421,7 +421,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 f"    by: {c.authors}\n"
                 f"    title: {c.title}\n"
             )
-            
+
             print(message)
 
 
