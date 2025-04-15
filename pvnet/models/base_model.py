@@ -106,13 +106,12 @@ def minimize_data_config(input_path, output_path, model):
                     nwp_config["image_size_pixels_height"] = nwp_pixel_size
                     nwp_config["image_size_pixels_width"] = nwp_pixel_size
 
-                    # Replace the forecast minutes
-                    nwp_config["forecast_minutes"] = (
-                        model.nwp_encoders_dict[nwp_source].sequence_length
-                        - nwp_config["interval_start_minutes"]
-                        / nwp_config["time_resolution_minutes"]
-                        - 1
-                    ) * nwp_config["time_resolution_minutes"]
+                    # Replace the interval_end_minutes minutes
+                    nwp_config["interval_end_minutes"] = (
+                        nwp_config["interval_start_minutes"] +
+                        (model.nwp_encoders_dict[nwp_source].sequence_length - 1)
+                        * nwp_config["time_resolution_minutes"]
+                    )
 
     if "satellite" in config["input_data"]:
         if not model.include_sat:
@@ -122,11 +121,15 @@ def minimize_data_config(input_path, output_path, model):
 
             # Replace the image size
             sat_pixel_size = model.sat_encoder.image_size_pixels
-            sat_config["satellite_image_size_pixels_height"] = sat_pixel_size
-            sat_config["satellite_image_size_pixels_width"] = sat_pixel_size
+            sat_config["image_size_pixels_height"] = sat_pixel_size
+            sat_config["image_size_pixels_width"] = sat_pixel_size
 
-            # Replace the satellite delay
-            sat_config["live_delay_minutes"] = model.min_sat_delay_minutes
+            # Replace the interval_end_minutes minutes
+            sat_config["interval_end_minutes"] = (
+                sat_config["interval_start_minutes"] +
+                (model.sat_encoder.sequence_length - 1)
+                * sat_config["time_resolution_minutes"]
+            )
 
     if "pv" in config["input_data"]:
         if not model.include_pv:
@@ -136,7 +139,7 @@ def minimize_data_config(input_path, output_path, model):
         gsp_config = config["input_data"]["gsp"]
 
         # Replace the forecast minutes
-        gsp_config["forecast_minutes"] = model.forecast_minutes
+        gsp_config["interval_end_minutes"] = model.forecast_minutes
 
     with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
@@ -407,6 +410,20 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 folder_path=save_directory,
                 revision=revision,
             )
+
+            # Print the most recent commit hash
+            c = api.list_repo_commits(repo_id=repo_id, repo_type="model")[0]
+
+            message = (
+                f"The latest commit is now: \n"
+                f"    date: {c.created_at} \n"
+                f"    commit hash: {c.commit_id}\n"
+                f"    by: {c.authors}\n"
+                f"    title: {c.title}\n"
+            )
+            
+            print(message)
+
 
         return None
 

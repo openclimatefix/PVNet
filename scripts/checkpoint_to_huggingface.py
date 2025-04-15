@@ -15,7 +15,9 @@ import wandb
 
 from pvnet.load_model import get_model_from_checkpoints
 
+app = typer.Typer(pretty_exceptions_show_locals=False)
 
+@app.command()
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
     huggingface_repo: str = "openclimatefix/pvnet_uk_region",  # e.g. openclimatefix/windnet_india
@@ -24,7 +26,7 @@ def push_to_huggingface(
     wandb_ids: list[str] = [],
     local_path: str = None,
     push_to_hub: bool = True,
-    revision: str = "main",
+    revision: str | None = None,
 ):
     """Push a local model to a huggingface model repo
 
@@ -81,4 +83,4 @@ def push_to_huggingface(
 
 
 if __name__ == "__main__":
-    typer.run(push_to_huggingface)
+    app()
