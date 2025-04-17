@@ -90,29 +90,41 @@ def sat_data():
 
 
 @pytest.fixture
-def valid_config_dict():
-    """Provides a dictionary representing a valid configuration."""
-
-    # Model config - additional considerations included
-    return {
+def valid_config_dict(model_minutes_kwargs):
+    """
+    Provides a dictionary representing a valid, minimal configuration
+    structure suitable for basic validation tests, reusing time settings
+    from the model_minutes_kwargs fixture.
+    """
+    cfg = {
         "_target_": "pvnet.models.multimodal.multimodal.Model",
-        "forecast_minutes": 480,
-        "history_minutes": 120,
-        "output_network": {"_target_": "SomeOutputNetwork"},
-        "optimizer": {"_target_": "SomeOptimizer", "lr": 0.001},
-        "sat_encoder": {"_target_": "SomeSatEncoder"},
-        "sat_history_minutes": 90,
-        "pv_encoder": {"_target_": "SomePvEncoder"},
-        "pv_history_minutes": 180,
-        "nwp_encoders_dict": {
-            "ukv": {"_target_": "SomeNwpEncoder"},
-            "ecmwf": {"_target_": "AnotherNwpEncoder"},
-        },
-        "nwp_history_minutes": {"ukv": 120, "ecmwf": 120},
-        "nwp_forecast_minutes": {"ukv": 480, "ecmwf": 480},
         "embedding_dim": 16,
         "include_sun": True,
+        "forecast_minutes": model_minutes_kwargs["forecast_minutes"],
+        "history_minutes": model_minutes_kwargs["history_minutes"],
+
+        "output_network": {"_target_": "pvnet.models.multimodal.linear_networks.networks.ResFCNet2"},
+        "optimizer": {"_target_": "torch.optim.Adam", "lr": 0.001},
+
+        "sat_encoder": {"_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet"},
+        "pv_encoder": {"_target_": "pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork"},
+        "nwp_encoders_dict": {
+            "ukv": {"_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet"},
+            "ecmwf": {"_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet"},
+        },
+
+        "sat_history_minutes": 90,
+        "pv_history_minutes": 180,
+        "nwp_history_minutes": {
+            "ukv": 120,
+             "ecmwf": 120
+        },
+        "nwp_forecast_minutes": {
+            "ukv": 480,
+            "ecmwf": 480
+        },
     }
+    return cfg
 
 
 def generate_synthetic_sample():
