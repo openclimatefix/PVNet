@@ -89,6 +89,32 @@ def sat_data():
     return ds
 
 
+@pytest.fixture
+def valid_config_dict():
+    """Provides a dictionary representing a valid configuration."""
+
+    # Model config - additional considerations included
+    return {
+        "_target_": "pvnet.models.multimodal.multimodal.Model",
+        "forecast_minutes": 480,
+        "history_minutes": 120,
+        "output_network": {"_target_": "SomeOutputNetwork"},
+        "optimizer": {"_target_": "SomeOptimizer", "lr": 0.001},
+        "sat_encoder": {"_target_": "SomeSatEncoder"},
+        "sat_history_minutes": 90,
+        "pv_encoder": {"_target_": "SomePvEncoder"},
+        "pv_history_minutes": 180,
+        "nwp_encoders_dict": {
+            "ukv": {"_target_": "SomeNwpEncoder"},
+            "ecmwf": {"_target_": "AnotherNwpEncoder"},
+        },
+        "nwp_history_minutes": {"ukv": 120, "ecmwf": 120},
+        "nwp_forecast_minutes": {"ukv": 480, "ecmwf": 480},
+        "embedding_dim": 16,
+        "include_sun": True,
+    }
+
+
 def generate_synthetic_sample():
     """
     Generate synthetic sample for testing
