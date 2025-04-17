@@ -97,6 +97,7 @@ def test_validate_warning_non_int_time_param(valid_config_dict, caplog):
 def test_validate_warning_empty_optional_section(valid_config_dict, caplog):
     warn_cfg = valid_config_dict.copy()
     warn_cfg["sat_encoder"] = {}
+    # Remove associated time param if present to isolate the empty section warning
     if "sat_history_minutes" in warn_cfg:
         del warn_cfg["sat_history_minutes"]
     with caplog.at_level(logging.WARNING):
@@ -107,6 +108,7 @@ def test_validate_warning_empty_optional_section(valid_config_dict, caplog):
 def test_validate_warning_missing_optional_sensor_time(valid_config_dict, caplog):
     warn_cfg = valid_config_dict.copy()
     warn_cfg["sensor_encoder"] = {"_target_": "some.SensorEncoder"}
+    # Ensure optional time params are missing to test warnings
     if "sensor_history_minutes" in warn_cfg:
         del warn_cfg["sensor_history_minutes"]
     if "sensor_forecast_minutes" in warn_cfg:
@@ -121,12 +123,14 @@ def test_validate_warning_missing_optional_sensor_time(valid_config_dict, caplog
 def test_validate_warning_nwp_empty_sources(valid_config_dict, caplog):
     warn_cfg = valid_config_dict.copy()
     warn_cfg["nwp_encoders_dict"] = {}
+    # Remove time params if present to isolate the nwp source warning
     if "nwp_history_minutes" in warn_cfg: del warn_cfg["nwp_history_minutes"]
     if "nwp_forecast_minutes" in warn_cfg: del warn_cfg["nwp_forecast_minutes"]
     with caplog.at_level(logging.WARNING):
         result = validate_multimodal_config(warn_cfg)
     assert result == {"valid": True}
     assert "Optional config section 'nwp_encoders_dict' is present but empty" in caplog.text
+    assert "'nwp_encoders_dict' is defined but contains no NWP sources" in caplog.text
 
 
 def test_validate_warning_nwp_non_int_time_value(valid_config_dict, caplog):
