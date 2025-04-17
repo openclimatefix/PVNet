@@ -45,11 +45,13 @@ def _check_key(
             return
 
     value: Any = cfg[key]
+    # Type validation
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type.__name__}, "
             f"found {type(value).__name__}."
         )
+        # Non critical and critical type mismatches
         if warn_on_type_mismatch:
             logger.warning(message)
         else:
@@ -103,6 +105,7 @@ def _check_dict_section(
 
     section_content: Any = cfg.get(section_name)
 
+    # Ensure section follows dict structure
     if not isinstance(section_content, dict):
         raise TypeError(
             f"Config section '{section_name}' must be a dictionary, "
@@ -169,6 +172,8 @@ def _check_time_parameter(
                   `required_if_owner_present` is True, and the `param_name` key
                   is missing from `cfg`.
     """
+
+    # Only if associated feature/encoder is configured and enabled
     if owner_key in cfg and cfg.get(owner_key):
         context = f"Config includes '{owner_key}'"
         if param_name not in cfg:
@@ -192,6 +197,7 @@ def _check_dict_values_are_int(data: dict[str, Any], dict_name: str) -> None:
     """Checks if all values in a dictionary are integers, logs warning otherwise."""
     for source, value in data.items():
         if not isinstance(value, int):
+            # Check integer type constraint
             logger.warning(
                 f"'{dict_name}' for source '{source}' expected int, "
                 f"found {type(value).__name__}."
@@ -237,6 +243,7 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
     forecast_keys: set[str] = set(nwp_forecast_times.keys())
     encoder_keys: set[str] = set(nwp_sources)
 
+    # Verify time params are provided for specifically defined NWP sources
     if hist_keys != encoder_keys:
         missing_in_hist = encoder_keys - hist_keys
         extra_in_hist = hist_keys - encoder_keys
@@ -254,6 +261,7 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
             f"Missing: {missing_in_forecast}, Extra: {extra_in_forecast}"
         )
 
+    # Check time param values are integers
     _check_dict_values_are_int(nwp_hist_times, "nwp_history_minutes")
     _check_dict_values_are_int(nwp_forecast_times, "nwp_forecast_minutes")
 
