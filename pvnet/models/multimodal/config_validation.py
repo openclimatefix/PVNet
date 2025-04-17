@@ -75,7 +75,7 @@ def _check_dict_section(
     Args:
         cfg: The main configuration dictionary.
         section_name: The key of the section to validate within `cfg`.
-        required: If True, raises KeyError if the section is missing. Defaults to True. # Modified description slightly
+        required: If True, raises KeyError if the section is missing.
         check_target: If True, checks for a '_target_' key directly within the
                       section dictionary (if `check_sub_items_target` is False).
                       Defaults to True.
@@ -92,7 +92,7 @@ def _check_dict_section(
     Raises:
         KeyError: If `required` is True and the section `section_name` is missing
                   from `cfg`, or if `check_target` or `check_sub_items_target`
-                  is True and the required '_target_' key(s) are missing (including if the section is empty).
+                  is True and the required '_target_' key(s) are missing.
         TypeError: If the section identified by `section_name` is not a dictionary,
                    or if `check_sub_items_target` is True and any sub-item is
                    not a dictionary.
