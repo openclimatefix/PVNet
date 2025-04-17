@@ -73,8 +73,7 @@ def _check_dict_section(
     Args:
         cfg: The main configuration dictionary.
         section_name: The key of the section to validate within `cfg`.
-        required: If True, raises KeyError if the section is missing or empty
-                  when `check_target` is also True. Defaults to True.
+        required: If True, raises KeyError if the section is missing. Defaults to True. # Modified description slightly
         check_target: If True, checks for a '_target_' key directly within the
                       section dictionary (if `check_sub_items_target` is False).
                       Defaults to True.
@@ -91,7 +90,7 @@ def _check_dict_section(
     Raises:
         KeyError: If `required` is True and the section `section_name` is missing
                   from `cfg`, or if `check_target` or `check_sub_items_target`
-                  is True and the required '_target_' key(s) are missing.
+                  is True and the required '_target_' key(s) are missing (including if the section is empty).
         TypeError: If the section identified by `section_name` is not a dictionary,
                    or if `check_sub_items_target` is True and any sub-item is
                    not a dictionary.
@@ -110,17 +109,16 @@ def _check_dict_section(
             f"found {type(section_content).__name__}."
         )
 
-    if not section_content:
-        if not required:
-            logger.warning(f"Optional config section '{section_name}' is present but empty.")
-        elif required and (check_target or check_sub_items_target):
-             raise KeyError(
-                 f"Required config section '{section_name}' is empty and requires sub-key(s) "
-                 f"like '_target_'."
-             )
+    if not section_content and not required:
+        logger.warning(f"Optional config section '{section_name}' is present but empty.")
         return section_content
 
     if check_sub_items_target:
+        if not section_content and required:
+             raise KeyError(
+                 f"Required config section '{section_name}' is empty and requires sub-items "
+                 f"with '_target_' keys."
+             )
         for source, sub_config in section_content.items():
             if not isinstance(sub_config, dict):
                 raise TypeError(
@@ -190,6 +188,16 @@ def _check_time_parameter(
             )
 
 
+def _check_dict_values_are_int(data: dict[str, Any], dict_name: str) -> None:
+    """Checks if all values in a dictionary are integers, logs warning otherwise."""
+    for source, value in data.items():
+        if not isinstance(value, int):
+            logger.warning(
+                f"'{dict_name}' for source '{source}' expected int, "
+                f"found {type(value).__name__}."
+            )
+
+
 def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) -> None:
     """
     Performs validation specific to the NWP (Numerical Weather Prediction) configuration.
@@ -246,18 +254,8 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
             f"Missing: {missing_in_forecast}, Extra: {extra_in_forecast}"
         )
 
-    for source, value in nwp_hist_times.items():
-        if not isinstance(value, int):
-            logger.warning(
-                f"'nwp_history_minutes' for source '{source}' expected int, "
-                f"found {type(value).__name__}."
-            )
-    for source, value in nwp_forecast_times.items():
-        if not isinstance(value, int):
-            logger.warning(
-                f"'nwp_forecast_minutes' for source '{source}' expected int, "
-                f"found {type(value).__name__}."
-            )
+    _check_dict_values_are_int(nwp_hist_times, "nwp_history_minutes")
+    _check_dict_values_are_int(nwp_forecast_times, "nwp_forecast_minutes")
 
 
 def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
