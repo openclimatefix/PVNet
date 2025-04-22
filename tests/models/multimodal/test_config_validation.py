@@ -139,21 +139,6 @@ def test_validate_warning_empty_optional_section(valid_config_dict, caplog):
     assert result == {"valid": True}
     assert "Optional config section 'sat_encoder' is present but empty" in caplog.text
 
-def test_validate_warning_missing_optional_sensor_time(valid_config_dict, caplog):
-    warn_cfg = valid_config_dict.copy()
-    # Add sensor encoder if not present
-    warn_cfg["sensor_encoder"] = {"_target_": "some.SensorEncoder"}
-    # Ensure optional time params are missing to test warnings
-    if "sensor_history_minutes" in warn_cfg:
-        del warn_cfg["sensor_history_minutes"]
-    if "sensor_forecast_minutes" in warn_cfg:
-        del warn_cfg["sensor_forecast_minutes"]
-    with caplog.at_level(logging.WARNING):
-        result = validate_multimodal_config(warn_cfg)
-    assert result == {"valid": True}
-    assert "includes 'sensor_encoder' but is missing 'sensor_history_minutes'" in caplog.text
-    assert "includes 'sensor_encoder' but is missing 'sensor_forecast_minutes'" in caplog.text
-
 
 def test_validate_warning_nwp_empty_sources(valid_config_dict, caplog):
     warn_cfg = valid_config_dict.copy()

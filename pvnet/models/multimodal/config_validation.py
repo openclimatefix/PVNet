@@ -1,7 +1,9 @@
 """Validation functions for Multimodal configuration using modern type hints."""
 
 import logging
+
 from typing import Any, Type
+from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ def _check_key(
     Checks for the presence and optionally the type of a key in the config dictionary.
 
     Logs a warning on type mismatch if warn_on_type_mismatch is True, otherwise
-    raises a TypeError.
+    raises TypeError.
 
     Args:
         cfg: The configuration dictionary.
@@ -29,8 +31,6 @@ def _check_key(
         warn_on_type_mismatch: If True and expected_type is provided, logs a
             warning on type mismatch instead of raising TypeError. Defaults to False.
         context: String describing the context for error/warning messages
-            (e.g., the name of the configuration section being checked).
-            Defaults to "Configuration".
 
     Raises:
         KeyError: If `required` is True and the `key` is missing from `cfg`.
@@ -67,10 +67,6 @@ def _check_dict_section(
 ) -> dict[str, Any] | None:
     """
     Validates a configuration section expected to be a dictionary.
-
-    Optionally checks for the presence of a '_target_' key within the section
-    or within sub-dictionaries of the section. Logs a warning if an optional
-    section is present but empty.
 
     Args:
         cfg: The main configuration dictionary.
@@ -150,8 +146,6 @@ def _check_time_parameter(
     required_if_owner_present: bool = True,
 ) -> None:
     """
-    Checks a time parameter potentially associated with an optional feature/encoder.
-
     Verifies the presence and type (expects int, warns otherwise) of a time
     parameter (`param_name`) if the feature enabling it (`owner_key`) is present
     and truthy in the configuration.
@@ -173,7 +167,7 @@ def _check_time_parameter(
                   is missing from `cfg`.
     """
 
-    # Only if associated feature/encoder is configured and enabled
+    # Only if associated feature / encoder is configured and enabled
     if owner_key in cfg and cfg.get(owner_key):
         context = f"Config includes '{owner_key}'"
         if param_name not in cfg:
@@ -206,8 +200,6 @@ def _check_dict_values_are_int(data: dict[str, Any], dict_name: str) -> None:
 
 def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) -> None:
     """
-    Performs validation specific to the NWP (Numerical Weather Prediction) configuration.
-
     Checks for the presence and structure of required NWP time parameters
     ('nwp_history_minutes', 'nwp_forecast_minutes') and ensures their keys
     match the sources defined in the 'nwp_encoders_dict'. Logs warnings for
@@ -266,74 +258,205 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
     _check_dict_values_are_int(nwp_forecast_times, "nwp_forecast_minutes")
 
 
-def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
+def _check_output_quantiles_config(cfg: dict[str, Any], context: str = "Top Level") -> None:
     """
-    Validates the configuration dictionary for the Multimodal Model.
-
-    Checks that the configuration dictionary `cfg` has the expected structure,
-    keys, and basic types required for the Multimodal Model. It utilizes
-    helper functions for granular checks. Critical issues (missing required keys
-    like '_target_', incorrect types for major sections, mismatched NWP keys)
-    will raise an appropriate exception (`KeyError`, `TypeError`, `ValueError`).
-    Non-critical issues (e.g., optional sections present but empty, expected
-    integer types being incorrect but tolerated) will be logged as warnings.
+    Validates the 'output_quantiles' configuration parameter. Ensures it exists,
+    is a non-empty list or tuple, and contains only numeric values.
 
     Args:
-        cfg (dict[str, Any]): The configuration dictionary to validate. Expected
-            to be a mapping from string keys to various value types.
-
-    Returns:
-        dict[str, bool]: A dictionary indicating success: `{"valid": True}`.
-            If validation fails due to a critical issue, an exception is raised
-            instead of returning normally.
+        cfg: The configuration dictionary containing 'output_quantiles'.
+        context: String describing the context for error messages (e.g., 'Top Level').
+                 Defaults to "Top Level".
 
     Raises:
-        TypeError: If a configuration section expected to be a dictionary is not,
-                   or if required time parameters (e.g., for NWP) are not dictionaries
-                   when expected, or if a value has an incorrect type and
-                   `warn_on_type_mismatch` was False for that check.
-        KeyError: For critical validation failures like missing required top-level
-                  keys (e.g., '_target_', 'forecast_minutes', 'history_minutes',
-                  'output_network', 'optimizer'), missing required '_target_'
-                  sub-keys within sections, or missing required time parameters
-                  when their associated feature is enabled.
-        ValueError: If keys in NWP time parameter dictionaries ('nwp_history_minutes',
-                    'nwp_forecast_minutes') do not exactly match the source keys
-                    defined in 'nwp_encoders_dict'.
+        KeyError: If 'output_quantiles' key is missing.
+        TypeError: If 'output_quantiles' is not a list or tuple, or if any element
+                   within it is not an int or float.
+        ValueError: If 'output_quantiles' is an empty list or tuple.
+    """
+    _check_key(cfg, "output_quantiles", required=True, expected_type=(list, tuple), context=context)
+    quantiles = cfg["output_quantiles"]
+    if not quantiles:
+        raise ValueError(f"{context}: 'output_quantiles' list cannot be empty.")
+    for i, q_value in enumerate(quantiles):
+        if not isinstance(q_value, (int, float)):
+             raise TypeError(
+                 f"{context}: Element {i} in 'output_quantiles' must be a number, "
+                 f"found {type(q_value).__name__}."
+            )
+
+
+def _check_convnet_encoder_params(cfg: dict[str, Any], section_key: str, context: str, source_key: str | None = None) -> None:
+    """
+    Validates parameters specific to Convolutional Neural Network (ConvNet) encoders
+    within a configuration dictionary. Handles potentially nested structures, such as
+    those used for NWP sources. Checks for required integer parameters and ensures
+    they are positive.
+
+    Args:
+        cfg: The main configuration dictionary.
+        section_key: The key within `cfg` that points to the encoder configuration.
+                     For NWP, this would be 'nwp_encoders_dict'. For others like
+                     satellite, it's the direct section key (e.g., 'sat_encoder').
+        context: A string describing the context for error messages, helping to
+                 pinpoint the location of validation failures (e.g., 'sat_encoder',
+                 'nwp_encoders_dict[NWP_SOURCE_NAME]').
+        source_key: An optional key used specifically when `section_key` points to a
+                    dictionary of sources (like 'nwp_encoders_dict'). This specifies
+                    which source's configuration to validate within the section.
+                    Defaults to None.
+
+    Raises:
+        KeyError: If the specified section or source configuration cannot be found
+                  at the expected location within `cfg`, or if required parameter
+                  keys ('in_channels', 'out_features', etc.) are missing within
+                  the encoder's configuration dictionary.
+        TypeError: If the retrieved encoder configuration is not a dictionary, or if
+                   any of the required parameters ('in_channels', etc.) are not integers.
+        ValueError: If any of the required numeric parameters ('in_channels',
+                    'out_features', 'number_of_conv3d_layers', 'conv3d_channels',
+                    'image_size_pixels') are not positive integers.
+    """
+    encoder_config: dict[str, Any] | None = None
+    if source_key:
+        nwp_dict = cfg.get(section_key)
+        if isinstance(nwp_dict, dict):
+            encoder_config = nwp_dict.get(source_key)
+        if encoder_config is None:
+             raise KeyError(f"{context}: Cannot find valid source config at cfg['{section_key}']['{source_key}'].")
+    else:
+        encoder_config = cfg.get(section_key)
+
+    if not isinstance(encoder_config, dict):
+        raise TypeError(f"{context}: Encoder configuration must be a dictionary.")
+
+    _check_key(encoder_config, "in_channels", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "out_features", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "number_of_conv3d_layers", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "conv3d_channels", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "image_size_pixels", required=True, expected_type=int, context=context)
+
+    if encoder_config["in_channels"] <= 0: raise ValueError(f"{context}: 'in_channels' must be positive.")
+    if encoder_config["out_features"] <= 0: raise ValueError(f"{context}: 'out_features' must be positive.")
+    if encoder_config["number_of_conv3d_layers"] <= 0: raise ValueError(f"{context}: 'number_of_conv3d_layers' must be positive.")
+    if encoder_config["conv3d_channels"] <= 0: raise ValueError(f"{context}: 'conv3d_channels' must be positive.")
+    if encoder_config["image_size_pixels"] <= 0: raise ValueError(f"{context}: 'image_size_pixels' must be positive.")
+
+
+def _check_attention_encoder_params(cfg: dict[str, Any], section_key: str, context: str) -> None:
+    """
+    Validates parameters specific to Attention-based encoders (e.g., for PV data)
+    within the main configuration dictionary. Checks for required integer parameters
+    and ensures they are positive.
+
+    Args:
+        cfg: The main configuration dictionary.
+        section_key: The key within `cfg` that points directly to the Attention
+                     encoder's configuration dictionary (e.g., 'pv_encoder').
+        context: A string describing the context for error messages, used to
+                 identify the encoder being validated (e.g., 'pv_encoder').
+
+    Raises:
+        TypeError: If the configuration retrieved using `section_key` is not a
+                   dictionary, or if any of the required parameters ('num_sites',
+                   'out_features', etc.) are not integers.
+        KeyError: If any of the required parameter keys ('num_sites', 'out_features',
+                  'num_heads', 'kdim', 'id_embed_dim') are missing from the
+                  encoder's configuration dictionary.
+        ValueError: If any of the required numeric parameters ('num_sites',
+                    'out_features', 'num_heads', 'kdim', 'id_embed_dim') are
+                    not positive integers.
+    """
+    encoder_config = cfg.get(section_key)
+
+    if not isinstance(encoder_config, dict):
+        raise TypeError(f"{context}: Encoder configuration must be a dictionary.")
+
+    _check_key(encoder_config, "num_sites", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "out_features", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "num_heads", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "kdim", required=True, expected_type=int, context=context)
+    _check_key(encoder_config, "id_embed_dim", required=True, expected_type=int, context=context)
+
+    if encoder_config["num_sites"] <= 0: raise ValueError(f"{context}: 'num_sites' must be positive.")
+    if encoder_config["out_features"] <= 0: raise ValueError(f"{context}: 'out_features' must be positive.")
+    if encoder_config["num_heads"] <= 0: raise ValueError(f"{context}: 'num_heads' must be positive.")
+    if encoder_config["kdim"] <= 0: raise ValueError(f"{context}: 'kdim' must be positive.")
+    if encoder_config["id_embed_dim"] <= 0: raise ValueError(f"{context}: 'id_embed_dim' must be positive.")
+
+
+def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
+    """
+    Performs comprehensive validation of Multimodal model configuration dictionary.
+
+    Args:
+        cfg: The Multimodal configuration dictionary to validate.
+
+    Returns:
+        dict[str, bool]: A dictionary indicating successful validation,
+                         typically `{"valid": True}`. If validation fails,
+                         an exception is raised instead.
+
+    Raises:
+        KeyError: If required top-level keys (e.g., '_target_', 'output_quantiles',
+                  'forecast_minutes', 'history_minutes'), required sections
+                  (e.g., 'output_network', 'optimizer'), required sub-keys within
+                  sections (e.g., '_target_', required time parameters like
+                  'sat_history_minutes' when 'sat_encoder' is present), or required
+                  encoder parameters are missing.
+        TypeError: If configuration elements have incorrect types, such as sections not
+                   being dictionaries, 'output_quantiles' not being a list/tuple,
+                   or specific parameters within encoders not having the expected
+                   numeric types. Note: Non-critical type mismatches for some time
+                   parameters might only log warnings.
+        ValueError: If certain values are invalid, such as 'output_quantiles' being
+                    an empty list, numeric encoder parameters (channels, features,
+                    image sizes, etc.) being non-positive, or if keys within NWP
+                    time parameter dictionaries ('nwp_history_minutes',
+                    'nwp_forecast_minutes') do not exactly match the sources defined
+                    in 'nwp_encoders_dict'.
     """
     _check_key(cfg, "_target_", required=True, expected_type=str)
-    _check_key(
-        cfg, "forecast_minutes", required=True, expected_type=int, warn_on_type_mismatch=True
-    )
-    _check_key(
-        cfg, "history_minutes", required=True, expected_type=int, warn_on_type_mismatch=True
-    )
+    _check_output_quantiles_config(cfg, context="Top Level")
+    _check_key(cfg, "forecast_minutes", required=True, expected_type=int, warn_on_type_mismatch=True)
+    _check_key(cfg, "history_minutes", required=True, expected_type=int, warn_on_type_mismatch=True)
+    _check_key(cfg, "min_sat_delay_minutes", required=False, expected_type=int, warn_on_type_mismatch=True)
+    _check_key(cfg, "nwp_interval_minutes", required=False, expected_type=dict)
 
-    _check_dict_section(cfg, "output_network", required=True, check_target=True)
-    _check_dict_section(cfg, "optimizer", required=True, check_target=True)
+    if "nwp_interval_minutes" in cfg and isinstance(cfg.get("nwp_interval_minutes"), dict):
+         _check_dict_values_are_int(cfg["nwp_interval_minutes"], "nwp_interval_minutes")
 
-    _check_dict_section(cfg, "sat_encoder", required=False, check_target=True)
-    _check_dict_section(cfg, "pv_encoder", required=False, check_target=True)
-    _check_dict_section(cfg, "sensor_encoder", required=False, check_target=True)
+    _check_key(cfg, "embedding_dim", required=False, expected_type=int)
+    _check_key(cfg, "include_sun", required=False, expected_type=bool)
+    _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
+    _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
 
-    _check_time_parameter(
-        cfg, "sat_history_minutes", owner_key="sat_encoder", required_if_owner_present=True
-    )
-    _check_time_parameter(
-        cfg, "pv_history_minutes", owner_key="pv_encoder", required_if_owner_present=True
-    )
-    _check_time_parameter(
-        cfg, "sensor_history_minutes", owner_key="sensor_encoder", required_if_owner_present=False
-    )
-    _check_time_parameter(
-        cfg, "sensor_forecast_minutes", owner_key="sensor_encoder", required_if_owner_present=False
-    )
+    output_network_section = _check_dict_section(cfg, "output_network", required=True, check_target=True)
+    optimizer_section = _check_dict_section(cfg, "optimizer", required=True, check_target=True)
 
-    nwp_section = _check_dict_section(
-        cfg, "nwp_encoders_dict", required=False, check_sub_items_target=True
-    )
+    # Satellite Encoder
+    sat_section = _check_dict_section(cfg, "sat_encoder", required=False, check_target=True)
+    _check_time_parameter(cfg, "sat_history_minutes", owner_key="sat_encoder", required_if_owner_present=True)
+    if sat_section:
+        _check_convnet_encoder_params(cfg, section_key="sat_encoder", context="sat_encoder")
 
+    # PV Encoder
+    pv_section = _check_dict_section(cfg, "pv_encoder", required=False, check_target=True)
+    _check_time_parameter(cfg, "pv_history_minutes", owner_key="pv_encoder", required_if_owner_present=True)
+    if pv_section:
+        _check_attention_encoder_params(cfg, section_key="pv_encoder", context="pv_encoder")
+
+    # NWP Encoders
+    nwp_section = _check_dict_section(cfg, "nwp_encoders_dict", required=False, check_sub_items_target=True)
     if nwp_section is not None:
         _validate_nwp_specifics(cfg, nwp_section)
+        for source in nwp_section.keys():
+             _check_convnet_encoder_params(
+                cfg=cfg,
+                section_key="nwp_encoders_dict",
+                context=f"nwp_encoders_dict[{source}]",
+                source_key=source
+            )
 
+    logger.info("Multimodal configuration validation successful.")
     return {"valid": True}

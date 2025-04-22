@@ -92,9 +92,8 @@ def sat_data():
 @pytest.fixture
 def valid_config_dict(model_minutes_kwargs):
     """
-    Provides a dictionary representing a valid, minimal configuration
-    structure suitable for basic validation tests, reusing time settings
-    from the model_minutes_kwargs fixture.
+    Provides a dictionary representing a valid configuration structure
+    suitable for validation tests, including required encoder parameters.
     """
     cfg = {
         "_target_": "pvnet.models.multimodal.multimodal.Model",
@@ -103,14 +102,44 @@ def valid_config_dict(model_minutes_kwargs):
         "forecast_minutes": model_minutes_kwargs["forecast_minutes"],
         "history_minutes": model_minutes_kwargs["history_minutes"],
 
+        "output_quantiles": [0.1, 0.5, 0.9],
+
         "output_network": {"_target_": "pvnet.models.multimodal.linear_networks.networks.ResFCNet2"},
         "optimizer": {"_target_": "torch.optim.Adam", "lr": 0.001},
 
-        "sat_encoder": {"_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet"},
-        "pv_encoder": {"_target_": "pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork"},
+        "sat_encoder": {
+            "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
+            "in_channels": 12,
+            "out_features": 128,
+            "number_of_conv3d_layers": 6,
+            "conv3d_channels": 32,
+            "image_size_pixels": 64,
+        },
+        "pv_encoder": {
+            "_target_": "pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork",
+             "num_sites": 100,
+             "out_features": 128,
+             "num_heads": 4,
+             "kdim": 64,
+             "id_embed_dim": 16,
+        },
         "nwp_encoders_dict": {
-            "ukv": {"_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet"},
-            "ecmwf": {"_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet"},
+            "ukv": {
+                "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
+                "in_channels": 10,
+                "out_features": 128,
+                "number_of_conv3d_layers": 4,
+                "conv3d_channels": 32,
+                "image_size_pixels": 32,
+            },
+            "ecmwf": {
+                "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
+                "in_channels": 8,
+                "out_features": 128,
+                "number_of_conv3d_layers": 4,
+                "conv3d_channels": 32,
+                "image_size_pixels": 32,
+            },
         },
 
         "sat_history_minutes": 90,
