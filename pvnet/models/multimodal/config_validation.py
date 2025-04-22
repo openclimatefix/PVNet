@@ -1,9 +1,7 @@
 """Validation functions for Multimodal configuration using modern type hints."""
 
 import logging
-
 from typing import Any, Type
-from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
