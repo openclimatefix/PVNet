@@ -1,9 +1,7 @@
-"""Validation functions for Multimodal configuration using modern type hints."""
+"""Validation functions for Multimodal configuration"""
 
 import logging
-
 from typing import Any, Type
-from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -448,9 +446,6 @@ def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
     _check_key(cfg, "include_sun", required=False, expected_type=bool)
     _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
     _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
-
-    output_network_section = _check_dict_section(cfg, "output_network", required=True, check_target=True)
-    optimizer_section = _check_dict_section(cfg, "optimizer", required=True, check_target=True)
 
     # Satellite Encoder
     sat_section = _check_dict_section(cfg, "sat_encoder", required=False, check_target=True)
