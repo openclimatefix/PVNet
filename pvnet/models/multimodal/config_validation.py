@@ -1,9 +1,7 @@
 """Validation functions for Multimodal configuration"""
 
 import logging
-
 from typing import Any, Type
-from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +283,7 @@ def _check_convnet_encoder_params(cfg: dict[str, Any], section_key: str, context
     Validates parameters specific to Convolutional Neural Network (ConvNet) encoders.
     """
     convnet_params = [
-        "in_channels", "out_features", "number_of_conv3d_layers", 
+        "in_channels", "out_features", "number_of_conv3d_layers",
         "conv3d_channels", "image_size_pixels"
     ]
     _check_encoder_params(cfg, section_key, context, convnet_params, source_key)
@@ -309,13 +307,13 @@ def _get_encoder_config(
 ) -> dict[str, Any]:
     """
     Retrieves encoder configuration, handling both direct and nested configurations.
-    
+
     Args:
         cfg: The main configuration dictionary.
         section_key: The key within `cfg` that points to the encoder configuration.
         context: Context string for error messages.
         source_key: Optional key for nested configurations.
-        
+
     Returns:
         The encoder configuration dictionary.
     """
@@ -331,7 +329,7 @@ def _get_encoder_config(
 
     if not isinstance(encoder_config, dict):
         raise TypeError(f"{context}: Encoder configuration must be a dictionary.")
-    
+
     return encoder_config
 
 
@@ -342,7 +340,7 @@ def _check_positive_int_param(
 ) -> None:
     """
     Checks if a parameter exists, is an integer, and is positive.
-    
+
     Args:
         config: The configuration dictionary.
         param_name: The parameter name to check.
@@ -362,7 +360,7 @@ def _check_encoder_params(
 ) -> None:
     """
     Generic encoder parameter validation function.
-    
+
     Args:
         cfg: The main configuration dictionary.
         section_key: The key within `cfg` that points to the encoder configuration.
@@ -371,7 +369,7 @@ def _check_encoder_params(
         source_key: An optional key for nested configurations.
     """
     encoder_config = _get_encoder_config(cfg, section_key, context, source_key)
-    
+
     for param_name in param_names:
         _check_positive_int_param(encoder_config, param_name, context)
 
@@ -384,7 +382,7 @@ def _check_dict_values_type(
 ) -> None:
     """
     Check if all values in dictionary match expected type.
-    
+
     Args:
         data: The dictionary whose values to check.
         dict_name: Name of the dictionary for error messages.
