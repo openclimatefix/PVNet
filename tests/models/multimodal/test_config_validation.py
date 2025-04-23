@@ -143,7 +143,7 @@ def test_validate_warning_empty_optional_section(valid_config_dict, caplog):
 def test_validate_warning_nwp_empty_sources(valid_config_dict, caplog):
     warn_cfg = valid_config_dict.copy()
     warn_cfg["nwp_encoders_dict"] = {}
-    # Remove time params if present to isolate the nwp source warning
+    # Remove time params if present to isolate nwp source warning
     if "nwp_history_minutes" in warn_cfg: del warn_cfg["nwp_history_minutes"]
     if "nwp_forecast_minutes" in warn_cfg: del warn_cfg["nwp_forecast_minutes"]
     with caplog.at_level(logging.WARNING):
