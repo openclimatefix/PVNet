@@ -249,7 +249,7 @@ def test_validate_batch_error_wrong_shape_time(valid_config_dict, sample_numpy_b
     batch[key_to_check] = np.zeros(tuple(wrong_time_shape))
 
     match_str = (
-        rf"'{key_to_check}' shape error using interval .* Got \({batch[key_to_check].shape}\)"
+        rf"'{key_to_check}' shape error using interval .* Expected B x \{{.*\}}, Got \{{.*\}}"
     )
     with pytest.raises(ValueError, match=match_str):
         validate(batch, config)
@@ -280,7 +280,7 @@ def test_validate_batch_error_wrong_shape_spatial(
     batch[key_to_check] = np.zeros(tuple(wrong_spatial_shape))
 
     match_str = (
-        rf"'{key_to_check}' shape error using interval .* Got \({batch[key_to_check].shape}\)"
+        rf"'{key_to_check}' shape error using interval .* Expected B x \{{.*\}}, Got \{{.*\}}"
     )
     with pytest.raises(ValueError, match=match_str):
         validate(batch, config)
