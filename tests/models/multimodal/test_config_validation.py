@@ -325,7 +325,6 @@ def _get_batch_size_test_helper(batch_dict, key):
 def test_validate_batch_error_batch_size_inconsistency(
     valid_config_dict, sample_numpy_batch
 ):
-    """Test ValueError for inconsistent batch sizes across modalities."""
     config = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
 
@@ -354,30 +353,31 @@ def test_validate_batch_error_batch_size_inconsistency(
                 f"Skipping modality {k} for inconsistency check (cannot get batch size): {e}"
             )
 
-    if len(valid_modalities) < 2:
+    if len(modality_batch_sizes) < 2:
         skip_msg = (
-            f"Need at least two valid modalities ({valid_modalities}) with retrievable "
-            f"batch sizes to test inconsistency."
+            f"Need at least two valid modalities ({list(modality_batch_sizes.keys())}) with "
+            f"retrievable batch sizes to test inconsistency."
         )
         pytest.skip(skip_msg)
 
-    first_key = valid_modalities[0]
-    bs1 = modality_batch_sizes[first_key]
-    for i in range(1, len(valid_modalities)):
-        key = valid_modalities[i]
-        bs_other = modality_batch_sizes[key]
+    sorted_modalities = sorted(modality_batch_sizes.keys())
+    reference_mod = sorted_modalities[0]
+    bs1 = modality_batch_sizes[reference_mod]
+
+    for mod_key in sorted_modalities[1:]:
+        bs_other = modality_batch_sizes[mod_key]
         if bs1 != bs_other:
             skip_msg = (
-                f"Fixture already has inconsistent batch sizes ({first_key}:{bs1}, "
-                f"{key}:{bs_other})."
+                f"Fixture already has inconsistent batch sizes ({reference_mod}:{bs1}, "
+                f"{mod_key}:{bs_other})."
             )
             pytest.skip(skip_msg)
 
     if bs1 <= 1:
         pytest.skip(f"Batch size ({bs1}) too small to test inconsistency reliably.")
 
+    mod_to_change = sorted_modalities[1]
     new_bs = bs1 - 1
-    mod_to_change = valid_modalities[1]
 
     if mod_to_change == "nwp":
         if not isinstance(batch[mod_to_change], dict):
@@ -400,6 +400,7 @@ def test_validate_batch_error_batch_size_inconsistency(
                     new_shape, dtype=source_data.dtype
                 )
                 modified_nwp = True
+                break # Modify only the first found array in the first source for simplicity
             except (StopIteration, KeyError, AttributeError, IndexError):
                 logger.warning(
                     f"Could not find/modify array in NWP source '{source}' for batch size test."
@@ -419,6 +420,19 @@ def test_validate_batch_error_batch_size_inconsistency(
             f"Modality '{mod_to_change}' to change ({type(batch[mod_to_change])}) is not testable."
         )
 
-    expected_match = rf"Batch size mismatch for {mod_to_change}.*: expected {bs1}, got {new_bs}"
+    offender_mod = reference_mod
+    reference_size_reported = new_bs
+    offender_size_reported = bs1
+
+    if offender_mod == "nwp":
+        reported_key_pattern = r"nwp\[\w+\]"
+    else:
+        reported_key_pattern = offender_mod
+
+    expected_match = (
+        rf"Batch size mismatch for {reported_key_pattern}.*:"
+        rf" expected {reference_size_reported}, got {offender_size_reported}"
+    )
+
     with pytest.raises(ValueError, match=expected_match):
         validate(batch, config)
