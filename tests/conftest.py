@@ -91,17 +91,13 @@ def sat_data():
 
 @pytest.fixture
 def valid_config_dict(model_minutes_kwargs):
-    """
-    Provides a dictionary representing a valid configuration structure
-    suitable for validation tests, including required encoder parameters.
-    """
     cfg = {
         "_target_": "pvnet.models.multimodal.multimodal.Model",
         "embedding_dim": 16,
         "include_sun": True,
         "include_gsp_yield_history": True,
-        "forecast_minutes": model_minutes_kwargs["forecast_minutes"],
-        "history_minutes": model_minutes_kwargs["history_minutes"],
+        "forecast_minutes": 420,
+        "history_minutes": 180,
 
         "output_quantiles": [0.1, 0.5, 0.9],
 
@@ -110,28 +106,20 @@ def valid_config_dict(model_minutes_kwargs):
 
         "sat_encoder": {
             "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-            "in_channels": 11,
-            "out_features": 128,
-            "number_of_conv3d_layers": 6,
-            "conv3d_channels": 32,
-            "image_size_pixels": 24,
+            "in_channels": 11, "out_features": 128, "number_of_conv3d_layers": 6,
+            "conv3d_channels": 32, "image_size_pixels": 24,
         },
+
         "nwp_encoders_dict": {
             "ukv": {
                 "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-                "in_channels": 11,
-                "out_features": 128,
-                "number_of_conv3d_layers": 6,
-                "conv3d_channels": 32,
-                "image_size_pixels": 24,
+                "in_channels": 11, "out_features": 128, "number_of_conv3d_layers": 6,
+                "conv3d_channels": 32, "image_size_pixels": 24,
             },
             "ecmwf": {
                 "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-                "in_channels": 12,
-                "out_features": 128,
-                "number_of_conv3d_layers": 6,
-                "conv3d_channels": 32,
-                "image_size_pixels": 12,
+                "in_channels": 12, "out_features": 128, "number_of_conv3d_layers": 6,
+                "conv3d_channels": 32, "image_size_pixels": 12,
             },
         },
 
@@ -186,63 +174,53 @@ def generate_synthetic_sample():
     now = pd.Timestamp.now(tz='UTC')
     sample = {}
 
+    # NWP define
     sample["nwp"] = {
         "ukv": {
             "nwp": torch.rand(11, 11, 24, 24),
-            "nwp_init_time_utc": torch.tensor(
-                [(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)]
-            ),
+            "nwp_init_time_utc": torch.tensor([(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)]),
             "nwp_step": torch.arange(11, dtype=torch.float32),
-            "nwp_target_time_utc": torch.tensor(
-                [(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]
-            ),
+            "nwp_target_time_utc": torch.tensor([(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]),
             "nwp_y_osgb": torch.linspace(0, 100, 24),
             "nwp_x_osgb": torch.linspace(0, 100, 24),
-        },
+         },
         "ecmwf": {
             "nwp": torch.rand(11, 12, 12, 12),
-            "nwp_init_time_utc": torch.tensor(
-                [(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)]
-            ),
+            "nwp_init_time_utc": torch.tensor([(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)]),
             "nwp_step": torch.arange(11, dtype=torch.float32),
-            "nwp_target_time_utc": torch.tensor(
-                [(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]
-            ),
-        },
-        "sat_pred": {
-            "nwp": torch.rand(12, 11, 24, 24),
-            "nwp_init_time_utc": torch.tensor(
-                [(now - pd.Timedelta(hours=i)).timestamp() for i in range(12)]
-            ),
-            "nwp_step": torch.arange(12, dtype=torch.float32),
-            "nwp_target_time_utc": torch.tensor(
-                [(now + pd.Timedelta(hours=i)).timestamp() for i in range(12)]
-            ),
+            "nwp_target_time_utc": torch.tensor([(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]),
         },
     }
 
+    # Satellite define
+    sample["satellite_pred"] = {
+            "data": torch.rand(12, 11, 24, 24),
+            "time_utc": torch.tensor([(now + pd.Timedelta(hours=i)).timestamp() for i in range(12)]),
+    }
+
     sample["satellite_actual"] = torch.rand(7, 11, 24, 24)
-    sample["satellite_time_utc"] = torch.tensor(
-        [(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)]
-    )
+    sample["satellite_time_utc"] = torch.tensor([(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)])
     sample["satellite_x_geostationary"] = torch.linspace(0, 100, 24)
     sample["satellite_y_geostationary"] = torch.linspace(0, 100, 24)
 
-    sample["gsp"] = torch.rand(5)
+    # GSP define
+    sample["gsp"] = torch.rand(21)
     sample["gsp_nominal_capacity_mwp"] = torch.tensor(100.0)
     sample["gsp_effective_capacity_mwp"] = torch.tensor(85.0)
     sample["gsp_time_utc"] = torch.tensor(
-        [(now + pd.Timedelta(minutes=30*i)).timestamp() for i in range(5)]
+        [(now + pd.Timedelta(minutes=30*i)).timestamp() for i in range(21)]
     )
-    sample["gsp_t0_idx"] = float(4)
+    sample["gsp_t0_idx"] = float(7)
     sample["gsp_id"] = 12
     sample["gsp_x_osgb"] = 123456.0
     sample["gsp_y_osgb"] = 654321.0
 
+    # Solar position define
     sample["solar_azimuth"] = torch.linspace(0, 180, 21)
     sample["solar_elevation"] = torch.linspace(-10, 60, 21)
 
     return sample
+
 
 def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True):
     """

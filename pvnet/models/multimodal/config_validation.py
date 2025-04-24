@@ -4,7 +4,6 @@ import logging
 import numpy as np
 
 from typing import Any, Type
-from collections.abc import Sequence
 
 from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 
@@ -370,78 +369,6 @@ def _check_attention_encoder_params(cfg: dict[str, Any], section_key: str, conte
     if encoder_config["id_embed_dim"] <= 0: raise ValueError(f"{context}: 'id_embed_dim' must be positive.")
 
 
-def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
-    """
-    Performs comprehensive validation of Multimodal model configuration dictionary.
-
-    Args:
-        data: The dictionary whose values to check.
-        dict_name: Name of the dictionary for error messages.
-        expected_type: The expected type for all values.
-        error_on_mismatch: If True, raise TypeError on mismatch instead of warning.
-    """
-    for source, value in data.items():
-        if not isinstance(value, expected_type):
-            message = (
-                f"'{dict_name}' for source '{source}' expected {expected_type.__name__}, "
-                f"found {type(value).__name__}."
-            )
-            if error_on_mismatch:
-                raise TypeError(message)
-            else:
-                logger.warning(message)
-
-
-def _validate_static_config(cfg: dict[str, Any]) -> None:
-    """
-    Performs static validation of the Multimodal configuration dictionary structure and types.
-    (Keep existing docstring but update purpose slightly if needed)
-
-    Raises:
-        KeyError, TypeError, ValueError: If static configuration rules are violated.
-    """
-    _check_output_quantiles_config(cfg, context="Top Level")
-    _check_key(cfg, "forecast_minutes", required=True, expected_type=int, warn_on_type_mismatch=True)
-    _check_key(cfg, "history_minutes", required=True, expected_type=int, warn_on_type_mismatch=True)
-    _check_key(cfg, "min_sat_delay_minutes", required=False, expected_type=int, warn_on_type_mismatch=True)
-    _check_key(cfg, "nwp_interval_minutes", required=False, expected_type=dict)
-
-    if "nwp_interval_minutes" in cfg and isinstance(cfg.get("nwp_interval_minutes"), dict):
-         _check_dict_values_are_int(cfg["nwp_interval_minutes"], "nwp_interval_minutes")
-
-    _check_key(cfg, "embedding_dim", required=False, expected_type=int)
-    _check_key(cfg, "include_sun", required=False, expected_type=bool)
-    _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
-    _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
-
-    _check_dict_section(cfg, "output_network", required=True, check_target=True)
-    _check_dict_section(cfg, "optimizer", required=True, check_target=True)
-
-    # Satellite Encoder
-    sat_section = _check_dict_section(cfg, "sat_encoder", required=False, check_target=True)
-    _check_time_parameter(cfg, "sat_history_minutes", owner_key="sat_encoder", required_if_owner_present=True)
-    if sat_section:
-        _check_convnet_encoder_params(cfg, section_key="sat_encoder", context="sat_encoder")
-
-    # PV Encoder
-    pv_section = _check_dict_section(cfg, "pv_encoder", required=False, check_target=True)
-    _check_time_parameter(cfg, "pv_history_minutes", owner_key="pv_encoder", required_if_owner_present=True)
-    if pv_section:
-        _check_attention_encoder_params(cfg, section_key="pv_encoder", context="pv_encoder")
-
-    # NWP Encoders
-    nwp_section = _check_dict_section(cfg, "nwp_encoders_dict", required=False, check_sub_items_target=True)
-    if nwp_section is not None:
-        _validate_nwp_specifics(cfg, nwp_section)
-        for source in nwp_section.keys():
-             _check_convnet_encoder_params(
-                cfg=cfg,
-                section_key="nwp_encoders_dict",
-                context=f"nwp_encoders_dict[{source}]",
-                source_key=source
-            )
-
-
 def _get_time_steps(
     hist_mins: int,
     forecast_mins: int,
@@ -581,6 +508,55 @@ def _get_encoder_config(
     return encoder_config
 
 
+def _validate_static_config(cfg: dict[str, Any]) -> None:
+    """
+    Performs static validation of the Multimodal configuration dictionary structure and types.
+    (Keep existing docstring but update purpose slightly if needed)
+
+    Raises:
+        KeyError, TypeError, ValueError: If static configuration rules are violated.
+    """
+    _check_output_quantiles_config(cfg, context="Top Level")
+    _check_key(cfg, "forecast_minutes", required=True, expected_type=int, warn_on_type_mismatch=True)
+    _check_key(cfg, "history_minutes", required=True, expected_type=int, warn_on_type_mismatch=True)
+    _check_key(cfg, "min_sat_delay_minutes", required=False, expected_type=int, warn_on_type_mismatch=True)
+    _check_key(cfg, "nwp_interval_minutes", required=False, expected_type=dict)
+
+    if "nwp_interval_minutes" in cfg and isinstance(cfg.get("nwp_interval_minutes"), dict):
+         _check_dict_values_are_int(cfg["nwp_interval_minutes"], "nwp_interval_minutes")
+
+    _check_key(cfg, "embedding_dim", required=False, expected_type=int)
+    _check_key(cfg, "include_sun", required=False, expected_type=bool)
+    _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
+    _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
+
+    _check_dict_section(cfg, "output_network", required=True, check_target=True)
+    _check_dict_section(cfg, "optimizer", required=True, check_target=True)
+
+    # Satellite Encoder
+    sat_section = _check_dict_section(cfg, "sat_encoder", required=False, check_target=True)
+    _check_time_parameter(cfg, "sat_history_minutes", owner_key="sat_encoder", required_if_owner_present=True)
+    if sat_section:
+        _check_convnet_encoder_params(cfg, section_key="sat_encoder", context="sat_encoder")
+
+    # PV Encoder
+    pv_section = _check_dict_section(cfg, "pv_encoder", required=False, check_target=True)
+    _check_time_parameter(cfg, "pv_history_minutes", owner_key="pv_encoder", required_if_owner_present=True)
+    if pv_section:
+        _check_attention_encoder_params(cfg, section_key="pv_encoder", context="pv_encoder")
+
+    # NWP Encoders
+    nwp_section = _check_dict_section(cfg, "nwp_encoders_dict", required=False, check_sub_items_target=True)
+    if nwp_section is not None:
+        _validate_nwp_specifics(cfg, nwp_section)
+        for source in nwp_section.keys():
+             _check_convnet_encoder_params(
+                cfg=cfg,
+                section_key="nwp_encoders_dict",
+                context=f"nwp_encoders_dict[{source}]",
+                source_key=source
+            )
+
 
 def validate(
     numpy_batch: NumpyBatch,
@@ -704,9 +680,10 @@ def validate(
 
         interval = _get_modality_interval(cfg, key, default_interval_minutes)
 
-        hist_steps, _ = _get_time_steps(cfg["history_minutes"], 0, interval)
-        if data.ndim < 2 or data.ndim > 3 or data.shape[1] != hist_steps:
-             raise ValueError(f"'{key}' shape error using interval {interval}. Expected B x ({hist_steps}, [1]), Got {data.shape}")
+        hist_steps, forecast_steps = _get_time_steps(cfg["history_minutes"], cfg["forecast_minutes"], interval)
+        expected_time_steps = hist_steps + forecast_steps
+        if data.ndim < 2 or data.ndim > 3 or data.shape[1] != expected_time_steps:
+             raise ValueError(f"'{key}' shape error using interval {interval}. Expected B x ({expected_time_steps}, [1]), Got {data.shape}")
         if data.ndim == 3 and data.shape[2] != 1:
              logger.warning(f"'{key}' has > 1 feature ({data.shape[2]}), expected 1.")
         batch_size = _check_batch_size_consistency(batch_size, data, key)

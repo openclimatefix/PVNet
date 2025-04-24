@@ -70,7 +70,7 @@ def test_validate_static_error_section_wrong_type(valid_config_dict, section_nam
     "section_name, invalid_sub_dict",
     [
         ("output_network", {"some_other_key": 123}),
-        ("pv_encoder", {"another_key": 456}),
+        ("sat_encoder", {"another_key": 456}),
     ],
     ids=[
         "required_section_missing_target",
@@ -188,7 +188,7 @@ def test_validate_batch_error_wrong_ndim(valid_config_dict, sample_numpy_batch):
 
     correct_shape = batch["satellite_actual"].shape
     if len(correct_shape) <= 1: pytest.skip("Cannot reduce ndim further.")
-    batch["satellite_actual"] = np.zeros(correct_shape[1:]) # Missing batch dim
+    batch["satellite_actual"] = np.zeros(correct_shape[1:])
 
     with pytest.raises(ValueError, match=r"'satellite_actual' data expected 5 dimensions.*|shape error.*Expected B x"):
         validate(batch, config)
@@ -229,7 +229,7 @@ def test_validate_batch_error_wrong_shape_spatial(valid_config_dict, sample_nump
     correct_shape = batch["satellite_actual"].shape
     if len(correct_shape) < 3: pytest.skip("Batch has insufficient dimensions.")
     wrong_spatial_shape = list(correct_shape)
-    wrong_spatial_shape[2] += 1 # Add one pixel to height
+    wrong_spatial_shape[2] += 1
     batch["satellite_actual"] = np.zeros(tuple(wrong_spatial_shape))
 
     with pytest.raises(ValueError, match=rf"'{'satellite_actual'}' shape error using interval .* Got \({batch['satellite_actual'].shape}\)"):
