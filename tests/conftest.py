@@ -99,6 +99,7 @@ def valid_config_dict(model_minutes_kwargs):
         "_target_": "pvnet.models.multimodal.multimodal.Model",
         "embedding_dim": 16,
         "include_sun": True,
+        "include_gsp_yield_history": True,
         "forecast_minutes": model_minutes_kwargs["forecast_minutes"],
         "history_minutes": model_minutes_kwargs["history_minutes"],
 
@@ -109,51 +110,73 @@ def valid_config_dict(model_minutes_kwargs):
 
         "sat_encoder": {
             "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-            "in_channels": 12,
+            "in_channels": 11,
             "out_features": 128,
             "number_of_conv3d_layers": 6,
             "conv3d_channels": 32,
-            "image_size_pixels": 64,
-        },
-        "pv_encoder": {
-            "_target_": "pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork",
-             "num_sites": 100,
-             "out_features": 128,
-             "num_heads": 4,
-             "kdim": 64,
-             "id_embed_dim": 16,
+            "image_size_pixels": 24,
         },
         "nwp_encoders_dict": {
             "ukv": {
                 "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-                "in_channels": 10,
+                "in_channels": 11,
                 "out_features": 128,
-                "number_of_conv3d_layers": 4,
+                "number_of_conv3d_layers": 6,
                 "conv3d_channels": 32,
-                "image_size_pixels": 32,
+                "image_size_pixels": 24,
             },
             "ecmwf": {
                 "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-                "in_channels": 8,
+                "in_channels": 12,
                 "out_features": 128,
-                "number_of_conv3d_layers": 4,
+                "number_of_conv3d_layers": 6,
                 "conv3d_channels": 32,
-                "image_size_pixels": 32,
+                "image_size_pixels": 12,
             },
         },
 
-        "sat_history_minutes": 90,
-        "pv_history_minutes": 180,
+        "sat_history_minutes": 30,
         "nwp_history_minutes": {
             "ukv": 120,
-             "ecmwf": 120
+            "ecmwf": 120,
         },
         "nwp_forecast_minutes": {
             "ukv": 480,
-            "ecmwf": 480
+            "ecmwf": 480,
         },
+        "nwp_interval_minutes": {
+             "ukv": 60,
+             "ecmwf": 60,
+        },
+
+        "satellite_time_resolution_minutes": 5,
+        "gsp_time_resolution_minutes": 30,
+        "sun_time_resolution_minutes": 30,
     }
     return cfg
+
+
+def _convert_to_numpy_recursive(item):
+    """Recursively converts tensors in dicts/lists/tuples to numpy arrays."""
+    if isinstance(item, torch.Tensor):
+        return item.detach().cpu().numpy()
+    elif isinstance(item, dict):
+        return {k: _convert_to_numpy_recursive(v) for k, v in item.items()}
+    elif isinstance(item, list):
+        return [_convert_to_numpy_recursive(i) for i in item]
+    elif isinstance(item, tuple):
+        return tuple(_convert_to_numpy_recursive(i) for i in item)
+    else:
+        return item
+
+
+@pytest.fixture()
+def sample_numpy_batch(sample_batch):
+    """
+    Provides a batch matching NumpyBatch structure (dict of numpy arrays)
+    by converting the tensors in the sample_batch (TensorBatch) fixture.
+    """
+    return _convert_to_numpy_recursive(sample_batch)
 
 
 def generate_synthetic_sample():
@@ -163,7 +186,6 @@ def generate_synthetic_sample():
     now = pd.Timestamp.now(tz='UTC')
     sample = {}
 
-    # NWP define
     sample["nwp"] = {
         "ukv": {
             "nwp": torch.rand(11, 11, 24, 24),
@@ -199,7 +221,6 @@ def generate_synthetic_sample():
         },
     }
 
-    # Satellite define
     sample["satellite_actual"] = torch.rand(7, 11, 24, 24)
     sample["satellite_time_utc"] = torch.tensor(
         [(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)]
@@ -207,24 +228,22 @@ def generate_synthetic_sample():
     sample["satellite_x_geostationary"] = torch.linspace(0, 100, 24)
     sample["satellite_y_geostationary"] = torch.linspace(0, 100, 24)
 
-    # GSP define
-    sample["gsp"] = torch.rand(21)
+    sample["gsp"] = torch.rand(5)
     sample["gsp_nominal_capacity_mwp"] = torch.tensor(100.0)
     sample["gsp_effective_capacity_mwp"] = torch.tensor(85.0)
     sample["gsp_time_utc"] = torch.tensor(
-        [(now + pd.Timedelta(minutes=30*i)).timestamp() for i in range(21)]
+        [(now + pd.Timedelta(minutes=30*i)).timestamp() for i in range(5)]
     )
-    sample["gsp_t0_idx"] = float(7)
+    sample["gsp_t0_idx"] = float(4)
     sample["gsp_id"] = 12
     sample["gsp_x_osgb"] = 123456.0
     sample["gsp_y_osgb"] = 654321.0
 
-    # Solar position define
-    sample["solar_azimuth"] = torch.linspace(0, 180, 21)
-    sample["solar_elevation"] = torch.linspace(-10, 60, 21)
+    solar_azimuth = torch.linspace(0, 180, 21)
+    solar_elevation = torch.linspace(-10, 60, 21)
+    sample["sun"] = torch.stack([solar_azimuth, solar_elevation], dim=-1)
 
     return sample
-
 
 def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True):
     """
