@@ -1,12 +1,10 @@
 """Validation functions for Multimodal configuration"""
 
 import logging
-import numpy as np
-
 from typing import Any, Type
 
+import numpy as np
 from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
-
 
 logger = logging.getLogger(__name__)
 
