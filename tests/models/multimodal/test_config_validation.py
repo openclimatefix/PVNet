@@ -325,6 +325,7 @@ def _get_batch_size_test_helper(batch_dict, key):
 def test_validate_batch_error_batch_size_inconsistency(
     valid_config_dict, sample_numpy_batch
 ):
+    """Test ValueError for incorrect / inconsistence batch size."""
     config = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
 
