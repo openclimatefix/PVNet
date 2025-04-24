@@ -2,19 +2,15 @@ import os
 import tempfile
 from datetime import timedelta
 
-import pytest
-import pandas as pd
-import numpy as np
-import xarray as xr
-import torch
 import hydra
+import numpy as np
+import pandas as pd
+import pytest
+import torch
+import xarray as xr
 
 from pvnet.data import DataModule, SiteDataModule
-import pvnet.models.multimodal.encoders.encoders3d
-import pvnet.models.multimodal.linear_networks.networks
-import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
-
 
 xr.set_options(keep_attrs=True)
 
