@@ -1,6 +1,7 @@
 import pytest
 import logging
 import numpy as np
+
 from copy import deepcopy
 
 NumpyBatch = dict

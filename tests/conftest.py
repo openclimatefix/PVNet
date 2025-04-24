@@ -239,9 +239,8 @@ def generate_synthetic_sample():
     sample["gsp_x_osgb"] = 123456.0
     sample["gsp_y_osgb"] = 654321.0
 
-    solar_azimuth = torch.linspace(0, 180, 21)
-    solar_elevation = torch.linspace(-10, 60, 21)
-    sample["sun"] = torch.stack([solar_azimuth, solar_elevation], dim=-1)
+    sample["solar_azimuth"] = torch.linspace(0, 180, 21)
+    sample["solar_elevation"] = torch.linspace(-10, 60, 21)
 
     return sample
 
