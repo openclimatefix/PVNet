@@ -1,7 +1,9 @@
 """Validation functions for Multimodal configuration"""
 
 import logging
+import numpy as np
 from typing import Any, Type
+from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 
 logger = logging.getLogger(__name__)
 
@@ -418,38 +420,14 @@ def _check_dict_values_type(
                 logger.warning(message)
 
 
-def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
+def _validate_static_config(cfg: dict[str, Any]) -> None:
     """
-    Performs comprehensive validation of Multimodal model configuration dictionary.
-
-    Args:
-        cfg: The Multimodal configuration dictionary to validate.
-
-    Returns:
-        dict[str, bool]: A dictionary indicating successful validation,
-                         typically `{"valid": True}`. If validation fails,
-                         an exception is raised instead.
+    Performs static validation of the Multimodal configuration dictionary structure and types.
+    (Keep existing docstring but update purpose slightly if needed)
 
     Raises:
-        KeyError: If required top-level keys (e.g., '_target_', 'output_quantiles',
-                  'forecast_minutes', 'history_minutes'), required sections
-                  (e.g., 'output_network', 'optimizer'), required sub-keys within
-                  sections (e.g., '_target_', required time parameters like
-                  'sat_history_minutes' when 'sat_encoder' is present), or required
-                  encoder parameters are missing.
-        TypeError: If configuration elements have incorrect types, such as sections not
-                   being dictionaries, 'output_quantiles' not being a list/tuple,
-                   or specific parameters within encoders not having the expected
-                   numeric types. Note: Non-critical type mismatches for some time
-                   parameters might only log warnings.
-        ValueError: If certain values are invalid, such as 'output_quantiles' being
-                    an empty list, numeric encoder parameters (channels, features,
-                    image sizes, etc.) being non-positive, or if keys within NWP
-                    time parameter dictionaries ('nwp_history_minutes',
-                    'nwp_forecast_minutes') do not exactly match the sources defined
-                    in 'nwp_encoders_dict'.
+        KeyError, TypeError, ValueError: If static configuration rules are violated.
     """
-    _check_key(cfg, "_target_", required=True, expected_type=str)
     _check_output_quantiles_config(cfg, context="Top Level")
 
     _check_key(
@@ -483,6 +461,9 @@ def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
     _check_key(cfg, "include_sun", required=False, expected_type=bool)
     _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
     _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
+
+    _check_dict_section(cfg, "output_network", required=True, check_target=True)
+    _check_dict_section(cfg, "optimizer", required=True, check_target=True)
 
     # Satellite Encoder
     sat_section = _check_dict_section(cfg, "sat_encoder", required=False, check_target=True)
@@ -528,5 +509,208 @@ def validate_multimodal_config(cfg: dict[str, Any]) -> dict[str, bool]:
                 source_key=source
             )
 
-    logger.info("Multimodal configuration validation successful.")
-    return {"valid": True}
+
+def _get_time_steps(
+    hist_mins: int,
+    forecast_mins: int,
+    interval: int
+) -> tuple:
+    """Calculates history and forecast time steps including t0 for history."""
+    if interval <= 0:
+        raise ValueError("Time interval must be positive")
+    hist_steps = int(hist_mins) // interval + 1
+    forecast_steps = int(forecast_mins) // interval
+    return hist_steps, forecast_steps
+
+
+def _check_batch_size_consistency(
+    current_batch_size: int | None,
+    arr: np.ndarray,
+    name: str
+) -> int:
+    """Checks array batch size and consistency with previous modalities."""
+    actual_size = arr.shape[0]
+    if actual_size <= 0:
+        raise ValueError(f"{name} batch dimension has size <= 0: {actual_size}")
+
+    if current_batch_size is None:
+        logger.debug(f"Inferred batch size: {actual_size} from {name}")
+        return actual_size
+    elif current_batch_size != actual_size:
+        raise ValueError(
+            f"Batch size mismatch for {name}: expected {current_batch_size}, got {actual_size}"
+        )
+    else:
+        return current_batch_size
+
+
+def _get_modality_interval(
+    cfg: dict,
+    modality_key_base: str,
+    default_interval_minutes: int
+) -> int:
+    """Gets the time interval for a modality, checking config first, then using default."""
+    config_key = f"{modality_key_base}_time_resolution_minutes"
+    interval = cfg.get(config_key)
+
+    if interval is not None:
+        if isinstance(interval, int) and interval > 0:
+            logger.debug(f"Using interval from config key '{config_key}': {interval}")
+            return interval
+        else:
+            logger.warning(
+                f"Config key '{config_key}' found but is not a positive integer ({interval}). "
+                f"Falling back to default interval {default_interval_minutes}."
+            )
+
+    logger.debug(f"Using default interval for {modality_key_base}: {default_interval_minutes}")
+    return default_interval_minutes
+
+
+def validate(
+    numpy_batch: NumpyBatch,
+    multimodal_config: dict,
+    default_interval_minutes: int = 5,
+) -> None:
+    """
+    Validates a data batch's shapes against the multimodal configuration.
+
+    Retrieves time intervals for shape calculation by looking for specific keys
+    in `multimodal_config` (e.g., 'satellite_time_resolution_minutes') first,
+    then falling back to `default_interval_minutes`. NWP intervals are read
+    from `nwp_interval_minutes` in the config.
+
+    Args:
+        numpy_batch: NumpyBatch object (dictionary) containing NumPy arrays for modalities.
+        multimodal_config: The multimodal configuration dictionary.
+        default_interval_minutes: Default time resolution used if modality-specific
+                                   resolution is not found in the config.
+
+    Raises:
+        KeyError, TypeError, ValueError: If config is invalid or batch shapes mismatch.
+    """
+
+    try:
+        _validate_static_config(multimodal_config)
+    except (KeyError, TypeError, ValueError) as e:
+        logger.error(f"Configuration validation failed: {e}")
+        raise
+
+    logger.info("Validating batch data shapes against configuration")
+    cfg = multimodal_config
+    batch_size: int | None = None
+
+    if "sat_encoder" in cfg and cfg.get("sat_encoder"):
+        key = "satellite_actual"
+        if key not in numpy_batch: raise KeyError(f"Batch missing '{key}' data")
+        data = numpy_batch[key]
+        if not isinstance(data, np.ndarray): raise TypeError(f"'{key}' data must be np.ndarray")
+
+        interval = _get_modality_interval(cfg, key, default_interval_minutes)
+
+        sat_cfg = _get_encoder_config(cfg, "sat_encoder", "sat_encoder")
+        h = w = sat_cfg["image_size_pixels"]
+        c = sat_cfg["in_channels"]
+        hist_steps, _ = _get_time_steps(cfg["sat_history_minutes"], 0, interval)
+        expected_shape = (hist_steps, c, h, w)
+
+        if data.ndim != 5 or data.shape[1:] != expected_shape:
+            raise ValueError(f"'{key}' shape error using interval {interval}. Expected B x {expected_shape}, Got {data.shape}")
+        batch_size = _check_batch_size_consistency(batch_size, data, key)
+
+    if "nwp_encoders_dict" in cfg and cfg.get("nwp_encoders_dict"):
+            key = "nwp"
+            if key not in numpy_batch: raise KeyError(f"Batch missing '{key}' data dict")
+            nwp_batch_data = numpy_batch[key]
+            if not isinstance(nwp_batch_data, dict): raise TypeError(f"'{key}' data must be a dict")
+
+            nwp_cfg_dict = cfg["nwp_encoders_dict"]
+            config_sources = set(nwp_cfg_dict.keys())
+            batch_sources = set(nwp_batch_data.keys())
+
+            if not config_sources.issubset(batch_sources):
+                missing_in_batch = config_sources - batch_sources
+                raise KeyError(f"NWP data in batch is missing configured sources: {missing_in_batch}")
+
+            extra_in_batch = batch_sources - config_sources
+            if extra_in_batch:
+                logger.warning(f"NWP data in batch contains extra sources not in config: {extra_in_batch}. These will be ignored by validation.")
+
+            nwp_hist_mins = cfg["nwp_history_minutes"]
+            nwp_forecast_mins = cfg["nwp_forecast_minutes"]
+            nwp_intervals = cfg["nwp_interval_minutes"]
+
+            for source in config_sources:
+                if source not in nwp_batch_data or not isinstance(nwp_batch_data[source], dict):
+                    raise TypeError(f"NWP data for configured source '{source}' is missing or not a dict in batch.")
+                source_nwp_dict = nwp_batch_data[source]
+
+                try:
+                    source_data_array = next(v for v in source_nwp_dict.values() if isinstance(v, np.ndarray) and v.ndim > 0)
+                except StopIteration:
+                    raise TypeError(f"NWP source '{source}' dict in batch contains no suitable numpy array for validation.")
+
+                source_cfg = _get_encoder_config(cfg, "nwp_encoders_dict", f"nwp[{source}]", source_key=source)
+                h = w = source_cfg["image_size_pixels"]
+                c = source_cfg["in_channels"]
+                interval = nwp_intervals[source]
+                if not isinstance(interval, int) or interval <= 0:
+                    raise ValueError(f"NWP interval for source '{source}' must be a positive integer in config, got {interval}.")
+                hist_steps, forecast_steps = _get_time_steps(nwp_hist_mins[source], nwp_forecast_mins[source], interval)
+                expected_shape = (hist_steps + forecast_steps, c, h, w)
+
+                if source_data_array.ndim != 5 or source_data_array.shape[1:] != expected_shape:
+                    raise ValueError(f"NWP source '{source}' shape error using interval {interval}. Expected B x {expected_shape}, Got {source_data_array.shape}")
+
+                batch_size = _check_batch_size_consistency(batch_size, source_data_array, f"{key}[{source}]")
+
+    if "pv_encoder" in cfg and cfg.get("pv_encoder"):
+        key = "pv"
+        if key not in numpy_batch: raise KeyError(f"Batch missing '{key}' data")
+        data = numpy_batch[key]
+        if not isinstance(data, np.ndarray): raise TypeError(f"'{key}' data must be np.ndarray")
+
+        interval = _get_modality_interval(cfg, key, default_interval_minutes)
+
+        pv_cfg = _get_encoder_config(cfg, "pv_encoder", "pv_encoder")
+        num_sites = pv_cfg["num_sites"]
+        hist_steps, _ = _get_time_steps(cfg["pv_history_minutes"], 0, interval)
+        expected_shape = (hist_steps, num_sites)
+
+        if data.ndim != 3 or data.shape[1:] != expected_shape:
+             raise ValueError(f"'{key}' shape error using interval {interval}. Expected B x {expected_shape}, Got {data.shape}")
+        batch_size = _check_batch_size_consistency(batch_size, data, key)
+
+    if cfg.get("include_gsp_yield_history"):
+        key = "gsp"
+        if key not in numpy_batch: raise KeyError(f"Batch missing '{key}' data")
+        data = numpy_batch[key]
+        if not isinstance(data, np.ndarray): raise TypeError(f"'{key}' data must be np.ndarray")
+
+        interval = _get_modality_interval(cfg, key, default_interval_minutes)
+
+        hist_steps, _ = _get_time_steps(cfg["history_minutes"], 0, interval)
+        if data.ndim < 2 or data.ndim > 3 or data.shape[1] != hist_steps:
+             raise ValueError(f"'{key}' shape error using interval {interval}. Expected B x ({hist_steps}, [1]), Got {data.shape}")
+        if data.ndim == 3 and data.shape[2] != 1:
+             logger.warning(f"'{key}' has > 1 feature ({data.shape[2]}), expected 1.")
+        batch_size = _check_batch_size_consistency(batch_size, data, key)
+
+    if cfg.get("include_sun"):
+        key = "sun"
+        if key not in numpy_batch: raise KeyError(f"Batch missing '{key}' data")
+        data = numpy_batch[key]
+        if not isinstance(data, np.ndarray): raise TypeError(f"'{key}' data must be np.ndarray")
+
+        interval = _get_modality_interval(cfg, key, default_interval_minutes)
+
+        hist_steps, forecast_steps = _get_time_steps(cfg["history_minutes"], cfg["forecast_minutes"], interval)
+        expected_time_steps = hist_steps + forecast_steps
+        if data.ndim < 2 or data.shape[1] != expected_time_steps:
+             raise ValueError(f"'{key}' shape error using interval {interval}. Expected B x ({expected_time_steps}, F), Got {data.shape}")
+        batch_size = _check_batch_size_consistency(batch_size, data, key)
+
+    if batch_size is None:
+        logger.warning("Batch size could not be determined (no modalities checked or empty batch?).")
+
+    logger.info("Batch data shape validation successful against configuration.")
