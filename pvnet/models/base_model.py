@@ -399,15 +399,15 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             for dist in pkg_resources.working_set if dist.project_name in packages_to_display
         }
         
-        package_versions = ""
+        package_versions_markdown = ""
         for package, version in packages_and_versions.items():
-            package_versions += f" - {package}=={version}\n"
+            package_versions_markdown += f" - {package}=={version}\n"
 
         card = ModelCard.from_template(
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
-            package_versions=package_versions
+            package_versions=package_versions_markdown
         )
 
         (save_directory / "README.md").write_text(str(card))
