@@ -12,6 +12,7 @@ import hydra
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import pandas as pd
+import pkg_resources
 import torch
 import torch.nn.functional as F
 import wandb
@@ -21,8 +22,6 @@ from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
-
-import pkg_resources
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -398,7 +397,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             dist.project_name: dist.version
             for dist in pkg_resources.working_set if dist.project_name in packages_to_display
         }
-        
+
         package_versions_markdown = ""
         for package, version in packages_and_versions.items():
             package_versions_markdown += f" - {package}=={version}\n"
