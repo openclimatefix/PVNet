@@ -22,6 +22,8 @@ from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
 
+import pkg_resources
+
 from pvnet.models.utils import (
     BatchAccumulator,
     MetricAccumulator,
@@ -390,10 +392,22 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             link = f"https://wandb.ai/{wandb_repo}/runs/{wandb_id}"
             wandb_links += f" - [{link}]({link})\n"
 
+        # Find package versions for OCF packages
+        packages_to_display = ["ocf_datapipes", "ocf_data_sampler"]
+        packages_and_versions = {
+            dist.project_name: dist.version
+            for dist in pkg_resources.working_set if dist.project_name in packages_to_display
+        }
+        
+        package_versions = ""
+        for package, version in packages_and_versions.items():
+            package_versions += f" - {package}=={version}\n"
+
         card = ModelCard.from_template(
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
+            package_versions=package_versions
         )
 
         (save_directory / "README.md").write_text(str(card))

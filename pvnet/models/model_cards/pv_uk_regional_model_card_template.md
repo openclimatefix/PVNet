@@ -52,3 +52,6 @@ Trained on a single NVIDIA Tesla T4
 
 - [1] https://github.com/openclimatefix/PVNet
 - [2] https://github.com/openclimatefix/ocf-data-sampler
+
+This project uses the following Open Climate Fix packages:
+{{ package_versions }}
