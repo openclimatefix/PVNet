@@ -1002,5 +1002,6 @@ def validate(
              f"Inferred {inferred_batch_size}, Expected {expected_batch_size}"
          )
          logger.error(msg)
-
+         raise ValueError("Batch size inconsistency detected.")
+    
     logger.info("Batch data shape validation successful against configuration.")
