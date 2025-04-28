@@ -1003,5 +1003,5 @@ def validate(
          )
          logger.error(msg)
          raise ValueError("Batch size inconsistency detected.")
-    
+
     logger.info("Batch data shape validation successful against configuration.")
