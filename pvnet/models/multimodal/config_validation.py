@@ -996,11 +996,11 @@ def validate(
         inferred_batch_size is not None
         and expected_batch_size is not None
         and inferred_batch_size != expected_batch_size
-    ): 
+    ):
          msg = (
              f"Final batch size check failed: "
              f"Inferred {inferred_batch_size}, Expected {expected_batch_size}"
          )
-         logger.error(msg) 
- 
+         logger.error(msg)
+
     logger.info("Batch data shape validation successful against configuration.")
