@@ -317,7 +317,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         push_to_hub: bool = False,
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
-        card_template_path=None,
+        card_template_path: Optional[Path] = None,
         revision: str = "main",
         **kwargs,
     ) -> Optional[str]:
@@ -367,6 +367,47 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             # Taylor the data config to the model being saved
             minimize_data_config(new_data_config_path, new_data_config_path, self)
 
+        card = self.create_hugging_face_model_card(repo_id,
+                                                  wandb_repo,
+                                                  wandb_ids,
+                                                  card_template_path)
+            
+        (save_directory / "README.md").write_text(str(card))
+
+        if push_to_hub:
+            api = HfApi()
+
+            api.upload_folder(
+                repo_id=repo_id,
+                repo_type="model",
+                folder_path=save_directory,
+                revision=revision,
+            )
+
+        return None
+
+    @staticmethod
+    def create_hugging_face_model_card(repo_id: Optional[str] = None,
+                                      wandb_repo: Optional[str] = None,
+                                      wandb_ids: Optional[Union[list[str], str]] = None,
+                                      card_template_path: Optional[Path] = None
+    ) -> ModelCard:
+        """
+        Creates Hugging Face model card
+
+        Args:
+            repo_id (`str`, *optional*):
+                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
+                the folder name if not provided.
+            wandb_repo: Identifier of the repo on wandb.
+            wandb_ids: Identifier(s) of the model on wandb.
+            card_template_path: Path to the HuggingFace model card template. Defaults to card in
+                PVNet library if set to None.
+
+        Returns:
+            card: ModelCard - Hugging Face model card object
+        """
+
         # Get appropriate model card
         model_name = repo_id.split("/")[1]
         if model_name == "windnet_india":
@@ -395,7 +436,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         packages_to_display = ["pvnet", "ocf-data-sampler"]
         packages_and_versions = {
             dist.project_name: dist.version
-            for dist in pkg_resources.working_set if dist.project_name in packages_to_display
+            for dist in pkg_resources.working_set
+            if dist.project_name.lower() in packages_to_display
         }
 
         package_versions_markdown = ""
@@ -409,20 +451,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             package_versions=package_versions_markdown
         )
 
-        (save_directory / "README.md").write_text(str(card))
-
-        if push_to_hub:
-            api = HfApi()
-
-            api.upload_folder(
-                repo_id=repo_id,
-                repo_type="model",
-                folder_path=save_directory,
-                revision=revision,
-            )
-
-        return None
-
+        return card
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     """Abstract base class for PVNet submodels"""

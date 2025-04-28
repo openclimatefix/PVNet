@@ -1,3 +1,5 @@
+import pytest
+import re
 from pvnet.models.base_model import BaseModel
 from pathlib import Path
 import yaml
@@ -92,3 +94,32 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
         model_id=model_output_dir,
         revision=None,
     )
+
+@pytest.mark.parametrize(
+    "repo_id, wandb_repo, wandb_ids",
+    [
+        (
+            "openclimatefix/pvnet_uk_region",
+            "None",
+            "excluded-for-text"
+        ),
+    ],
+)
+def test_create_hugging_face_model_card(repo_id, wandb_repo, wandb_ids):
+    
+    # Create Hugging Face ModelCard
+    card = BaseModel.create_hugging_face_model_card(
+        repo_id=repo_id,
+        wandb_repo=wandb_repo,
+        wandb_ids=wandb_ids
+    )
+
+    # Extract the card markdown
+    card_markdown = card.content
+
+    # Regex to find if the pvnet and ocf-data-sampler versions are present
+    has_pvnet = re.search(r'^ - pvnet==', card_markdown, re.IGNORECASE | re.MULTILINE)
+    has_ocf_data_sampler= re.search(r'^ - ocf[-_]data[-_]sampler==', card_markdown, re.IGNORECASE | re.MULTILINE)
+
+    assert not has_pvnet, "The hugging face card created does not display the PVNet package version"
+    assert has_ocf_data_sampler, "The hugging face card created does not display the ocf-data-sampler package version"
