@@ -12,6 +12,9 @@ import xarray as xr
 from pvnet.data import DataModule, SiteDataModule
 from pvnet.models.multimodal.multimodal import Model
 
+from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
+from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
+
 xr.set_options(keep_attrs=True)
 
 
@@ -140,27 +143,91 @@ def valid_config_dict(model_minutes_kwargs):
     return cfg
 
 
-def _convert_to_numpy_recursive(item):
-    """Recursively converts tensors in dicts/lists/tuples to numpy arrays."""
-    if isinstance(item, torch.Tensor):
-        return item.detach().cpu().numpy()
-    elif isinstance(item, dict):
-        return {k: _convert_to_numpy_recursive(v) for k, v in item.items()}
-    elif isinstance(item, list):
-        return [_convert_to_numpy_recursive(i) for i in item]
-    elif isinstance(item, tuple):
-        return tuple(_convert_to_numpy_recursive(i) for i in item)
-    else:
-        return item
+@pytest.fixture
+def valid_input_data_config():
+    cfg = {
+        "satellite": {
+            "time_resolution_minutes": 5,
+        },
+        "nwp": {
+            "ukv": {
+                "time_resolution_minutes": 60,
+            },
+            "ecmwf": {
+                "time_resolution_minutes": 60,
+            },
+        },
+        "gsp": {
+            "time_resolution_minutes": 30,
+        },
+    }
+    return cfg
 
 
 @pytest.fixture()
-def sample_numpy_batch(sample_batch):
-    """
-    Provides a batch matching NumpyBatch structure (dict of numpy arrays)
-    by converting the tensors in the sample_batch (TensorBatch) fixture.
-    """
-    return _convert_to_numpy_recursive(sample_batch)
+def sample_numpy_batch() -> NumpyBatch:
+    batch_size = 4
+    sample_list = []
+    for i in range(batch_size):
+        numpy_sample = generate_synthetic_numpy_sample()
+        sample_list.append(numpy_sample)
+
+    final_batch = stack_np_samples_into_batch(sample_list)
+
+    return final_batch
+
+
+def generate_synthetic_numpy_sample():
+    now = pd.Timestamp.now(tz='UTC')
+    sample = {}
+
+    nwp_init_times = np.array([(now - pd.Timedelta(hours=i)).timestamp() for i in range(11)])
+    nwp_target_times = np.array([(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)])
+    sat_pred_times = np.array([(now + pd.Timedelta(hours=i)).timestamp() for i in range(12)])
+    sat_actual_times = np.array([(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)])
+    gsp_times = np.array([(now + pd.Timedelta(minutes=30*i)).timestamp() for i in range(21)])
+
+    sample["nwp"] = {
+        "ukv": {
+            "nwp": np.random.rand(11, 11, 24, 24).astype(np.float32),
+            "nwp_init_time_utc": nwp_init_times,
+            "nwp_step": np.arange(11, dtype=np.float32),
+            "nwp_target_time_utc": nwp_target_times,
+            "nwp_y_osgb": np.linspace(0, 100, 24).astype(np.float32),
+            "nwp_x_osgb": np.linspace(0, 100, 24).astype(np.float32),
+        },
+        "ecmwf": {
+            "nwp": np.random.rand(11, 12, 12, 12).astype(np.float32),
+            "nwp_init_time_utc": nwp_init_times,
+            "nwp_step": np.arange(11, dtype=np.float32),
+            "nwp_target_time_utc": nwp_target_times,
+        },
+        "satellite_pred": {
+            "data": np.random.rand(12, 11, 24, 24).astype(np.float32),
+            "time_utc": sat_pred_times,
+        }
+    }
+
+    sample["satellite_actual"] = np.random.rand(7, 11, 24, 24).astype(np.float32)
+    sample["satellite_time_utc"] = sat_actual_times
+    sample["satellite_x_geostationary"] = np.linspace(0, 100, 24).astype(np.float32)
+    sample["satellite_y_geostationary"] = np.linspace(0, 100, 24).astype(np.float32)
+
+    sample["gsp"] = np.random.rand(21).astype(np.float32)
+    sample["gsp_nominal_capacity_mwp"] = np.array(100.0, dtype=np.float32)
+    sample["gsp_effective_capacity_mwp"] = np.array(85.0, dtype=np.float32)
+    sample["gsp_time_utc"] = gsp_times
+    sample["gsp_t0_idx"] = 7
+    sample["gsp_id"] = np.int32(12)
+    sample["gsp_x_osgb"] = np.float32(123456.0)
+    sample["gsp_y_osgb"] = np.float32(654321.0)
+
+    sample["solar_azimuth"] = np.linspace(0, 180, 21).astype(np.float32)
+    sample["solar_elevation"] = np.linspace(-10, 60, 21).astype(np.float32)
+
+    sample["example_channel_names"] = ["ch1", "ch2"]
+
+    return sample
 
 
 def generate_synthetic_sample():
@@ -186,14 +253,13 @@ def generate_synthetic_sample():
             "nwp_step": torch.arange(11, dtype=torch.float32),
             "nwp_target_time_utc": torch.tensor([(now + pd.Timedelta(hours=i)).timestamp() for i in range(11)]),
         },
+        "satellite_pred": {
+            "data": torch.rand(12, 11, 24, 24),
+            "time_utc": torch.tensor([(now + pd.Timedelta(hours=i)).timestamp() for i in range(12)]),
+        },
     }
 
     # Satellite define
-    sample["satellite_pred"] = {
-            "data": torch.rand(12, 11, 24, 24),
-            "time_utc": torch.tensor([(now + pd.Timedelta(hours=i)).timestamp() for i in range(12)]),
-    }
-
     sample["satellite_actual"] = torch.rand(7, 11, 24, 24)
     sample["satellite_time_utc"] = torch.tensor([(now - pd.Timedelta(minutes=5*i)).timestamp() for i in range(7)])
     sample["satellite_x_geostationary"] = torch.linspace(0, 100, 24)
