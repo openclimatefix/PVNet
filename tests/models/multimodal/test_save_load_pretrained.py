@@ -121,5 +121,5 @@ def test_create_hugging_face_model_card(repo_id, wandb_repo, wandb_ids):
     has_pvnet = re.search(r'^ - pvnet==', card_markdown, re.IGNORECASE | re.MULTILINE)
     has_ocf_data_sampler= re.search(r'^ - ocf[-_]data[-_]sampler==', card_markdown, re.IGNORECASE | re.MULTILINE)
 
-    assert not has_pvnet, "The hugging face card created does not display the PVNet package version"
+    assert has_pvnet, "The hugging face card created does not display the PVNet package version"
     assert has_ocf_data_sampler, "The hugging face card created does not display the ocf-data-sampler package version"
