@@ -85,7 +85,7 @@ def validate(
             interval = _get_modality_interval(input_data_config, "nwp", source, is_nwp_source=True)
             source_model_cfg = _get_encoder_config(
                 cfg, config_key_nwp, source_key_str, source_key=source
-            )            
+            )
             h = w = source_model_cfg["image_size_pixels"]
             c = source_model_cfg["in_channels"]
             hist_min = nwp_hist_mins.get(source)
@@ -107,7 +107,7 @@ def validate(
              raise KeyError(
                  "Neither 'site' nor 'pv' section found in "
                  "input_data_config for PV validation"
-             )             
+             )
         logger.debug(f"Validating modality: {key} using input config '{modality_data_cfg_key}'")
         data = _check_batch_data(numpy_batch, key, np.ndarray, config_key_pv)
         interval = _get_modality_interval(input_data_config, modality_data_cfg_key)
