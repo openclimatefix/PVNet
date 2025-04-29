@@ -69,9 +69,13 @@ def validate(
         config_sources = set(nwp_model_cfg_dict.keys())
         batch_sources = set(nwp_batch_data.keys())
         if not config_sources.issubset(batch_sources):
-            raise KeyError(f"NWP batch missing configured sources: {config_sources - batch_sources}")
+            raise KeyError(
+                f"NWP batch missing configured sources: {config_sources - batch_sources}"
+            )
         if batch_sources - config_sources:
-            logger.warning(f"NWP batch has extra sources not in config: {batch_sources - config_sources}")
+            logger.warning(
+                f"NWP batch has extra sources not in config: {batch_sources - config_sources}"
+            )
         nwp_hist_mins = cfg["nwp_history_minutes"]
         nwp_forecast_mins = cfg["nwp_forecast_minutes"]
         for source in config_sources:
@@ -79,7 +83,9 @@ def validate(
             logger.debug(f"Validating NWP source: {source}")
             source_data_array = _validate_nwp_source_structure(nwp_batch_data, source)
             interval = _get_modality_interval(input_data_config, "nwp", source, is_nwp_source=True)
-            source_model_cfg = _get_encoder_config(cfg, config_key_nwp, source_key_str, source_key=source)
+            source_model_cfg = _get_encoder_config(
+                cfg, config_key_nwp, source_key_str, source_key=source
+            )            
             h = w = source_model_cfg["image_size_pixels"]
             c = source_model_cfg["in_channels"]
             hist_min = nwp_hist_mins.get(source)
@@ -87,7 +93,8 @@ def validate(
             hist_steps, forecast_steps = _get_time_steps(hist_min, forecast_min, interval)
             expected_shape_no_batch = (hist_steps + forecast_steps, c, h, w)
             inferred_batch_size = _validate_array_shape(
-                source_data_array, 5, expected_shape_no_batch, source_key_str, interval, inferred_batch_size
+                source_data_array, 5, expected_shape_no_batch, source_key_str,
+                interval, inferred_batch_size
             )
             logger.debug(f"NWP source '{source}' validation passed with interval {interval}.")
 
@@ -97,7 +104,10 @@ def validate(
         key = "pv"
         modality_data_cfg_key = next((k for k in ["site", "pv"] if k in input_data_config), None)
         if modality_data_cfg_key is None:
-             raise KeyError("Neither 'site' nor 'pv' section found in input_data_config for PV validation")
+             raise KeyError(
+                 "Neither 'site' nor 'pv' section found in "
+                 "input_data_config for PV validation"
+             )             
         logger.debug(f"Validating modality: {key} using input config '{modality_data_cfg_key}'")
         data = _check_batch_data(numpy_batch, key, np.ndarray, config_key_pv)
         interval = _get_modality_interval(input_data_config, modality_data_cfg_key)
@@ -107,8 +117,9 @@ def validate(
         hist_steps, _ = _get_time_steps(hist_mins, 0, interval)
         expected_shape_no_batch = (hist_steps, num_sites)
         inferred_batch_size = _validate_array_shape(
-            data, 3, expected_shape_no_batch, key, interval, inferred_batch_size
-        )
+                data, 2, expected_shape_no_batch, key, interval,
+                inferred_batch_size, allow_ndim_plus_one=True
+            )
         logger.debug(f"'{key}' validation passed with interval {interval}.")
 
     # GSP
@@ -123,7 +134,13 @@ def validate(
         )
         expected_shape_no_batch = (hist_steps + forecast_steps,)
         inferred_batch_size = _validate_array_shape(
-            data, 2, expected_shape_no_batch, key, interval, inferred_batch_size, allow_ndim_plus_one=True
+            data,
+            2,
+            expected_shape_no_batch,
+            key,
+            interval,
+            inferred_batch_size,
+            allow_ndim_plus_one=True,
         )
         logger.debug(f"'{key}' validation passed with interval {interval}.")
 
@@ -146,7 +163,9 @@ def validate(
 
     # Final Batch Size Check
     if inferred_batch_size is None and expected_batch_size is None:
-        logger.warning("Batch size could not be determined (no modalities checked or empty batch?).")
+        logger.warning(
+            "Batch size could not be determined (no modalities checked or empty batch?)."
+        )
     elif (
         inferred_batch_size is not None
         and expected_batch_size is not None
@@ -158,8 +177,13 @@ def validate(
              f"{expected_batch_size}."
          )
     elif inferred_batch_size is not None:
-         logger.info(f"All modalities passed validation with consistent inferred batch size: {inferred_batch_size}")
+         logger.info(
+             f"All modalities passed validation with consistent inferred batch size: "
+             f"{inferred_batch_size}"
+         )
     elif expected_batch_size is not None:
-         logger.warning(f"Expected batch size {expected_batch_size} provided, but no data modalities were validated to confirm.")
-
+         logger.warning(
+             f"Expected batch size {expected_batch_size} provided, but no data "
+             f"modalities were validated to confirm."
+         )
     logger.info("Batch data shape validation successful against configuration.")
