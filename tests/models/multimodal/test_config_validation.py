@@ -6,7 +6,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 
-from pvnet.models.multimodal.config_validation import validate
+from pvnet.models.multimodal.validation.config_validation import validate
 
 NumpyBatch = dict
 logger = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ def test_validate_batch_error_missing_modality_key(
             f"Config expects {key_to_check}, but sample_numpy_batch missing it."
         )
 
-    match_str = f"Batch missing '{key_to_check}' data"
+    match_str = f"Batch missing required '{key_to_check}' data"
     with pytest.raises(KeyError, match=match_str):
         validate(batch, config, valid_input_data_config)
 
@@ -222,7 +222,7 @@ def test_validate_batch_error_modality_wrong_type(
 
     batch[key_to_check] = "this is not a numpy array"
 
-    match_str = f"'{key_to_check}' data must be np.ndarray"
+    match_str = f"'{key_to_check}' data must be ndarray, found str"
     with pytest.raises(TypeError, match=match_str):
         validate(batch, config, valid_input_data_config)
 
@@ -433,7 +433,6 @@ def test_validate_batch_size(
          mod_to_change = "nwp"
     else:
          pytest.skip("Could not find a suitable modality to modify for batch size test.")
-
 
     new_bs = bs1 - 1
     log_msg = (
