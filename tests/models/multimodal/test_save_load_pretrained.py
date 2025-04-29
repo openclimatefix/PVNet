@@ -106,7 +106,7 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
     ],
 )
 def test_create_hugging_face_model_card(repo_id, wandb_repo, wandb_ids):
-    
+
     # Create Hugging Face ModelCard
     card = BaseModel.create_hugging_face_model_card(
         repo_id=repo_id,

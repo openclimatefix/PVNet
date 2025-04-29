@@ -371,7 +371,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                                                   wandb_repo,
                                                   wandb_ids,
                                                   card_template_path)
-            
+
         (save_directory / "README.md").write_text(str(card))
 
         if push_to_hub:
