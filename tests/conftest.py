@@ -8,12 +8,20 @@ import pandas as pd
 import pytest
 import torch
 import xarray as xr
+from ocf_data_sampler.config.model import (
+    GSP,
+    NWP,
+    Configuration,
+    InputData,
+    MultiNWP,
+    NormalisationValues,
+    Satellite,
+)
+from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
+from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 
 from pvnet.data import DataModule, SiteDataModule
 from pvnet.models.multimodal.multimodal import Model
-
-from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
-from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
 
 xr.set_options(keep_attrs=True)
 
@@ -145,23 +153,66 @@ def valid_config_dict(model_minutes_kwargs):
 
 @pytest.fixture
 def valid_input_data_config():
-    cfg = {
-        "satellite": {
-            "time_resolution_minutes": 5,
-        },
-        "nwp": {
-            "ukv": {
-                "time_resolution_minutes": 60,
-            },
-            "ecmwf": {
-                "time_resolution_minutes": 60,
-            },
-        },
-        "gsp": {
-            "time_resolution_minutes": 30,
-        },
-    }
-    return cfg
+    """
+    Provides input data config dict derived via minimal manual Configuration creation.
+    """
+    minimal_config = Configuration(
+        input_data=InputData(
+            satellite=Satellite(
+                time_resolution_minutes=5,
+                interval_start_minutes=0, interval_end_minutes=0,
+                image_size_pixels_height=1, image_size_pixels_width=1,
+                zarr_path="dummy_sat.zarr", channels=["dummy_sat_chan"],
+                normalisation_constants={"dummy_sat_chan": NormalisationValues(mean=0, std=1)}
+            ),
+            nwp=MultiNWP(root={
+                "ukv": NWP(
+                    time_resolution_minutes=60,
+                    interval_start_minutes=0, interval_end_minutes=0,
+                    image_size_pixels_height=1, image_size_pixels_width=1,
+                    zarr_path="dummy_ukv.zarr", channels=["dummy_ukv_chan"], provider="ukv",
+                    normalisation_constants={"dummy_ukv_chan": NormalisationValues(mean=0, std=1)}
+                ),
+                "ecmwf": NWP(
+                    time_resolution_minutes=60,
+                    interval_start_minutes=0, interval_end_minutes=0,
+                    image_size_pixels_height=1, image_size_pixels_width=1,
+                    zarr_path="dummy_ecmwf.zarr", channels=["dummy_ecmwf_chan"], provider="ecmwf",
+                    normalisation_constants={"dummy_ecmwf_chan": NormalisationValues(mean=0, std=1)}
+                ),
+            }),
+            gsp=GSP(
+                time_resolution_minutes=30,
+                interval_start_minutes=0, interval_end_minutes=0,
+                zarr_path="dummy_gsp.zarr"
+            )
+        )
+    )
+
+    cfg_dict = {}
+
+    # Satellite
+    if minimal_config.input_data and minimal_config.input_data.satellite:
+        cfg_dict["satellite"] = {
+            "time_resolution_minutes": minimal_config.input_data.satellite.time_resolution_minutes
+        }
+
+    # NWP
+    if minimal_config.input_data and minimal_config.input_data.nwp:
+        cfg_dict["nwp"] = {}
+        for source, nwp_config in minimal_config.input_data.nwp.items():
+            if nwp_config:
+                cfg_dict["nwp"][source] = {
+                    "time_resolution_minutes": nwp_config.time_resolution_minutes
+                }
+
+    # GSP
+    if minimal_config.input_data and minimal_config.input_data.gsp:
+        cfg_dict["gsp"] = {
+            "time_resolution_minutes": minimal_config.input_data.gsp.time_resolution_minutes
+        }
+
+    return cfg_dict
 
 
 @pytest.fixture()
