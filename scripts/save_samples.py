@@ -43,8 +43,8 @@ import warnings
 
 import dask
 import hydra
-from ocf_data_sampler.sample.site import SiteSample
-from ocf_data_sampler.sample.uk_regional import UKRegionalSample
+from ocf_data_sampler.torch_datasets.sample.site import SiteSample
+from ocf_data_sampler.torch_datasets.sample.uk_regional import UKRegionalSample
 from ocf_data_sampler.torch_datasets.datasets import PVNetUKRegionalDataset, SitesDataset
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
