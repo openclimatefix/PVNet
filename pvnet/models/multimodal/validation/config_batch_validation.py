@@ -1,3 +1,5 @@
+"""Validation functoions for Multimodal batches."""
+
 import logging
 from typing import Any, Optional, Type
 
@@ -16,7 +18,8 @@ def _check_batch_data(
     """Check if modality data exists in batch and has the expected type."""
     if batch_key not in numpy_batch:
         raise KeyError(
-            f"Batch missing required '{batch_key}' data (required by config key '{context_config_key}')."
+            f"Batch missing required '{batch_key}' data "
+            f"(required by config key '{context_config_key}')."
         )
     data: Any = numpy_batch[batch_key]
     if not isinstance(data, expected_type):
@@ -46,13 +49,18 @@ def _get_modality_interval(
         if not isinstance(config_to_check, dict):
             raise TypeError(f"Expected dict for '{primary_modality_key}' in input_data_config")
         if secondary_modality_key is None:
-             raise ValueError("secondary_modality_key (NWP source) is required when is_nwp_source=True")
+            raise ValueError(
+                "secondary_modality_key (NWP source) is required when is_nwp_source=True"
+            )
+
         lookup_key = secondary_modality_key
         error_context = f"NWP source '{lookup_key}'"
 
     modality_config_dict = None
     if lookup_key not in config_to_check:
-        if primary_modality_key == "sun" and secondary_modality_key is not None and secondary_modality_key in input_data_config:
+        if (primary_modality_key == "sun"
+                and secondary_modality_key is not None
+                and secondary_modality_key in input_data_config):
             logger.debug(f"Using '{secondary_modality_key}' interval as fallback for sun.")
             lookup_key = secondary_modality_key
             error_context = f"fallback modality '{lookup_key}' for sun"
@@ -64,8 +72,10 @@ def _get_modality_interval(
 
 
     if not isinstance(modality_config_dict, dict):
-        raise TypeError(f"Expected dict for {error_context} config, got {type(modality_config_dict).__name__}")
-
+        raise TypeError(
+            f"Expected dict for {error_context} config, "
+            f"got {type(modality_config_dict).__name__}"
+        )
     try:
         interval = modality_config_dict['time_resolution_minutes']
         if not isinstance(interval, int) or interval <= 0:
@@ -91,6 +101,7 @@ def _validate_array_shape(
 ) -> int:
     """
     Validate ndim, full shape (incl. batch dim), and batch consistency.
+
     Returns the validated batch size inferred from the data.
     """
     if not isinstance(data, np.ndarray):
@@ -132,7 +143,10 @@ def _validate_array_shape(
         return batch_size_to_use
 
     elif actual_ndim != expected_ndim:
-         allowed_ndims_str = f"{expected_ndim} or {expected_ndim + 1}" if allow_ndim_plus_one else str(expected_ndim)
+         allowed_ndims_str = (
+             f"{expected_ndim} or {expected_ndim + 1}"
+             if allow_ndim_plus_one else str(expected_ndim)
+         )
          raise ValueError(
              f"'{data_key}' dimension error. Expected {allowed_ndims_str} dims, Got {actual_ndim}"
          )
@@ -154,7 +168,8 @@ def _validate_nwp_source_structure(
     source_data_dict = nwp_batch_data[source]
     if not isinstance(source_data_dict, dict):
         raise TypeError(
-            f"NWP data for source '{source}' must be a dict, found {type(source_data_dict).__name__}"
+            f"NWP data for source '{source}' must be a dict, "
+            f"found {type(source_data_dict).__name__}"
         )
 
     data_array_key = "nwp"
