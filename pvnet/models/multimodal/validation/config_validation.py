@@ -1,22 +1,21 @@
 """Main validation entry point for Multimodal configuration and batches."""
 
 import logging
-from typing import Any, Optional, Type
+from typing import Optional
 
 import numpy as np
 from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 
-from pvnet.models.multimodal.validation.config_static_validation import (
-    _validate_static_config,
-    _get_encoder_config,
-)
-
 from pvnet.models.multimodal.validation.config_batch_validation import (
     _check_batch_data,
     _get_modality_interval,
+    _get_time_steps,
     _validate_array_shape,
     _validate_nwp_source_structure,
-    _get_time_steps,
+)
+from pvnet.models.multimodal.validation.config_static_validation import (
+    _get_encoder_config,
+    _validate_static_config,
 )
 
 logger = logging.getLogger(__name__)
