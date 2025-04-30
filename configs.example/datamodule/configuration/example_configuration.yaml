@@ -281,3 +281,8 @@ input_data:
       WV_073:
         mean: 0.62479186
         std: 0.12924142
+
+  solar_position:
+    interval_start_minutes: -60
+    interval_end_minutes: 480
+    time_resolution_minutes: 5
