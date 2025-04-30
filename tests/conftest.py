@@ -93,7 +93,7 @@ def generate_synthetic_sample():
     """
     Generate synthetic sample for testing
     """
-    now = pd.Timestamp.now(tz='UTC')
+    now = pd.Timestamp.now(tz=None)
     sample = {}
 
     # NWP define
@@ -168,7 +168,7 @@ def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True)
         variation_index: Index to use for coordinate variations
         add_noise: Whether to add random noise to data variables
     """
-    now = pd.Timestamp.now(tz='UTC')
+    now = pd.Timestamp.now(tz=None)
 
     # Create time and space coordinates
     site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
