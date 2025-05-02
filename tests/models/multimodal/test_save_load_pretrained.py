@@ -1,7 +1,7 @@
 import pytest
 import re
+import pkg_resources
 from pvnet.models.base_model import BaseModel
-from pathlib import Path
 import yaml
 import tempfile
 
@@ -118,8 +118,11 @@ def test_create_hugging_face_model_card(repo_id, wandb_repo, wandb_ids):
     card_markdown = card.content
 
     # Regex to find if the pvnet and ocf-data-sampler versions are present
-    has_pvnet = re.search(r'^ - pvnet==', card_markdown, re.IGNORECASE | re.MULTILINE)
-    has_ocf_data_sampler= re.search(r'^ - ocf[-_]data[-_]sampler==', card_markdown, re.IGNORECASE | re.MULTILINE)
+    pvnet_version = pkg_resources.get_distribution("pvnet").version
+    has_pvnet = re.search(fr'^ - pvnet=={pvnet_version}', card_markdown, re.IGNORECASE | re.MULTILINE)
+
+    ocf_sampler_version = pkg_resources.get_distribution("ocf-data-sampler").version
+    has_ocf_data_sampler= re.search(fr'^ - ocf-data-sampler=={ocf_sampler_version}', card_markdown, re.IGNORECASE | re.MULTILINE)
 
     assert has_pvnet, "The hugging face card created does not display the PVNet package version"
     assert has_ocf_data_sampler, "The hugging face card created does not display the ocf-data-sampler package version"

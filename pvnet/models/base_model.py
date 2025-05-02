@@ -435,9 +435,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # Find package versions for OCF packages
         packages_to_display = ["pvnet", "ocf-data-sampler"]
         packages_and_versions = {
-            dist.project_name: dist.version
-            for dist in pkg_resources.working_set
-            if dist.project_name.lower() in packages_to_display
+            package_name: pkg_resources.get_distribution(package_name).version
+            for package_name in packages_to_display
         }
 
         package_versions_markdown = ""
