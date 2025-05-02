@@ -34,9 +34,10 @@ def get_model_from_checkpoints(
                 raise ValueError(
                     f"Found {len(files)} checkpoints @ {path}/epoch*.ckpt. Expected one."
                 )
-            checkpoint = torch.load(files[0], map_location="cpu")
+            # TODO: Loading with weights_only=False is not recommended
+            checkpoint = torch.load(files[0], map_location="cpu", weights_only=False)
         else:
-            checkpoint = torch.load(f"{path}/last.ckpt", map_location="cpu")
+            checkpoint = torch.load(f"{path}/last.ckpt", map_location="cpu", weights_only=False)
 
         model.load_state_dict(state_dict=checkpoint["state_dict"])
 
