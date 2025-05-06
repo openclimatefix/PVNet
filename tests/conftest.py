@@ -249,14 +249,17 @@ def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True)
     now = pd.Timestamp.now(tz='UTC')
 
     # Create time and space coordinates
-    site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
-    nwp_time_coords = pd.date_range(start=now, periods=50, freq="1h")
+    site_time_coords_aware = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
+    nwp_time_coords_aware = pd.date_range(start=now, periods=50, freq="1h")
+    nwp_init_time_aware = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
+    site_time_coords = site_time_coords_aware.tz_convert(None)
+    nwp_time_coords = nwp_time_coords_aware.tz_convert(None)
+    nwp_init_time = nwp_init_time_aware.tz_convert(None)
     nwp_lat = np.linspace(50.0, 60.0, 24)
     nwp_lon = np.linspace(-10.0, 2.0, 24)
     nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
 
     # Generate NWP data
-    nwp_init_time = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
     nwp_steps = pd.timedelta_range(start=pd.Timedelta(hours=0), periods=50, freq="1h")
     nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
 
