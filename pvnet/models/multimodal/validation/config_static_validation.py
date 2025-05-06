@@ -302,7 +302,7 @@ def _check_convnet_encoder_params(
         "conv3d_channels",
         "image_size_pixels",
     ]
-    encoder_config = _get_encoder_config(cfg, section_key, context, source_key)
+    encoder_config = get_encoder_config(cfg, section_key, context, source_key)
     _check_positive_int_params_in_dict(encoder_config, convnet_params, context)
 
 
@@ -326,7 +326,7 @@ def _check_attention_encoder_params(
         "kdim",
         "id_embed_dim",
     ]
-    encoder_config = _get_encoder_config(cfg, section_key, context, None)
+    encoder_config = get_encoder_config(cfg, section_key, context, None)
     _check_positive_int_params_in_dict(encoder_config, attention_params, context)
 
 
@@ -345,7 +345,7 @@ def _check_dict_values_are_int(
             logger.warning(message)
 
 
-def _get_encoder_config(
+def get_encoder_config(
     cfg: dict[str, Any], section_key: str, context: str, source_key: str | None = None
 ) -> dict[str, Any]:
     """Retrieve an encoder's configuration dictionary (handles nesting).
@@ -425,7 +425,7 @@ def _check_positive_int_params_in_dict(
             )
 
 
-def _validate_static_config(cfg: dict[str, Any]) -> None:
+def validate_static_config(cfg: dict[str, Any]) -> None:
     """Perform static validation of the multimodal configuration dictionary.
 
     Checks presence, types, and basic constraints of core config parameters
