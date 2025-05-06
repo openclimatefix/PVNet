@@ -2,6 +2,7 @@ import os
 import tempfile
 from datetime import timedelta
 from typing import Dict, Any
+from omegaconf import OmegaConf
 
 import hydra
 import numpy as np
@@ -99,58 +100,24 @@ def sat_data():
 
 
 @pytest.fixture
-def valid_config_dict(model_minutes_kwargs):
-    cfg = {
-        "_target_": "pvnet.models.multimodal.multimodal.Model",
-        "embedding_dim": 16,
-        "include_sun": True,
-        "include_gsp_yield_history": True,
-        "forecast_minutes": 420,
-        "history_minutes": 180,
+def valid_config_dict() -> Dict[str, Any]:
+    config_filename = "test_valid_config_dict.yaml"
+    conftest_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(conftest_dir, config_filename)
 
-        "output_quantiles": [0.1, 0.5, 0.9],
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"Test configuration file not found: {config_path}. "
+            f"Ensure '{config_filename}' exists in the '{conftest_dir}' directory."
+        )
 
-        "output_network": {"_target_": "pvnet.models.multimodal.linear_networks.networks.ResFCNet2"},
-        "optimizer": {"_target_": "torch.optim.Adam", "lr": 0.001},
+    cfg_omegaconf = OmegaConf.load(config_path)
+    cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
 
-        "sat_encoder": {
-            "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-            "in_channels": 11, "out_features": 128, "number_of_conv3d_layers": 6,
-            "conv3d_channels": 32, "image_size_pixels": 24,
-        },
+    if cfg_dict is None:
+         raise ValueError(f"OmegaConf failed to load or parse YAML from {config_path}")
 
-        "nwp_encoders_dict": {
-            "ukv": {
-                "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-                "in_channels": 11, "out_features": 128, "number_of_conv3d_layers": 6,
-                "conv3d_channels": 32, "image_size_pixels": 24,
-            },
-            "ecmwf": {
-                "_target_": "pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet",
-                "in_channels": 12, "out_features": 128, "number_of_conv3d_layers": 6,
-                "conv3d_channels": 32, "image_size_pixels": 12,
-            },
-        },
-
-        "sat_history_minutes": 30,
-        "nwp_history_minutes": {
-            "ukv": 120,
-            "ecmwf": 120,
-        },
-        "nwp_forecast_minutes": {
-            "ukv": 480,
-            "ecmwf": 480,
-        },
-        "nwp_interval_minutes": {
-             "ukv": 60,
-             "ecmwf": 60,
-        },
-
-        "satellite_time_resolution_minutes": 5,
-        "gsp_time_resolution_minutes": 30,
-        "sun_time_resolution_minutes": 30,
-    }
-    return cfg
+    return cfg_dict
 
 
 @pytest.fixture
@@ -193,8 +160,7 @@ def sample_numpy_batch() -> NumpyBatch:
     sample_list = []
     for i in range(batch_size):
         pytorch_sample = generate_synthetic_sample()
-        numpy_sample = convert_pytorch_dict_to_numpy(pytorch_sample)
-        sample_list.append(numpy_sample)
+        sample_list.append(pytorch_sample)
 
     final_batch = stack_np_samples_into_batch(sample_list)
 
