@@ -167,7 +167,7 @@ def validate(
             (k for k in possible_fallback_keys if k in input_data_config and
                 isinstance(input_data_config.get(k), dict)),
             None
-        )        
+        )
         if fallback_key is None:
             raise KeyError(
                  "Cannot determine interval for sun: No suitable fallback modality "
