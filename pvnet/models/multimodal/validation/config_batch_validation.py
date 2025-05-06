@@ -9,7 +9,7 @@ from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 logger = logging.getLogger(__name__)
 
 
-def _check_batch_data(
+def check_batch_data(
     numpy_batch: NumpyBatch,
     batch_key: str,
     expected_type: Type,
@@ -31,7 +31,7 @@ def _check_batch_data(
     return data
 
 
-def _get_modality_interval(
+def get_modality_interval(
     input_data_config: dict,
     primary_modality_key: str,
     secondary_modality_key: Optional[str] = None,
@@ -90,20 +90,14 @@ def _get_modality_interval(
         raise ValueError(f"Invalid time_resolution_minutes for {error_context}: {e}")
 
 
-def _validate_array_shape(
+def validate_array_shape(
     data: np.ndarray,
-    expected_ndim: int,
-    expected_shape_no_batch: tuple,
+    expected_shape_with_batch: tuple,
     data_key: str,
     interval: int,
-    current_inferred_batch_size: Optional[int],
     allow_ndim_plus_one: bool = False,
-) -> int:
-    """
-    Validate ndim, full shape (incl. batch dim), and batch consistency.
-
-    Returns the validated batch size inferred from the data.
-    """
+) -> None:
+    """Get and validate array dimensions."""
     if not isinstance(data, np.ndarray):
         raise TypeError(f"'{data_key}' data must be NumPy array, found {type(data).__name__}")
     if data.ndim == 0:
@@ -111,53 +105,45 @@ def _validate_array_shape(
 
     actual_batch_size = data.shape[0]
     if actual_batch_size <= 0:
-         raise ValueError(f"'{data_key}' batch dimension has size <= 0: {actual_batch_size}")
+        raise ValueError(f"'{data_key}' batch dimension has size <= 0: {actual_batch_size}")
 
-    if current_inferred_batch_size is None:
-        batch_size_to_use = actual_batch_size
-        logger.debug(f"Inferred batch size: {batch_size_to_use} from {data_key}")
-    elif current_inferred_batch_size != actual_batch_size:
+    expected_batch_dim = expected_shape_with_batch[0]
+    if actual_batch_size != expected_batch_dim:
         raise ValueError(
-            f"Batch size mismatch for {data_key}: expected {current_inferred_batch_size}, "
+            f"Batch size mismatch for {data_key}: expected {expected_batch_dim}, "
             f"got {actual_batch_size}"
         )
-    else:
-        batch_size_to_use = current_inferred_batch_size
 
-    expected_shape_with_batch = (batch_size_to_use,) + expected_shape_no_batch
+    expected_ndim_base = len(expected_shape_with_batch)
+    allowed_ndims = {expected_ndim_base}
+    if allow_ndim_plus_one:
+        allowed_ndims.add(expected_ndim_base + 1)
+
     actual_ndim = data.ndim
-    shape_matches = data.shape == expected_shape_with_batch
 
-    if allow_ndim_plus_one and actual_ndim == expected_ndim + 1:
+    if actual_ndim not in allowed_ndims:
+        allowed_ndims_str = " or ".join(map(str, sorted(list(allowed_ndims))))
+        raise ValueError(
+            f"'{data_key}' dimension error. Expected {allowed_ndims_str} dims, Got {actual_ndim}"
+        )
+
+    if actual_ndim == expected_ndim_base:
+        if data.shape != expected_shape_with_batch:
+             raise ValueError(
+                 f"'{data_key}' shape error using interval {interval}. "
+                 f"Expected {expected_shape_with_batch}, Got {data.shape}"
+             )
+    elif actual_ndim == expected_ndim_base + 1:
         expected_shape_plus_one = expected_shape_with_batch + (1,)
-        if data.shape == expected_shape_plus_one:
-            return batch_size_to_use
-        else:
+        if data.shape != expected_shape_plus_one:
              raise ValueError(
                 f"'{data_key}' shape error using interval {interval}. "
-                f"Expected {expected_shape_with_batch} or {expected_shape_plus_one}, "
-                f"Got {data.shape}"
-            )
-
-    elif shape_matches:
-        return batch_size_to_use
-
-    elif actual_ndim != expected_ndim:
-         allowed_ndims_str = (
-             f"{expected_ndim} or {expected_ndim + 1}"
-             if allow_ndim_plus_one else str(expected_ndim)
-         )
-         raise ValueError(
-             f"'{data_key}' dimension error. Expected {allowed_ndims_str} dims, Got {actual_ndim}"
-         )
-    else:
-         raise ValueError(
-             f"'{data_key}' shape error using interval {interval}. "
-             f"Expected {expected_shape_with_batch}, Got {data.shape}"
-         )
+                f"Expected shape with extra dim {expected_shape_plus_one}, Got {data.shape}"
+             )
+    return
 
 
-def _validate_nwp_source_structure(
+def validate_nwp_source_structure(
     nwp_batch_data: dict,
     source: str
 ) -> np.ndarray:
@@ -187,7 +173,7 @@ def _validate_nwp_source_structure(
     return source_data_array
 
 
-def _get_time_steps(hist_mins: int, forecast_mins: int, interval: int) -> tuple:
+def get_time_steps(hist_mins: int, forecast_mins: int, interval: int) -> tuple:
     """Calculate history and forecast time steps based on duration and interval.
 
     Args:
