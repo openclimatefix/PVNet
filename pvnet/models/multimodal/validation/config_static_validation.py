@@ -1,4 +1,4 @@
-"""Validation functoions for Multimodal configuration."""
+"""Validation functions for Multimodal configuration."""
 
 import logging
 from typing import Any, Type
