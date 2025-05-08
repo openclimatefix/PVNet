@@ -65,7 +65,6 @@ def _check_dict_section(
     section_name: str,
     required: bool = True,
     check_target: bool = True,
-    check_sub_items_target: bool = False,
 ) -> dict[str, Any] | None:
     """Validate a config section, ensuring it's a dict and optionally checking targets.
 
@@ -104,26 +103,7 @@ def _check_dict_section(
         )
         return section_content
 
-    if check_sub_items_target:
-        if not section_content and required:
-             # If required and needs sub-items, it cannot be empty
-            raise KeyError(
-                f"Required config section '{section_name}' is empty and requires sub-items "
-                f"with '_target_' keys."
-            )
-        for source, sub_config in section_content.items():
-            if not isinstance(sub_config, dict):
-                raise TypeError(
-                    f"Config for source '{source}' in '{section_name}' "
-                    f"must be a dictionary, found {type(sub_config).__name__}."
-                )
-            if "_target_" not in sub_config:
-                raise KeyError(
-                    f"Source '{source}' in section '{section_name}' "
-                    f"missing required sub-key: '_target_'"
-                )
-    elif check_target:
-         # Only check target if section is not empty or if it's required (implicitly not empty)
+    if check_target:
          if section_content or required:
               if "_target_" not in section_content:
                   raise KeyError(
@@ -160,16 +140,14 @@ def _check_time_parameter(
             if required_if_owner_present:
                 raise KeyError(message)
             else:
-                logger.warning(
-                    f"{message} (Action: May use default value if applicable)."
-                )
+                logger.warning(message)
         else:
             _check_key(
                 cfg,
                 param_name,
                 required=False,
                 expected_type=int,
-                warn_on_type_mismatch=True,
+                warn_on_type_mismatch=False,
                 context=f"Parameter '{param_name}' associated with '{owner_key}'",
             )
 
@@ -232,7 +210,7 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
     _check_key(
         cfg, "nwp_interval_minutes", required=True, expected_type=dict, context=context
     )
-    nwp_intervals: dict[str, Any] = cfg["nwp_interval_minutes"]
+    nwp_intervals: dict[str, int] = cfg["nwp_interval_minutes"]
     interval_keys: set[str] = set(nwp_intervals.keys())
     if interval_keys != encoder_keys:
         missing_in_interval = encoder_keys - interval_keys
@@ -271,8 +249,7 @@ def _check_output_quantiles_config(
         context=context,
     )
     quantiles = cfg["output_quantiles"]
-    if not quantiles:
-        raise ValueError(f"{context}: 'output_quantiles' list cannot be empty.")
+
     for i, q_value in enumerate(quantiles):
         if not isinstance(q_value, (int, float)):
             raise TypeError(
@@ -339,10 +316,11 @@ def _check_dict_values_are_int(
     for source, value in data.items():
         if not isinstance(value, expected_type):
             message = (
-                f"'{dict_name}' for source '{source}' expected {expected_type.__name__}, "
+                f"Value for source/key '{source}' in dictionary '{dict_name}' "
+                f"expected type {expected_type.__name__}, "
                 f"found {type(value).__name__}."
             )
-            logger.warning(message)
+            raise TypeError(message)
 
 
 def get_encoder_config(
@@ -402,7 +380,7 @@ def get_encoder_config(
 def _check_positive_int_params_in_dict(
     config_dict: dict[str, Any], param_names: list[str], context: str
 ) -> None:
-    """Check if specified keys in a dict exist, are integers, and are positive.
+    """Check if specified keys in a dict exist, their values are integers, and are positive.
 
     Args:
         config_dict: The dictionary containing the parameters.
@@ -501,11 +479,20 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
 
     # NWP Encoders
     nwp_section = _check_dict_section(
-        cfg, "nwp_encoders_dict", required=False, check_sub_items_target=True
+        cfg, "nwp_encoders_dict", required=False, check_target=False
     )
     if nwp_section is not None:
         _validate_nwp_specifics(cfg, nwp_section)
         for source in nwp_section.keys():
+            source_specific_encoder_config = get_encoder_config(
+                cfg,
+                "nwp_encoders_dict",
+                context=f"Config for NWP source '{source}'",
+                source_key=source
+            )
+            _check_key(source_specific_encoder_config, "_target_", required=True,
+                       context=f"Config for NWP source '{source}'")
+
             _check_convnet_encoder_params(
                 cfg=cfg,
                 section_key="nwp_encoders_dict",
