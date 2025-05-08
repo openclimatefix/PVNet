@@ -107,13 +107,12 @@ def minimize_data_config(input_path, output_path, model):
                     nwp_config["image_size_pixels_height"] = nwp_pixel_size
                     nwp_config["image_size_pixels_width"] = nwp_pixel_size
 
-                    # Replace the forecast minutes
-                    nwp_config["forecast_minutes"] = (
-                        model.nwp_encoders_dict[nwp_source].sequence_length
-                        - nwp_config["interval_start_minutes"]
-                        / nwp_config["time_resolution_minutes"]
-                        - 1
-                    ) * nwp_config["time_resolution_minutes"]
+                    # Replace the interval_end_minutes minutes
+                    nwp_config["interval_end_minutes"] = (
+                        nwp_config["interval_start_minutes"] +
+                        (model.nwp_encoders_dict[nwp_source].sequence_length - 1)
+                        * nwp_config["time_resolution_minutes"]
+                    )
 
     if "satellite" in config["input_data"]:
         if not model.include_sat:
@@ -123,11 +122,15 @@ def minimize_data_config(input_path, output_path, model):
 
             # Replace the image size
             sat_pixel_size = model.sat_encoder.image_size_pixels
-            sat_config["satellite_image_size_pixels_height"] = sat_pixel_size
-            sat_config["satellite_image_size_pixels_width"] = sat_pixel_size
+            sat_config["image_size_pixels_height"] = sat_pixel_size
+            sat_config["image_size_pixels_width"] = sat_pixel_size
 
-            # Replace the satellite delay
-            sat_config["live_delay_minutes"] = model.min_sat_delay_minutes
+            # Replace the interval_end_minutes minutes
+            sat_config["interval_end_minutes"] = (
+                sat_config["interval_start_minutes"] +
+                (model.sat_encoder.sequence_length - 1)
+                * sat_config["time_resolution_minutes"]
+            )
 
     if "pv" in config["input_data"]:
         if not model.include_pv:
@@ -137,7 +140,7 @@ def minimize_data_config(input_path, output_path, model):
         gsp_config = config["input_data"]["gsp"]
 
         # Replace the forecast minutes
-        gsp_config["forecast_minutes"] = model.forecast_minutes
+        gsp_config["interval_end_minutes"] = model.forecast_minutes
 
     with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
@@ -318,7 +321,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
         card_template_path: Optional[Path] = None,
-        revision: str = "main",
         **kwargs,
     ) -> Optional[str]:
         """
@@ -340,8 +342,6 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
-            revision (`str`, *optional*, defaults to `"main"`):
-                The revision to push the model to. Only used if `push_to_hub=True`.
             kwargs:
                 Additional key word arguments passed along to the
                 [`~ModelHubMixin._from_pretrained`] method.
@@ -367,10 +367,9 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             # Taylor the data config to the model being saved
             minimize_data_config(new_data_config_path, new_data_config_path, self)
 
-        card = self.create_hugging_face_model_card(repo_id,
-                                                  wandb_repo,
-                                                  wandb_ids,
-                                                  card_template_path)
+        card = self.create_hugging_face_model_card(
+            repo_id, wandb_repo, wandb_ids, card_template_path
+        )
 
         (save_directory / "README.md").write_text(str(card))
 
@@ -381,16 +380,29 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 repo_id=repo_id,
                 repo_type="model",
                 folder_path=save_directory,
-                revision=revision,
             )
+
+            # Print the most recent commit hash
+            c = api.list_repo_commits(repo_id=repo_id, repo_type="model")[0]
+
+            message = (
+                f"The latest commit is now: \n"
+                f"    date: {c.created_at} \n"
+                f"    commit hash: {c.commit_id}\n"
+                f"    by: {c.authors}\n"
+                f"    title: {c.title}\n"
+            )
+
+            print(message)
 
         return None
 
     @staticmethod
-    def create_hugging_face_model_card(repo_id: Optional[str] = None,
-                                      wandb_repo: Optional[str] = None,
-                                      wandb_ids: Optional[Union[list[str], str]] = None,
-                                      card_template_path: Optional[Path] = None
+    def create_hugging_face_model_card(
+        repo_id: Optional[str] = None,
+        wandb_repo: Optional[str] = None,
+        wandb_ids: Optional[Union[list[str], str]] = None,
+        card_template_path: Optional[Path] = None,
     ) -> ModelCard:
         """
         Creates Hugging Face model card
@@ -443,14 +455,13 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         for package, version in packages_and_versions.items():
             package_versions_markdown += f" - {package}=={version}\n"
 
-        card = ModelCard.from_template(
+        return ModelCard.from_template(
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
             package_versions=package_versions_markdown
         )
 
-        return card
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     """Abstract base class for PVNet submodels"""

@@ -15,7 +15,9 @@ import wandb
 
 from pvnet.load_model import get_model_from_checkpoints
 
+app = typer.Typer(pretty_exceptions_show_locals=False)
 
+@app.command()
 def push_to_huggingface(
     checkpoint_dir_paths: list[str],
     huggingface_repo: str = "openclimatefix/pvnet_uk_region",  # e.g. openclimatefix/windnet_india
@@ -24,7 +26,6 @@ def push_to_huggingface(
     wandb_ids: list[str] = [],
     local_path: str = None,
     push_to_hub: bool = True,
-    revision: str = "main",
 ):
     """Push a local model to a huggingface model repo
 
@@ -36,7 +37,6 @@ def push_to_huggingface(
         wandb_ids: The wandb ID code(s)
         local_path: Where to save the local copy of the model
         push_to_hub: Whether to push the model to the hub or just create local version.
-        revision: The git revision to commit from. Only used if push_to_hub is True.
     """
 
     assert push_to_hub or local_path is not None
@@ -73,7 +73,6 @@ def push_to_huggingface(
         wandb_ids=wandb_ids,
         push_to_hub=push_to_hub,
         repo_id=huggingface_repo if push_to_hub else None,
-        revision=revision,
     )
 
     if local_path is None:
@@ -81,4 +80,4 @@ def push_to_huggingface(
 
 
 if __name__ == "__main__":
-    typer.run(push_to_huggingface)
+    app()
