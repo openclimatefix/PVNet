@@ -12,6 +12,7 @@ import hydra
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import pandas as pd
+import pkg_resources
 import torch
 import torch.nn.functional as F
 import wandb
@@ -319,7 +320,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         push_to_hub: bool = False,
         wandb_repo: Optional[str] = None,
         wandb_ids: Optional[Union[list[str], str]] = None,
-        card_template_path=None,
+        card_template_path: Optional[Path] = None,
         revision: str = "main",
         **kwargs,
     ) -> Optional[str]:
@@ -369,34 +370,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             # Taylor the data config to the model being saved
             minimize_data_config(new_data_config_path, new_data_config_path, self)
 
-        # Get appropriate model card
-        model_name = repo_id.split("/")[1]
-        if model_name == "windnet_india":
-            model_card = "wind_india_model_card_template.md"
-        elif model_name == "pvnet_india":
-            model_card = "pv_india_model_card_template.md"
-        else:
-            model_card = "pv_uk_regional_model_card_template.md"
-
-        # Creating and saving model card.
-        card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
-        if card_template_path is None:
-            card_template_path = (
-                f"{os.path.dirname(os.path.abspath(__file__))}/model_cards/{model_card}"
-            )
-
-        if isinstance(wandb_ids, str):
-            wandb_ids = [wandb_ids]
-
-        wandb_links = ""
-        for wandb_id in wandb_ids:
-            link = f"https://wandb.ai/{wandb_repo}/runs/{wandb_id}"
-            wandb_links += f" - [{link}]({link})\n"
-
-        card = ModelCard.from_template(
-            card_data,
-            template_path=card_template_path,
-            wandb_links=wandb_links,
+        card = self.create_hugging_face_model_card(
+            repo_id, wandb_repo, wandb_ids, card_template_path
         )
 
         (save_directory / "README.md").write_text(str(card))
@@ -424,8 +399,72 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
             print(message)
 
-
         return None
+
+    @staticmethod
+    def create_hugging_face_model_card(
+        repo_id: Optional[str] = None,
+        wandb_repo: Optional[str] = None,
+        wandb_ids: Optional[Union[list[str], str]] = None,
+        card_template_path: Optional[Path] = None,
+    ) -> ModelCard:
+        """
+        Creates Hugging Face model card
+
+        Args:
+            repo_id (`str`, *optional*):
+                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
+                the folder name if not provided.
+            wandb_repo: Identifier of the repo on wandb.
+            wandb_ids: Identifier(s) of the model on wandb.
+            card_template_path: Path to the HuggingFace model card template. Defaults to card in
+                PVNet library if set to None.
+
+        Returns:
+            card: ModelCard - Hugging Face model card object
+        """
+
+        # Get appropriate model card
+        model_name = repo_id.split("/")[1]
+        if model_name == "windnet_india":
+            model_card = "wind_india_model_card_template.md"
+        elif model_name == "pvnet_india":
+            model_card = "pv_india_model_card_template.md"
+        else:
+            model_card = "pv_uk_regional_model_card_template.md"
+
+        # Creating and saving model card.
+        card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
+        if card_template_path is None:
+            card_template_path = (
+                f"{os.path.dirname(os.path.abspath(__file__))}/model_cards/{model_card}"
+            )
+
+        if isinstance(wandb_ids, str):
+            wandb_ids = [wandb_ids]
+
+        wandb_links = ""
+        for wandb_id in wandb_ids:
+            link = f"https://wandb.ai/{wandb_repo}/runs/{wandb_id}"
+            wandb_links += f" - [{link}]({link})\n"
+
+        # Find package versions for OCF packages
+        packages_to_display = ["pvnet", "ocf-data-sampler"]
+        packages_and_versions = {
+            package_name: pkg_resources.get_distribution(package_name).version
+            for package_name in packages_to_display
+        }
+
+        package_versions_markdown = ""
+        for package, version in packages_and_versions.items():
+            package_versions_markdown += f" - {package}=={version}\n"
+
+        return ModelCard.from_template(
+            card_data,
+            template_path=card_template_path,
+            wandb_links=wandb_links,
+            package_versions=package_versions_markdown
+        )
 
 
 class BaseModel(pl.LightningModule, PVNetModelHubMixin):

@@ -43,9 +43,9 @@ import warnings
 
 import dask
 import hydra
-from ocf_data_sampler.sample.site import SiteSample
-from ocf_data_sampler.sample.uk_regional import UKRegionalSample
 from ocf_data_sampler.torch_datasets.datasets import PVNetUKRegionalDataset, SitesDataset
+from ocf_data_sampler.torch_datasets.sample.site import SiteSample
+from ocf_data_sampler.torch_datasets.sample.uk_regional import UKRegionalSample
 from omegaconf import DictConfig, OmegaConf
 from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader, Dataset
@@ -80,10 +80,10 @@ class SaveFuncFactory:
         save_path = f"{self.save_dir}/{sample_num:08}"
 
         if self.renewable == "pv_uk":
-            sample_class = UKRegionalSample()
+            sample_class = UKRegionalSample(sample)
             filename = f"{save_path}.pt"
         elif self.renewable == "site":
-            sample_class = SiteSample()
+            sample_class = SiteSample(sample)
             filename = f"{save_path}.nc"
         else:
             raise ValueError(f"Unknown renewable: {self.renewable}")

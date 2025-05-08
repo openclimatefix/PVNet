@@ -1,4 +1,4 @@
-_target_: pvnet.data.datamodule.DataModule
+_target_: pvnet.data.DataModule
 configuration: null
 
 # The sample_dir is the location batches were saved to using the save_batches.py script
