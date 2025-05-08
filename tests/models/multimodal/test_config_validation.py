@@ -20,9 +20,9 @@ def test_validate_valid_inputs(
     """Test validate with valid config and correctly shaped batch."""
     try:
         validate(
-            sample_numpy_batch, 
-            valid_config_dict, 
-            valid_input_data_config, 
+            sample_numpy_batch,
+            valid_config_dict,
+            valid_input_data_config,
             expected_batch_size=4
         )
     except Exception as e:
