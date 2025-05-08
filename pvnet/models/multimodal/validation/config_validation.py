@@ -29,7 +29,7 @@ def validate(
     """
     Validate a batch of numpy data against the multimodal configuration using helpers.
 
-    Validates shapes and types. If expected_batch_size is provided, validates
+    Validates shapes and types. With the expected_batch_size provided, validates
     batch dimension against it. Does not infer or enforce cross-modality batch size
     consistency if expected_batch_size is None.
     """
@@ -55,7 +55,10 @@ def validate(
         key = "satellite_actual"
         logger.debug(f"Validating modality: {key}")
         data = check_batch_data(numpy_batch, key, np.ndarray, config_key_sat)
-        interval = get_modality_interval(input_data_config, "satellite")
+        interval = get_modality_interval(
+            input_data_config, 
+            "satellite", 
+            secondary_modality_key=None)
         sat_cfg = get_encoder_config(cfg, config_key_sat, config_key_sat)
         h = w = sat_cfg["image_size_pixels"]
         c = sat_cfg["in_channels"]
@@ -167,7 +170,7 @@ def validate(
             (k for k in possible_fallback_keys if k in input_data_config and
                 isinstance(input_data_config.get(k), dict)),
             None
-        )
+        )        
         if fallback_key is None:
             raise KeyError(
                  "Cannot determine interval for sun: No suitable fallback modality "
