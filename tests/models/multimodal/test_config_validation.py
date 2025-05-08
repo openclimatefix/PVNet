@@ -19,7 +19,12 @@ def test_validate_valid_inputs(
 ):
     """Test validate with valid config and correctly shaped batch."""
     try:
-        validate(sample_numpy_batch, valid_config_dict, valid_input_data_config, expected_batch_size=4)
+        validate(
+            sample_numpy_batch, 
+            valid_config_dict, 
+            valid_input_data_config, 
+            expected_batch_size=4
+        )
     except Exception as e:
         pytest.fail(f"validate raised an unexpected exception with valid inputs: {e}")
 
@@ -129,7 +134,7 @@ def test_validate_static_error_nwp_sub_item_missing_target(
     except IndexError:
         pytest.skip("nwp_encoders_dict is empty in fixture.")
 
-    match_str = rf"Source '{nwp_key}'.*missing required sub-key: '_target_'"
+    match_str = rf"Config for NWP source '{nwp_key}' missing required key: '_target_'"
     with pytest.raises(KeyError, match=match_str):
         validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
 
@@ -232,6 +237,7 @@ def test_validate_batch_error_wrong_ndim(
     sample_numpy_batch,
     valid_input_data_config
 ):
+    """Test ValueError for incorrect number of dimensions (ndim) in batch data."""
     config = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     key_to_check = "satellite_actual"
@@ -372,6 +378,7 @@ def test_validate_error_mismatch_expected_batch_size(
     sample_numpy_batch,
     valid_input_data_config
 ):
+    """Test ValueError when expected_batch_size mismatches the actual batch size."""
     config = valid_config_dict
     batch = sample_numpy_batch
     try:
@@ -399,6 +406,7 @@ def test_validate_error_internal_mismatch_with_expected_size(
     sample_numpy_batch,
     valid_input_data_config
 ):
+    """Test ValueError when a modality's batch size internally mismatches expected_batch_size."""
     config = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     expected_data_keys = set()
@@ -406,7 +414,7 @@ def test_validate_error_internal_mismatch_with_expected_size(
         expected_data_keys.add("satellite_actual")
     if config.get("nwp_encoders_dict"):
         expected_data_keys.add("nwp")
-    if config.get("pv_encoder"): # Added check based on config
+    if config.get("pv_encoder"):
         expected_data_keys.add("pv")
     if config.get("include_gsp_yield_history"):
         expected_data_keys.add("gsp")
