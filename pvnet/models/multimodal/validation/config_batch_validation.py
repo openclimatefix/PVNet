@@ -1,7 +1,7 @@
 """Validation functoions for Multimodal batches."""
 
 import logging
-from typing import Any, Optional, Type
+from typing import Any, Type
 
 import numpy as np
 from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
@@ -15,7 +15,23 @@ def check_batch_data(
     expected_type: Type,
     context_config_key: str,
 ) -> Any:
-    """Check if modality data exists in batch and has the expected type."""
+    """Check if modality data exists in batch and has the expected type.
+
+    Args:
+        numpy_batch: The batch of data (a dictionary-like object) to check.
+        batch_key: The specific key within the batch whose data needs validation.
+        expected_type: The Python type the data associated with `batch_key`
+            is expected to be.
+        context_config_key: The configuration key that requires this `batch_key`,
+            used for providing context in error messages.
+
+    Returns:
+        The validated data corresponding to `batch_key` from `numpy_batch`.
+
+    Raises:
+        KeyError: If `batch_key` is not found in `numpy_batch`.
+        TypeError: If the data for `batch_key` is not of `expected_type`.
+    """
     if batch_key not in numpy_batch:
         raise KeyError(
             f"Batch missing required '{batch_key}' data "
@@ -34,10 +50,34 @@ def check_batch_data(
 def get_modality_interval(
     input_data_config: dict,
     primary_modality_key: str,
-    secondary_modality_key: Optional[str] = None,
+    secondary_modality_key: str | None,
     is_nwp_source: bool = False,
 ) -> int:
-    """Get and validate time resolution interval from input_data_config."""
+    """Get and validate time resolution interval from input_data_config.
+
+    Args:
+        input_data_config: Dictionary containing configuration for data modalities,
+            expected to hold 'time_resolution_minutes'.
+        primary_modality_key: The main key for the modality (e.g., "satellite",
+            "nwp", "sun") in `input_data_config`.
+        secondary_modality_key: An optional secondary key. If `is_nwp_source`
+            is True, this specifies the NWP source (e.g., "ecmwf"). If
+            `primary_modality_key` is "sun", this can specify a fallback
+            modality (e.g., "gsp") for interval lookup.
+        is_nwp_source: Boolean flag. If True, indicates that the primary key
+            is "nwp" and the `secondary_modality_key` refers to a specific
+            NWP data source within the "nwp" section of the config.
+
+    Returns:
+        The validated time resolution in minutes for the specified modality.
+
+    Raises:
+        KeyError: If configuration keys are missing or not found.
+        TypeError: If configuration values are not of the expected type (e.g., dict).
+        ValueError: If `time_resolution_minutes` is invalid (e.g., not a
+            positive integer), or if `secondary_modality_key` is required
+            for NWP but not provided.
+    """
     config_to_check = input_data_config
     lookup_key = primary_modality_key
     error_context = f"modality '{primary_modality_key}'"
@@ -97,7 +137,26 @@ def validate_array_shape(
     interval: int,
     allow_ndim_plus_one: bool = False,
 ) -> None:
-    """Get and validate array dimensions."""
+    """Get and validate array dimensions.
+
+    Args:
+        data: The NumPy array whose shape is to be validated.
+        expected_shape_with_batch: A tuple representing the expected shape
+            of the array, including the batch dimension as the first element.
+        data_key: The key or name identifying the data array, used for context
+            in error messages.
+        interval: The time interval associated with the data's time dimension,
+            used for context in error messages.
+        allow_ndim_plus_one: If True, allows the array's number of dimensions
+            to be one greater than defined by `expected_shape_with_batch`
+            (typically for an added channel dimension of size 1). Defaults to False.
+
+    Raises:
+        TypeError: If `data` is not a NumPy array.
+        ValueError: If `data` is scalar, has a non-positive batch dimension,
+            has an incorrect number of dimensions, or its shape does not match
+            the expected shape.
+    """
     if not isinstance(data, np.ndarray):
         raise TypeError(f"'{data_key}' data must be NumPy array, found {type(data).__name__}")
     if data.ndim == 0:
@@ -147,7 +206,23 @@ def validate_nwp_source_structure(
     nwp_batch_data: dict,
     source: str
 ) -> np.ndarray:
-    """Validate structure of NWP source dict in batch and return data array."""
+    """Validate structure of NWP source dict in batch and return data array.
+
+    Args:
+        nwp_batch_data: A dictionary where keys are NWP source identifiers (e.g.,
+            "ecmwf") and values are dictionaries containing the NWP data array.
+        source: The specific NWP source key (e.g., "ecmwf", "gfs") whose
+            structure within `nwp_batch_data` needs validation.
+
+    Returns:
+        The validated NumPy array containing the NWP data for the specified `source`.
+
+    Raises:
+        KeyError: If the `source` is not in `nwp_batch_data` or if the
+            expected "nwp" data array key is missing within the source's dict.
+        TypeError: If the data for the `source` or the NWP array itself is not
+            of the expected type (dict and np.ndarray, respectively).
+    """
     if source not in nwp_batch_data:
         raise KeyError(f"NWP data for configured source '{source}' is missing in batch dict.")
 
