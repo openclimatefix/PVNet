@@ -2,7 +2,7 @@
 
 import glob
 from collections import OrderedDict
-from typing import Optional, Any
+from typing import Any, Optional
 
 import hydra
 import torch

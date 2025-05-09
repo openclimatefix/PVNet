@@ -1,7 +1,7 @@
 """The default composite model architecture for PVNet"""
 
 from collections import OrderedDict
-from typing import Optional, Any
+from typing import Any, Optional
 
 import torch
 from omegaconf import DictConfig
