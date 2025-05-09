@@ -50,6 +50,7 @@ def unimodal_model_kwargs(teacher_dir, model_minutes_kwargs):
             dropout_frac=0.0,
         ),
         cold_start=True,
+        label_mapping={i:i for i in range(1, 318)},
     )
 
     # Get the teacher model save directories

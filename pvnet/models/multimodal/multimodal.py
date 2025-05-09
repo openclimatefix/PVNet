@@ -1,7 +1,7 @@
 """The default composite model architecture for PVNet"""
 
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, Any
 
 import torch
 from omegaconf import DictConfig
@@ -47,6 +47,7 @@ class Model(MultimodalBaseModel):
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
         include_time: bool = False,
+        label_mapping: Optional[dict[Any, int]] = None,
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -64,7 +65,6 @@ class Model(MultimodalBaseModel):
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
         sensor_interval_minutes: int = 30,
-        num_embeddings: Optional[int] = 318,
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
         forecast_minutes_ignore: Optional[int] = 0,
@@ -94,8 +94,9 @@ class Model(MultimodalBaseModel):
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
             include_time: Include sine and cosine of dates and times.
-            embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
-                `None`.
+            label_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
+                used if this is not provided.
+            embedding_dim: Number of embedding dimensions to use for GSP ID.
             forecast_minutes: The amount of minutes that should be forecasted.
             history_minutes: The default amount of historical minutes that are used.
             sat_history_minutes: Length of recent observations used for satellite inputs. Defaults
@@ -116,7 +117,6 @@ class Model(MultimodalBaseModel):
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
             sensor_interval_minutes: The interval between each sample of the sensor data
-            num_embeddings: The number of dimensions to use for the image embedding
             timestep_intervals_to_plot: Intervals, in timesteps, to plot in
             addition to the full forecast
             sensor_encoder: Encoder for sensor data
@@ -136,11 +136,22 @@ class Model(MultimodalBaseModel):
         self.include_sun = include_sun
         self.include_time = include_time
         self.include_sensor = sensor_encoder is not None
+        self.label_mapping = label_mapping
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
         self.interval_minutes = interval_minutes
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
+
+        if label_mapping is None and add_image_embedding_channel:
+            raise ValueError(
+                "If `add_image_embedding_channel` is set to True, `label_mapping` must be provided."
+            )
+
+        self.use_id_embedding = label_mapping is not None
+
+        if self.use_id_embedding:
+            num_embeddings = max(label_mapping.values())
 
         super().__init__(
             history_minutes=history_minutes,
@@ -246,7 +257,7 @@ class Model(MultimodalBaseModel):
             # Update num features
             fusion_input_features += self.sensor_encoder.out_features
 
-        if self.embedding_dim:
+        if self.use_id_embedding:
             self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
 
             # Update num features
@@ -289,6 +300,13 @@ class Model(MultimodalBaseModel):
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
+        if self.use_id_embedding:
+            id = torch.tensor(
+                [self.label_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
+                device=self.device,
+                dtype=torch.int64,
+            )
+
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -297,7 +315,6 @@ class Model(MultimodalBaseModel):
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x[f"{self._target_key}_id"].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -313,7 +330,6 @@ class Model(MultimodalBaseModel):
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x[f"{self._target_key}_id"].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
@@ -339,10 +355,8 @@ class Model(MultimodalBaseModel):
             modes["gsp"] = gsp_history
 
         # ********************** Embedding of GSP/Site ID ********************
-        if self.embedding_dim:
-            id = x[f"{self._target_key}_id"].int()
-            id_embedding = self.embed(id)
-            modes["id"] = id_embedding
+        if self.use_id_embedding:
+            modes["id"] = self.embed(id)
 
         if self.include_sun:
             # Use only new direct keys

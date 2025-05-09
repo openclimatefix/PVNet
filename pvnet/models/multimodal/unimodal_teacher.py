@@ -2,7 +2,7 @@
 
 import glob
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, Any
 
 import hydra
 import torch
@@ -44,6 +44,7 @@ class Model(MultimodalBaseModel):
         output_quantiles: Optional[list[float]] = None,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
+        label_mapping: Optional[dict[Any, int]] = None,
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -74,8 +75,9 @@ class Model(MultimodalBaseModel):
                 None the output is a single value.
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
-            embedding_dim: Number of embedding dimensions to use for GSP ID. Not included if set to
-                `None`.
+            label_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
+                used if this is not provided.
+            embedding_dim: Number of embedding dimensions to use for GSP ID
             forecast_minutes: The amount of minutes that should be forecasted.
             history_minutes: The default amount of historical minutes that are used.
             optimizer: Optimizer factory function used for network.
@@ -93,12 +95,18 @@ class Model(MultimodalBaseModel):
 
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sun = include_sun
+        self.label_mapping = label_mapping
         self.embedding_dim = embedding_dim
         self.enc_loss_frac = enc_loss_frac
         self.include_sat = False
         self.include_nwp = False
         self.include_pv = False
         self.adapt_batches = adapt_batches
+
+        self.use_id_embedding = label_mapping is not None
+
+        if self.use_id_embedding:
+            num_embeddings = max(label_mapping.values())
 
         # This is set but modified later based on the teachers
         self.add_image_embedding_channel = False
@@ -167,7 +175,7 @@ class Model(MultimodalBaseModel):
                 fusion_input_features += self.nwp_encoders_dict[nwp_source].out_features
 
         if self.embedding_dim:
-            self.embed = nn.Embedding(num_embeddings=318, embedding_dim=embedding_dim)
+            self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
             fusion_input_features += embedding_dim
 
         if self.include_sun:
@@ -209,6 +217,14 @@ class Model(MultimodalBaseModel):
 
     def teacher_forward(self, x):
         """Run the teacher models and return their encodings"""
+
+        if self.use_id_embedding:
+            id = torch.tensor(
+                [self.label_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
+                device=self.device,
+                dtype=torch.int64,
+            )
+
         modes = OrderedDict()
         for mode, teacher_model in self.teacher_models.items():
             # ******************* Satellite imagery *************************
@@ -218,7 +234,6 @@ class Model(MultimodalBaseModel):
                 sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
                 if self.add_image_embedding_channel:
-                    id = x["gsp_id"].int()
                     sat_data = teacher_model.sat_embed(sat_data, id)
 
                 modes[mode] = teacher_model.sat_encoder(sat_data)
@@ -232,7 +247,6 @@ class Model(MultimodalBaseModel):
                 nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
                 if teacher_model.add_image_embedding_channel:
-                    id = x["gsp_id"].int()
                     nwp_data = teacher_model.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = teacher_model.nwp_encoders_dict[nwp_source](nwp_data)
@@ -251,6 +265,13 @@ class Model(MultimodalBaseModel):
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
+        if self.use_id_embedding:
+            id = torch.tensor(
+                [self.label_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
+                device=self.device,
+                dtype=torch.int64,
+            )
+
         modes = OrderedDict()
         # ******************* Satellite imagery *************************
         if self.include_sat:
@@ -259,7 +280,6 @@ class Model(MultimodalBaseModel):
             sat_data = torch.swapaxes(sat_data, 1, 2).float()  # switch time and channels
 
             if self.add_image_embedding_channel:
-                id = x["gsp_id"].int()
                 sat_data = self.sat_embed(sat_data, id)
             modes["sat"] = self.sat_encoder(sat_data)
 
@@ -275,7 +295,6 @@ class Model(MultimodalBaseModel):
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
-                    id = x["gsp_id"].int()
                     nwp_data = self.nwp_embed_dict[nwp_source](nwp_data, id)
 
                 nwp_out = self.nwp_encoders_dict[nwp_source](nwp_data)
@@ -299,10 +318,8 @@ class Model(MultimodalBaseModel):
             modes["gsp"] = gsp_history
 
         # ********************** Embedding of GSP ID ********************
-        if self.embedding_dim:
-            id = x["gsp_id"].int()
-            id_embedding = self.embed(id)
-            modes["id"] = id_embedding
+        if self.use_id_embedding:
+            modes["id"] = self.embed(id)
 
         if self.include_sun:
             # Use only new direct keys
