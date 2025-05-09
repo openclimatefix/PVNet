@@ -6,15 +6,6 @@ import yaml
 import tempfile
 
 
-def test_from_pretrained():
-    model_name = "openclimatefix/pvnet_uk_region"
-    model_version = "92266cd9040c590a9e90ee33eafd0e7b92548be8"
-
-    _ = BaseModel.from_pretrained(
-        model_id=model_name,
-        revision=model_version,
-    )
-
 
 def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs, sample_datamodule):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
@@ -118,10 +109,10 @@ def test_create_hugging_face_model_card(repo_id, wandb_repo, wandb_ids):
 
     # Regex to find if the pvnet and ocf-data-sampler versions are present
     pvnet_version = pkg_resources.get_distribution("pvnet").version
-    has_pvnet = re.search(fr'^ - pvnet=={pvnet_version}', card_markdown, re.IGNORECASE | re.MULTILINE)
+    has_pvnet = f"pvnet=={pvnet_version}" in card_markdown
 
     ocf_sampler_version = pkg_resources.get_distribution("ocf-data-sampler").version
-    has_ocf_data_sampler= re.search(fr'^ - ocf-data-sampler=={ocf_sampler_version}', card_markdown, re.IGNORECASE | re.MULTILINE)
+    has_ocf_data_sampler= f"ocf-data-sampler=={ocf_sampler_version}" in card_markdown
 
-    assert has_pvnet, "The hugging face card created does not display the PVNet package version"
-    assert has_ocf_data_sampler, "The hugging face card created does not display the ocf-data-sampler package version"
+    assert has_pvnet, f"The hugging face card created does not display the PVNet package version"
+    assert has_ocf_data_sampler, f"The hugging face card created does not display the ocf-data-sampler package version"

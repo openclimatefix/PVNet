@@ -461,6 +461,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
             res_block_layers=2,
             dropout_frac=0.0,
         ),
+        label_mapping={i:i for i in range(1, 318)},
         embedding_dim=16,
         include_sun=True,
         include_gsp_yield_history=True,
