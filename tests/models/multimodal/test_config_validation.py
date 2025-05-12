@@ -5,6 +5,7 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
+import re
 
 from pvnet.models.multimodal.validation.config_validation import validate
 
@@ -20,9 +21,9 @@ def test_validate_valid_inputs(
     """Test validate with valid config and correctly shaped batch."""
     try:
         validate(
-            sample_numpy_batch,
-            valid_config_dict,
-            valid_input_data_config,
+            sample_numpy_batch, 
+            valid_config_dict, 
+            valid_input_data_config, 
             expected_batch_size=4
         )
     except Exception as e:
@@ -266,7 +267,7 @@ def test_validate_batch_error_wrong_ndim(
     except IndexError:
         pytest.skip("Cannot modify array dimensions reliably for test.")
 
-    match_str = r"'satellite_actual'.*dimension error.*Expected 5 dims"
+    match_str = rf"'{key_to_check}' dimension count error\. Expected {len(correct_shape)} dims, Got {len(wrong_ndim_shape)}\."
     with pytest.raises(ValueError, match=match_str):
         validate(batch, config, valid_input_data_config, expected_batch_size=actual_batch_size)
 
@@ -298,7 +299,8 @@ def test_validate_batch_error_wrong_shape_time(
     batch[key_to_check] = np.zeros(tuple(wrong_time_shape))
 
     match_str = (
-        rf"'{key_to_check}' shape error using interval"
+        rf"'{key_to_check}' shape error at dimension 1 \(0-indexed, after batch\)\. "
+        rf"Expected size {correct_shape[1]}, Got {wrong_time_shape[1]}\."
     )
     with pytest.raises(ValueError, match=match_str):
         validate(batch, config, valid_input_data_config, expected_batch_size=4)
@@ -331,7 +333,8 @@ def test_validate_batch_error_wrong_shape_spatial(
     batch[key_to_check] = np.zeros(tuple(wrong_spatial_shape))
 
     match_str = (
-        rf"'{key_to_check}' shape error using interval"
+        rf"'{key_to_check}' shape error at dimension 3 \(0-indexed, after batch\)\. "
+        rf"Expected size {correct_shape[3]}, Got {wrong_spatial_shape[3]}\."
     )
     with pytest.raises(ValueError, match=match_str):
         validate(batch, config, valid_input_data_config, expected_batch_size=4)
@@ -382,12 +385,13 @@ def test_validate_error_mismatch_expected_batch_size(
     config = valid_config_dict
     batch = sample_numpy_batch
     try:
-        actual_batch_size = _get_batch_size_test_helper(batch, "gsp")
+        actual_batch_size_from_fixture = _get_batch_size_test_helper(batch, "gsp")
     except Exception as e:
         pytest.skip(f"Could not determine actual batch size from fixture: {e}")
-    if actual_batch_size <= 0:
+    if actual_batch_size_from_fixture <= 0:
          pytest.skip("Fixture batch size is not positive.")
-    incorrect_expected_size = actual_batch_size + 1
+    incorrect_expected_size = actual_batch_size_from_fixture + 1
+
     with pytest.raises(ValueError) as exc_info:
         validate(
             batch,
@@ -396,9 +400,16 @@ def test_validate_error_mismatch_expected_batch_size(
             expected_batch_size=incorrect_expected_size
         )
     error_message = str(exc_info.value)
-    assert "Batch size mismatch for" in error_message
-    assert f"expected {incorrect_expected_size}" in error_message
-    assert f"got {actual_batch_size}" in error_message
+    
+    expected_data_key_in_error = "satellite_actual" 
+    actual_runtime_batch_size = actual_batch_size_from_fixture 
+
+    expected_message_pattern = (
+        rf"Batch size mismatch for '{expected_data_key_in_error}'\. "
+        rf"Expected {incorrect_expected_size}, Got {actual_runtime_batch_size}\."
+    )
+    assert re.search(expected_message_pattern, error_message), \
+        f"Pattern <{expected_message_pattern}> not found in error: <{error_message}>"
 
 
 def test_validate_error_internal_mismatch_with_expected_size(
@@ -429,9 +440,9 @@ def test_validate_error_internal_mismatch_with_expected_size(
             continue
         try:
             modality_batch_sizes[k] = _get_batch_size_test_helper(batch, k)
-        except (TypeError, ValueError, KeyError, StopIteration) as e:
+        except (TypeError, ValueError, KeyError, StopIteration) as e_inner:
             logger.info(
-                f"Skipping modality {k} for inconsistency check (cannot get batch size): {e}"
+                f"Skipping modality {k} for inconsistency check (cannot get batch size): {e_inner}"
             )
 
     if len(modality_batch_sizes) < 1:
@@ -456,7 +467,7 @@ def test_validate_error_internal_mismatch_with_expected_size(
     mods_present = list(modality_batch_sizes.keys())
     if "satellite_actual" in mods_present:
          mod_to_change = "satellite_actual"
-    elif "pv" in mods_present: # Check pv before gsp
+    elif "pv" in mods_present: 
         mod_to_change = "pv"
     elif "gsp" in mods_present:
          mod_to_change = "gsp"
@@ -483,8 +494,8 @@ def test_validate_error_internal_mismatch_with_expected_size(
             if not isinstance(first_source_dict, dict):
                  raise TypeError("Source value is not dict")
             array_key = next(
-                k for k, v in first_source_dict.items()
-                if isinstance(v, np.ndarray) and v.ndim > 0 and v.shape[0] == bs1
+                k_inner for k_inner, v_inner in first_source_dict.items()
+                if isinstance(v_inner, np.ndarray) and v_inner.ndim > 0 and v_inner.shape[0] == bs1
             )
             source_data = first_source_dict[array_key]
             new_shape = (new_bs,) + source_data.shape[1:]
@@ -493,8 +504,8 @@ def test_validate_error_internal_mismatch_with_expected_size(
             )
             modified_nwp = True
             logger.info(f"Modified NWP source '{first_source}', key '{array_key}'")
-        except (StopIteration, KeyError, AttributeError, IndexError, TypeError) as e:
-            logger.warning(f"Could not modify NWP for batch size test: {e}")
+        except (StopIteration, KeyError, AttributeError, IndexError, TypeError) as e_inner:
+            logger.warning(f"Could not modify NWP for batch size test: {e_inner}")
             pytest.skip("Could not modify any NWP source for batch size test.")
         if not modified_nwp:
              pytest.skip("Failed to modify NWP source.")
@@ -521,11 +532,15 @@ def test_validate_error_internal_mismatch_with_expected_size(
             batch,
             config,
             valid_input_data_config,
-            expected_batch_size=bs1
+            expected_batch_size=bs1 
         )
-
+    
     error_message = str(exc_info.value)
-    assert "Batch size mismatch for" in error_message
-    assert f"expected {bs1}" in error_message
-    assert f"got {new_bs}" in error_message
+
+    expected_message_pattern = (
+        rf"Batch size mismatch for '{mod_to_change}'\. "
+        rf"Expected {bs1}, Got {new_bs}\."
+    )
+    assert re.search(expected_message_pattern, error_message), \
+        f"Pattern <{expected_message_pattern}> not found in error: <{error_message}>"
     logger.info(f"Caught expected ValueError: {error_message}")
