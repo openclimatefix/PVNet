@@ -21,9 +21,9 @@ def test_validate_valid_inputs(
     """Test validate with valid config and correctly shaped batch."""
     try:
         validate(
-            sample_numpy_batch,
-            valid_config_dict,
-            valid_input_data_config,
+            sample_numpy_batch, 
+            valid_config_dict, 
+            valid_input_data_config, 
             expected_batch_size=4
         )
     except Exception as e:
@@ -400,9 +400,9 @@ def test_validate_error_mismatch_expected_batch_size(
             expected_batch_size=incorrect_expected_size
         )
     error_message = str(exc_info.value)
-
-    expected_data_key_in_error = "satellite_actual"
-    actual_runtime_batch_size = actual_batch_size_from_fixture
+    
+    expected_data_key_in_error = "satellite_actual" 
+    actual_runtime_batch_size = actual_batch_size_from_fixture 
 
     expected_message_pattern = (
         rf"Batch size mismatch for '{expected_data_key_in_error}'\. "
@@ -467,7 +467,7 @@ def test_validate_error_internal_mismatch_with_expected_size(
     mods_present = list(modality_batch_sizes.keys())
     if "satellite_actual" in mods_present:
          mod_to_change = "satellite_actual"
-    elif "pv" in mods_present:
+    elif "pv" in mods_present: 
         mod_to_change = "pv"
     elif "gsp" in mods_present:
          mod_to_change = "gsp"
@@ -532,9 +532,9 @@ def test_validate_error_internal_mismatch_with_expected_size(
             batch,
             config,
             valid_input_data_config,
-            expected_batch_size=bs1
+            expected_batch_size=bs1 
         )
-
+    
     error_message = str(exc_info.value)
 
     expected_message_pattern = (
