@@ -24,12 +24,6 @@ log = utils.get_logger(__name__)
 torch.set_default_dtype(torch.float32)
 
 
-def _callbacks_to_phase(callbacks, phase):
-    for c in callbacks:
-        if hasattr(c, "switch_phase"):
-            c.switch_phase(phase)
-
-
 def resolve_monitor_loss(output_quantiles):
     """Return the desired metric to monitor based on whether quantile regression is being used.
 
@@ -131,13 +125,6 @@ def train(config: DictConfig) -> Optional[float]:
 
                 break
 
-    should_pretrain = False
-    for c in callbacks:
-        should_pretrain |= hasattr(c, "training_phase") and c.training_phase == "pretrain"
-
-    if should_pretrain:
-        _callbacks_to_phase(callbacks, "pretrain")
-
     trainer: Trainer = hydra.utils.instantiate(
         config.trainer,
         logger=loggers,
@@ -145,39 +132,5 @@ def train(config: DictConfig) -> Optional[float]:
         callbacks=callbacks,
     )
 
-    # TODO: remove this option
-    if should_pretrain:
-        # Pre-train the model
-        raise NotImplementedError("Pre-training is not yet supported")
-        # The parameter `block_nwp_and_sat` is not available in data-sampler
-        # If pretraining is re-supported in the future it is likely any pre-training logic should
-        # go here or perhaps in the callbacks
-        # datamodule.block_nwp_and_sat = True
-
-        trainer.fit(model=model, datamodule=datamodule)
-
-    _callbacks_to_phase(callbacks, "main")
-
-    trainer.should_stop = False
-
     # Train the model completely
     trainer.fit(model=model, datamodule=datamodule)
-
-    # Make sure everything closed properly
-    log.info("Finalizing!")
-    utils.finish(
-        config=config,
-        model=model,
-        datamodule=datamodule,
-        trainer=trainer,
-        callbacks=callbacks,
-        loggers=loggers,
-    )
-
-    # Print path to best checkpoint
-    log.info(f"Best checkpoint path:\n{trainer.checkpoint_callback.best_model_path}")
-
-    # Return metric score for hyperparameter optimization
-    optimized_metric = config.get("optimized_metric")
-    if optimized_metric:
-        return trainer.callback_metrics[optimized_metric]

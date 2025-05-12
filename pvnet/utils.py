@@ -228,23 +228,6 @@ def log_hyperparameters(
     trainer.logger.log_hyperparams = empty
 
 
-def finish(
-    config: DictConfig,
-    model: pl.LightningModule,
-    datamodule: pl.LightningDataModule,
-    trainer: pl.Trainer,
-    callbacks: list[pl.Callback],
-    loggers: list[Logger],
-) -> None:
-    """Makes sure everything closed properly."""
-
-    # without this sweeps with wandb logger might crash!
-    if any([isinstance(logger, pl.loggers.wandb.WandbLogger) for logger in loggers]):
-        import wandb
-
-        wandb.finish()
-
-
 def plot_batch_forecasts(
     batch,
     y_hat,
