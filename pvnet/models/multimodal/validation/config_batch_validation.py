@@ -51,22 +51,22 @@ def get_modality_interval(
     input_data_config: dict,
     primary_modality_key: str,
     secondary_modality_key: str | None,
-    is_nwp_source: bool = False,
 ) -> int:
     """Get and validate time resolution interval from input_data_config.
 
     Args:
         input_data_config: Dictionary containing configuration for data modalities,
             expected to hold 'time_resolution_minutes'.
-        primary_modality_key: The main key for the modality (e.g., "satellite",
-            "nwp", "sun") in `input_data_config`.
-        secondary_modality_key: An optional secondary key. If `is_nwp_source`
-            is True, this specifies the NWP source (e.g., "ecmwf"). If
-            `primary_modality_key` is "sun", this can specify a fallback
-            modality (e.g., "gsp") for interval lookup.
-        is_nwp_source: Boolean flag. If True, indicates that the primary key
-            is "nwp" and the `secondary_modality_key` refers to a specific
-            NWP data source within the "nwp" section of the config.
+        primary_modality_key: The main key for the modality in `input_data_config`.
+            If this is "nwp", then `secondary_modality_key` is treated as the
+            specific NWP source name within the "nwp" section.
+        secondary_modality_key: An optional secondary key.
+            - If `primary_modality_key` is "nwp", this is REQUIRED and specifies
+              the NWP source (e.g., "ecmwf").
+            - If `primary_modality_key` is "sun", this can specify a fallback
+              modality (e.g., "gsp") for interval lookup if the "sun" config
+              is not found directly.
+            - Otherwise, typically None for non-NWP, non-sun direct lookups.
 
     Returns:
         The validated time resolution in minutes for the specified modality.
@@ -78,66 +78,80 @@ def get_modality_interval(
             positive integer), or if `secondary_modality_key` is required
             for NWP but not provided.
     """
-    config_to_check = input_data_config
-    lookup_key = primary_modality_key
-    error_context = f"modality '{primary_modality_key}'"
+    config_section_to_search = input_data_config
+    key_for_config = primary_modality_key
+    error_context_desc = f"modality '{primary_modality_key}'"
 
-    if is_nwp_source:
-        if primary_modality_key not in config_to_check:
-            raise KeyError(f"NWP section ('{primary_modality_key}') not found in input_data_config")
-        config_to_check = config_to_check[primary_modality_key]
-        if not isinstance(config_to_check, dict):
-            raise TypeError(f"Expected dict for '{primary_modality_key}' in input_data_config")
+    if primary_modality_key == "nwp":
         if secondary_modality_key is None:
             raise ValueError(
-                "secondary_modality_key (NWP source) is required when is_nwp_source=True"
+                "When primary_modality_key is 'nwp', secondary_modality_key "
+                "(the NWP source name) must be provided."
             )
+        if "nwp" not in input_data_config or not isinstance(input_data_config["nwp"], dict):
+                raise KeyError(
+                    "NWP section ('nwp') not found or is not a dictionary "
+                    "in input_data_config."
+                )
 
-        lookup_key = secondary_modality_key
-        error_context = f"NWP source '{lookup_key}'"
+        config_section_to_search = input_data_config["nwp"]
+        key_for_config = secondary_modality_key
+        error_context_desc = f"NWP source '{key_for_config}'"
 
-    modality_config_dict = None
-    if lookup_key not in config_to_check:
-        if (primary_modality_key == "sun"
-                and secondary_modality_key is not None
-                and secondary_modality_key in input_data_config):
-            logger.debug(f"Using '{secondary_modality_key}' interval as fallback for sun.")
-            lookup_key = secondary_modality_key
-            error_context = f"fallback modality '{lookup_key}' for sun"
-            modality_config_dict = input_data_config.get(lookup_key)
+    modality_config_dict = config_section_to_search.get(key_for_config)
+
+    if modality_config_dict is None:
+        if primary_modality_key == "sun" and secondary_modality_key is not None:
+            logger.debug(
+                f"Config for '{primary_modality_key}' not found directly, "
+                f"attempting fallback to '{secondary_modality_key}' "
+                f"from top-level input_data_config."
+            )
+            modality_config_dict = input_data_config.get(secondary_modality_key)
+            if modality_config_dict is not None:
+                error_context_desc = f"fallback modality '{secondary_modality_key}' for sun"
+            else:
+                raise KeyError(
+                    f"Could not find config for modality '{primary_modality_key}' or "
+                    f"fallback '{secondary_modality_key}' in input_data_config."
+                )
         else:
-             raise KeyError(f"Could not find config for {error_context} in input_data_config")
-    else:
-         modality_config_dict = config_to_check.get(lookup_key)
-
+            raise KeyError(
+                f"Could not find config for {error_context_desc} "
+                f"in the relevant section."
+            )
 
     if not isinstance(modality_config_dict, dict):
         raise TypeError(
-            f"Expected dict for {error_context} config, "
-            f"got {type(modality_config_dict).__name__}"
+            f"Expected a dictionary for {error_context_desc} config, "
+            f"got {type(modality_config_dict).__name__}."
         )
     try:
-        interval = modality_config_dict['time_resolution_minutes']
-        if not isinstance(interval, int) or interval <= 0:
-            raise ValueError("Interval must be a positive integer")
-        return interval
+        resolution_minutes = modality_config_dict['time_resolution_minutes']
+        if not isinstance(resolution_minutes, int) or resolution_minutes <= 0:
+            raise ValueError(
+                f"'time_resolution_minutes' for {error_context_desc} "
+                "must be a positive integer, "
+                f"found {resolution_minutes}."
+            )
+        return resolution_minutes
     except KeyError:
         raise KeyError(
-            f"Could not find 'time_resolution_minutes' for {error_context} "
-            f"in input_data_config"
+            f"Could not find 'time_resolution_minutes' for {error_context_desc} "
+            f"in its configuration."
         )
     except ValueError as e:
-        raise ValueError(f"Invalid time_resolution_minutes for {error_context}: {e}")
+        raise ValueError(f"Invalid 'time_resolution_minutes' for {error_context_desc}: {e}")
 
 
 def validate_array_shape(
     data: np.ndarray,
     expected_shape_with_batch: tuple,
     data_key: str,
-    interval: int,
+    time_resolution_minutes: int,
     allow_ndim_plus_one: bool = False,
 ) -> None:
-    """Get and validate array dimensions.
+    """Validate array dimensions, checking batch size, ndim, and per-dimension sizes.
 
     Args:
         data: The NumPy array whose shape is to be validated.
@@ -145,7 +159,7 @@ def validate_array_shape(
             of the array, including the batch dimension as the first element.
         data_key: The key or name identifying the data array, used for context
             in error messages.
-        interval: The time interval associated with the data's time dimension,
+        time_resolution_minutes: The time resolution (in minutes) of the data,
             used for context in error messages.
         allow_ndim_plus_one: If True, allows the array's number of dimensions
             to be one greater than defined by `expected_shape_with_batch`
@@ -155,22 +169,23 @@ def validate_array_shape(
         TypeError: If `data` is not a NumPy array.
         ValueError: If `data` is scalar, has a non-positive batch dimension,
             has an incorrect number of dimensions, or its shape does not match
-            the expected shape.
+            the expected shape at any dimension.
     """
     if not isinstance(data, np.ndarray):
-        raise TypeError(f"'{data_key}' data must be NumPy array, found {type(data).__name__}")
+        raise TypeError(f"'{data_key}' data must be NumPy array, found {type(data).__name__}.")
     if data.ndim == 0:
         raise ValueError(f"'{data_key}' array is scalar.")
 
     actual_batch_size = data.shape[0]
     if actual_batch_size <= 0:
-        raise ValueError(f"'{data_key}' batch dimension has size <= 0: {actual_batch_size}")
+        raise ValueError(f"'{data_key}' batch dimension has size <= 0: {actual_batch_size}.")
 
-    expected_batch_dim = expected_shape_with_batch[0]
-    if actual_batch_size != expected_batch_dim:
+    expected_batch_dim_value = expected_shape_with_batch[0]
+    if actual_batch_size != expected_batch_dim_value:
         raise ValueError(
-            f"Batch size mismatch for {data_key}: expected {expected_batch_dim}, "
-            f"got {actual_batch_size}"
+            f"Batch size mismatch for '{data_key}'. Expected {expected_batch_dim_value}, "
+            f"Got {actual_batch_size}. "
+            f"(Time resolution for context: {time_resolution_minutes} mins)."
         )
 
     expected_ndim_base = len(expected_shape_with_batch)
@@ -179,26 +194,35 @@ def validate_array_shape(
         allowed_ndims.add(expected_ndim_base + 1)
 
     actual_ndim = data.ndim
-
     if actual_ndim not in allowed_ndims:
         allowed_ndims_str = " or ".join(map(str, sorted(list(allowed_ndims))))
         raise ValueError(
-            f"'{data_key}' dimension error. Expected {allowed_ndims_str} dims, Got {actual_ndim}"
+            f"'{data_key}' dimension count error. "
+            f"Expected {allowed_ndims_str} dims, Got {actual_ndim}. "
+            f"(Time resolution for context: {time_resolution_minutes} mins)."
         )
 
+    final_expected_shape: tuple
     if actual_ndim == expected_ndim_base:
-        if data.shape != expected_shape_with_batch:
-             raise ValueError(
-                 f"'{data_key}' shape error using interval {interval}. "
-                 f"Expected {expected_shape_with_batch}, Got {data.shape}"
-             )
-    elif actual_ndim == expected_ndim_base + 1:
-        expected_shape_plus_one = expected_shape_with_batch + (1,)
-        if data.shape != expected_shape_plus_one:
-             raise ValueError(
-                f"'{data_key}' shape error using interval {interval}. "
-                f"Expected shape with extra dim {expected_shape_plus_one}, Got {data.shape}"
-             )
+        final_expected_shape = expected_shape_with_batch
+    else:
+        final_expected_shape = expected_shape_with_batch + (1,)
+
+    for i in range(1, actual_ndim):
+        if data.shape[i] != final_expected_shape[i]:
+            raise ValueError(
+                f"'{data_key}' shape error at dimension {i} (0-indexed, after batch). "
+                f"Expected size {final_expected_shape[i]}, Got {data.shape[i]}. "
+                f"Full Expected Shape: {final_expected_shape}, Full Actual Shape: {data.shape}. "
+                f"(Time resolution for context: {time_resolution_minutes} mins)."
+            )
+    
+    if data.shape != final_expected_shape:
+         raise ValueError(
+             f"'{data_key}' general shape mismatch (unexpected). "
+             f"Expected {final_expected_shape}, Got {data.shape}. "
+             f"(Time resolution for context: {time_resolution_minutes} mins)."
+         )
     return
 
 
