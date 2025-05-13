@@ -1,6 +1,5 @@
 """Basic layers for composite models"""
 
-import warnings
 
 import torch
 from torch import nn
