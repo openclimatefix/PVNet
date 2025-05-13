@@ -94,8 +94,8 @@ class Model(MultimodalBaseModel):
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
             include_time: Include sine and cosine of dates and times.
-            location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
-                used if this is not provided.
+            location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is
+                not used if this is not provided.
             embedding_dim: Number of embedding dimensions to use for GSP ID.
             forecast_minutes: The amount of minutes that should be forecasted.
             history_minutes: The default amount of historical minutes that are used.
@@ -145,7 +145,8 @@ class Model(MultimodalBaseModel):
 
         if location_id_mapping is None and add_image_embedding_channel:
             raise ValueError(
-                "If `add_image_embedding_channel` is set to True, `location_id_mapping` must be provided."
+                "If `add_image_embedding_channel` is set to True, `location_id_mapping` must be "
+                "provided."
             )
 
         self.use_id_embedding = location_id_mapping is not None

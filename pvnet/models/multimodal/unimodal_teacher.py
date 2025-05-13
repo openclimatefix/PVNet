@@ -75,8 +75,8 @@ class Model(MultimodalBaseModel):
                 None the output is a single value.
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
-            location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
-                used if this is not provided.
+            location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is
+                not used if this is not provided.
             embedding_dim: Number of embedding dimensions to use for GSP ID
             forecast_minutes: The amount of minutes that should be forecasted.
             history_minutes: The default amount of historical minutes that are used.
