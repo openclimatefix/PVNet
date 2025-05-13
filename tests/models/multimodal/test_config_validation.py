@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 import re
 
+from omegaconf import OmegaConf
+
 from pvnet.models.multimodal.validation.config_validation import validate
 
 NumpyBatch = dict
@@ -20,10 +22,13 @@ def test_validate_valid_inputs(
 ):
     """Test validate with valid config and correctly shaped batch."""
     try:
+        omega_multimodal_config = OmegaConf.create(valid_config_dict)
+        omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
         validate(
-            sample_numpy_batch,
-            valid_config_dict,
-            valid_input_data_config,
+            numpy_batch=sample_numpy_batch,
+            multimodal_config=omega_multimodal_config,
+            input_data_config=omega_input_data_config,
             expected_batch_size=4
         )
     except Exception as e:
@@ -48,16 +53,24 @@ def test_validate_static_error_missing_required_item(
     valid_input_data_config
 ):
     """Tests validate catches static KeyError for missing required config items."""
-    invalid_cfg = deepcopy(valid_config_dict)
+    invalid_cfg_dict = deepcopy(valid_config_dict)
     dummy_batch = {}
 
-    if key_to_delete in invalid_cfg:
-        del invalid_cfg[key_to_delete]
+    if key_to_delete in invalid_cfg_dict:
+        del invalid_cfg_dict[key_to_delete]
     else:
         pytest.skip(f"Key '{key_to_delete}' not in valid_config_dict fixture.")
 
+    omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(KeyError, match=expected_error_match):
-        validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
+        validate(
+            dummy_batch,
+            omega_invalid_cfg,
+            omega_input_data_config,
+            expected_batch_size=1
+        )
 
 
 @pytest.mark.parametrize(
@@ -78,15 +91,24 @@ def test_validate_static_error_section_wrong_type(
     valid_input_data_config
 ):
     """Tests validate catches static TypeError for sections not being dicts."""
-    invalid_cfg = deepcopy(valid_config_dict)
+    invalid_cfg_dict = deepcopy(valid_config_dict)
     dummy_batch = {}
-    if section_name not in invalid_cfg:
+    if section_name not in invalid_cfg_dict:
         pytest.skip(f"'{section_name}' not in fixture.")
 
-    invalid_cfg[section_name] = invalid_value
+    invalid_cfg_dict[section_name] = invalid_value
     match_str = rf"section '{section_name}'.*must be a dictionary"
+
+    omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(TypeError, match=match_str):
-        validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
+        validate(
+            dummy_batch,
+            omega_invalid_cfg,
+            omega_input_data_config,
+            expected_batch_size=1
+        )
 
 
 @pytest.mark.parametrize(
@@ -107,15 +129,24 @@ def test_validate_static_error_section_missing_target(
     valid_input_data_config
 ):
     """Tests validate catches static KeyError when section dict misses '_target_'."""
-    invalid_cfg = deepcopy(valid_config_dict)
+    invalid_cfg_dict = deepcopy(valid_config_dict)
     dummy_batch = {}
-    if section_name not in invalid_cfg:
+    if section_name not in invalid_cfg_dict:
         pytest.skip(f"'{section_name}' not in fixture.")
 
-    invalid_cfg[section_name] = invalid_sub_dict
+    invalid_cfg_dict[section_name] = invalid_sub_dict
     match_str = rf"section '{section_name}'.*missing required sub-key: '_target_'"
+
+    omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(KeyError, match=match_str):
-        validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
+        validate(
+            dummy_batch,
+            omega_invalid_cfg,
+            omega_input_data_config,
+            expected_batch_size=1
+        )
 
 
 def test_validate_static_error_nwp_sub_item_missing_target(
@@ -123,21 +154,30 @@ def test_validate_static_error_nwp_sub_item_missing_target(
     valid_input_data_config
 ):
     """Tests validate catches static KeyError for NWP sub-item missing '_target_'."""
-    invalid_cfg = deepcopy(valid_config_dict)
+    invalid_cfg_dict = deepcopy(valid_config_dict)
     dummy_batch = {}
-    if not invalid_cfg.get("nwp_encoders_dict"):
+    if not invalid_cfg_dict.get("nwp_encoders_dict"):
         pytest.skip("nwp_encoders_dict missing or empty in fixture.")
 
-    invalid_cfg["nwp_encoders_dict"] = deepcopy(invalid_cfg["nwp_encoders_dict"])
+    invalid_cfg_dict["nwp_encoders_dict"] = deepcopy(invalid_cfg_dict["nwp_encoders_dict"])
     try:
-        nwp_key = list(invalid_cfg["nwp_encoders_dict"].keys())[0]
-        invalid_cfg["nwp_encoders_dict"][nwp_key] = {"wrong_key": 789}
+        nwp_key = list(invalid_cfg_dict["nwp_encoders_dict"].keys())[0]
+        invalid_cfg_dict["nwp_encoders_dict"][nwp_key] = {"wrong_key": 789}
     except IndexError:
         pytest.skip("nwp_encoders_dict is empty in fixture.")
 
     match_str = rf"Config for NWP source '{nwp_key}' missing required key: '_target_'"
+    
+    omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(KeyError, match=match_str):
-        validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
+        validate(
+            dummy_batch,
+            omega_invalid_cfg,
+            omega_input_data_config,
+            expected_batch_size=1
+        )
 
 
 def test_validate_static_error_missing_req_time_param(
@@ -145,19 +185,28 @@ def test_validate_static_error_missing_req_time_param(
     valid_input_data_config
 ):
     """Tests validate catches static KeyError for missing dependent time param."""
-    invalid_cfg = deepcopy(valid_config_dict)
+    invalid_cfg_dict = deepcopy(valid_config_dict)
     dummy_batch = {}
-    if not invalid_cfg.get("sat_encoder"):
+    if not invalid_cfg_dict.get("sat_encoder"):
         pytest.skip("sat_encoder not configured in fixture.")
 
-    if "sat_history_minutes" in invalid_cfg:
-        del invalid_cfg["sat_history_minutes"]
+    if "sat_history_minutes" in invalid_cfg_dict:
+        del invalid_cfg_dict["sat_history_minutes"]
     else:
         pytest.skip("'sat_history_minutes' not in fixture.")
 
     match_str = r"includes 'sat_encoder' but is missing 'sat_history_minutes'"
+    
+    omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+    
     with pytest.raises(KeyError, match=match_str):
-        validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
+        validate(
+            dummy_batch,
+            omega_invalid_cfg,
+            omega_input_data_config,
+            expected_batch_size=1
+        )
 
 
 def test_validate_static_error_nwp_time_keys_mismatch(
@@ -165,22 +214,31 @@ def test_validate_static_error_nwp_time_keys_mismatch(
     valid_input_data_config
 ):
     """Tests validate catches static ValueError for NWP time key mismatch."""
-    invalid_cfg = deepcopy(valid_config_dict)
+    invalid_cfg_dict = deepcopy(valid_config_dict)
     dummy_batch = {}
-    if not invalid_cfg.get("nwp_encoders_dict") or not invalid_cfg.get(
+    if not invalid_cfg_dict.get("nwp_encoders_dict") or not invalid_cfg_dict.get(
         "nwp_history_minutes"
     ):
         pytest.skip("NWP sections missing or empty in fixture.")
 
-    invalid_cfg["nwp_history_minutes"] = deepcopy(invalid_cfg["nwp_history_minutes"])
-    if "dummy_source_for_mismatch" not in invalid_cfg["nwp_history_minutes"]:
-        invalid_cfg["nwp_history_minutes"]["dummy_source_for_mismatch"] = 60
+    invalid_cfg_dict["nwp_history_minutes"] = deepcopy(invalid_cfg_dict["nwp_history_minutes"])
+    if "dummy_source_for_mismatch" not in invalid_cfg_dict["nwp_history_minutes"]:
+        invalid_cfg_dict["nwp_history_minutes"]["dummy_source_for_mismatch"] = 60
     else:
         pytest.skip("Cannot reliably create mismatch key.")
 
     match_str = r"Keys in 'nwp_history_minutes'.*do not match sources"
+
+    omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(ValueError, match=match_str):
-        validate(dummy_batch, invalid_cfg, valid_input_data_config, expected_batch_size=1)
+        validate(
+            dummy_batch,
+            omega_invalid_cfg,
+            omega_input_data_config,
+            expected_batch_size=1
+        )
 
 
 def test_validate_batch_error_missing_modality_key(
@@ -189,22 +247,31 @@ def test_validate_batch_error_missing_modality_key(
     valid_input_data_config
 ):
     """Test KeyError when a required modality is missing from the batch."""
-    config = deepcopy(valid_config_dict)
+    config_dict = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
-    if not config.get("sat_encoder"):
+    if not config_dict.get("sat_encoder"):
         pytest.skip("sat_encoder not in config fixture.")
 
     key_to_check = "satellite_actual"
     if key_to_check in batch:
         del batch[key_to_check]
-    elif config.get("sat_encoder"):
+    elif config_dict.get("sat_encoder"):
         pytest.skip(
             f"Config expects {key_to_check}, but sample_numpy_batch missing it."
         )
 
     match_str = f"Batch missing required '{key_to_check}' data"
+    
+    omega_config = OmegaConf.create(config_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+    
     with pytest.raises(KeyError, match=match_str):
-        validate(batch, config, valid_input_data_config, expected_batch_size=4)
+        validate(
+            batch,
+            omega_config,
+            omega_input_data_config,
+            expected_batch_size=4
+        )
 
 
 def test_validate_batch_error_modality_wrong_type(
@@ -213,13 +280,13 @@ def test_validate_batch_error_modality_wrong_type(
     valid_input_data_config
 ):
     """Test TypeError when batch data for a modality is not a numpy array."""
-    config = deepcopy(valid_config_dict)
+    config_dict = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     key_to_check = "satellite_actual"
 
-    if not config.get("sat_encoder"):
+    if not config_dict.get("sat_encoder"):
         pytest.skip("sat_encoder not in config fixture.")
-    if key_to_check not in batch and config.get("sat_encoder"):
+    if key_to_check not in batch and config_dict.get("sat_encoder"):
         pytest.skip(
             f"Config expects {key_to_check}, but sample_numpy_batch missing it."
         )
@@ -229,8 +296,17 @@ def test_validate_batch_error_modality_wrong_type(
     batch[key_to_check] = "this is not a numpy array"
 
     match_str = f"'{key_to_check}' data must be ndarray, found str"
+    
+    omega_config = OmegaConf.create(config_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+    
     with pytest.raises(TypeError, match=match_str):
-        validate(batch, config, valid_input_data_config, expected_batch_size=4)
+        validate(
+            batch,
+            omega_config,
+            omega_input_data_config,
+            expected_batch_size=4
+        )
 
 
 def test_validate_batch_error_wrong_ndim(
@@ -239,13 +315,13 @@ def test_validate_batch_error_wrong_ndim(
     valid_input_data_config
 ):
     """Test ValueError for incorrect number of dimensions (ndim) in batch data."""
-    config = deepcopy(valid_config_dict)
+    config_dict = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     key_to_check = "satellite_actual"
 
-    if not config.get("sat_encoder"):
+    if not config_dict.get("sat_encoder"):
         pytest.skip("sat_encoder not in config fixture.")
-    if key_to_check not in batch and config.get("sat_encoder"):
+    if key_to_check not in batch and config_dict.get("sat_encoder"):
         pytest.skip(
             f"Config expects {key_to_check}, but sample_numpy_batch missing it."
         )
@@ -268,8 +344,17 @@ def test_validate_batch_error_wrong_ndim(
         pytest.skip("Cannot modify array dimensions reliably for test.")
 
     match_str = rf"'{key_to_check}' dimension count error\. Expected {len(correct_shape)} dims, Got {len(wrong_ndim_shape)}\."
+
+    omega_config = OmegaConf.create(config_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(ValueError, match=match_str):
-        validate(batch, config, valid_input_data_config, expected_batch_size=actual_batch_size)
+        validate(
+            batch,
+            omega_config,
+            omega_input_data_config,
+            expected_batch_size=actual_batch_size
+        )
 
 
 def test_validate_batch_error_wrong_shape_time(
@@ -278,13 +363,13 @@ def test_validate_batch_error_wrong_shape_time(
     valid_input_data_config
 ):
     """Test ValueError for incorrect time dimension size."""
-    config = deepcopy(valid_config_dict)
+    config_dict = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     key_to_check = "satellite_actual"
 
-    if not config.get("sat_encoder"):
+    if not config_dict.get("sat_encoder"):
         pytest.skip("sat_encoder not in config fixture.")
-    if key_to_check not in batch and config.get("sat_encoder"):
+    if key_to_check not in batch and config_dict.get("sat_encoder"):
         pytest.skip(
             f"Config expects {key_to_check}, but sample_numpy_batch missing it."
         )
@@ -298,12 +383,22 @@ def test_validate_batch_error_wrong_shape_time(
     wrong_time_shape[1] += 1
     batch[key_to_check] = np.zeros(tuple(wrong_time_shape))
 
+
     match_str = (
         rf"'{key_to_check}' shape error at dimension 1 \(0-indexed, after batch\)\. "
         rf"Expected size {correct_shape[1]}, Got {wrong_time_shape[1]}\."
     )
+
+    omega_config = OmegaConf.create(config_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(ValueError, match=match_str):
-        validate(batch, config, valid_input_data_config, expected_batch_size=4)
+        validate(
+            batch,
+            omega_config,
+            omega_input_data_config,
+            expected_batch_size=4
+        )
 
 
 def test_validate_batch_error_wrong_shape_spatial(
@@ -312,13 +407,13 @@ def test_validate_batch_error_wrong_shape_spatial(
     valid_input_data_config
 ):
     """Test ValueError for incorrect spatial dimension size."""
-    config = deepcopy(valid_config_dict)
+    config_as_dict = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     key_to_check = "satellite_actual"
 
-    if not config.get("sat_encoder"):
+    if not config_as_dict.get("sat_encoder"):
         pytest.skip("sat_encoder not in config fixture.")
-    if key_to_check not in batch and config.get("sat_encoder"):
+    if key_to_check not in batch and config_as_dict.get("sat_encoder"):
         pytest.skip(
             f"Config expects {key_to_check}, but sample_numpy_batch missing it."
         )
@@ -332,12 +427,22 @@ def test_validate_batch_error_wrong_shape_spatial(
     wrong_spatial_shape[3] += 1
     batch[key_to_check] = np.zeros(tuple(wrong_spatial_shape))
 
+
     match_str = (
         rf"'{key_to_check}' shape error at dimension 3 \(0-indexed, after batch\)\. "
         rf"Expected size {correct_shape[3]}, Got {wrong_spatial_shape[3]}\."
     )
+
+    omega_config = OmegaConf.create(config_as_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(ValueError, match=match_str):
-        validate(batch, config, valid_input_data_config, expected_batch_size=4)
+        validate(
+            batch,
+            omega_config,
+            omega_input_data_config,
+            expected_batch_size=4
+        )
 
 
 def _get_batch_size_test_helper(batch_dict, key):
@@ -382,7 +487,7 @@ def test_validate_error_mismatch_expected_batch_size(
     valid_input_data_config
 ):
     """Test ValueError when expected_batch_size mismatches the actual batch size."""
-    config = valid_config_dict
+    config_as_dict = valid_config_dict
     batch = sample_numpy_batch
     try:
         actual_batch_size_from_fixture = _get_batch_size_test_helper(batch, "gsp")
@@ -392,17 +497,20 @@ def test_validate_error_mismatch_expected_batch_size(
          pytest.skip("Fixture batch size is not positive.")
     incorrect_expected_size = actual_batch_size_from_fixture + 1
 
+    omega_config = OmegaConf.create(config_as_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(ValueError) as exc_info:
         validate(
             batch,
-            config,
-            valid_input_data_config,
+            omega_config,
+            omega_input_data_config,
             expected_batch_size=incorrect_expected_size
         )
     error_message = str(exc_info.value)
-
-    expected_data_key_in_error = "satellite_actual"
-    actual_runtime_batch_size = actual_batch_size_from_fixture
+    
+    expected_data_key_in_error = "satellite_actual" 
+    actual_runtime_batch_size = actual_batch_size_from_fixture 
 
     expected_message_pattern = (
         rf"Batch size mismatch for '{expected_data_key_in_error}'\. "
@@ -418,18 +526,18 @@ def test_validate_error_internal_mismatch_with_expected_size(
     valid_input_data_config
 ):
     """Test ValueError when a modality's batch size internally mismatches expected_batch_size."""
-    config = deepcopy(valid_config_dict)
+    config_dict = deepcopy(valid_config_dict)
     batch = deepcopy(sample_numpy_batch)
     expected_data_keys = set()
-    if config.get("sat_encoder"):
+    if config_dict.get("sat_encoder"):
         expected_data_keys.add("satellite_actual")
-    if config.get("nwp_encoders_dict"):
+    if config_dict.get("nwp_encoders_dict"):
         expected_data_keys.add("nwp")
-    if config.get("pv_encoder"):
+    if config_dict.get("pv_encoder"):
         expected_data_keys.add("pv")
-    if config.get("include_gsp_yield_history"):
+    if config_dict.get("include_gsp_yield_history"):
         expected_data_keys.add("gsp")
-    if config.get("include_sun"):
+    if config_dict.get("include_sun"):
         expected_data_keys.add("solar_azimuth")
         expected_data_keys.add("solar_elevation")
 
@@ -465,9 +573,10 @@ def test_validate_error_internal_mismatch_with_expected_size(
         pytest.skip(f"Batch size ({bs1}) too small to test inconsistency reliably.")
 
     mods_present = list(modality_batch_sizes.keys())
+    mod_to_change = ""
     if "satellite_actual" in mods_present:
          mod_to_change = "satellite_actual"
-    elif "pv" in mods_present:
+    elif "pv" in mods_present: 
         mod_to_change = "pv"
     elif "gsp" in mods_present:
          mod_to_change = "gsp"
@@ -527,14 +636,17 @@ def test_validate_error_internal_mismatch_with_expected_size(
         )
         pytest.fail(fail_msg)
 
+    omega_config = OmegaConf.create(config_dict)
+    omega_input_data_config = OmegaConf.create(valid_input_data_config)
+
     with pytest.raises(ValueError) as exc_info:
         validate(
             batch,
-            config,
-            valid_input_data_config,
-            expected_batch_size=bs1
+            omega_config,
+            omega_input_data_config,
+            expected_batch_size=bs1 
         )
-
+    
     error_message = str(exc_info.value)
 
     expected_message_pattern = (
