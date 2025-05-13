@@ -44,7 +44,7 @@ class Model(MultimodalBaseModel):
         output_quantiles: Optional[list[float]] = None,
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
-        label_mapping: Optional[dict[Any, int]] = None,
+        location_id_mapping: Optional[dict[Any, int]] = None,
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -75,7 +75,7 @@ class Model(MultimodalBaseModel):
                 None the output is a single value.
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
-            label_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
+            location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
                 used if this is not provided.
             embedding_dim: Number of embedding dimensions to use for GSP ID
             forecast_minutes: The amount of minutes that should be forecasted.
@@ -95,7 +95,7 @@ class Model(MultimodalBaseModel):
 
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_sun = include_sun
-        self.label_mapping = label_mapping
+        self.location_id_mapping = location_id_mapping
         self.embedding_dim = embedding_dim
         self.enc_loss_frac = enc_loss_frac
         self.include_sat = False
@@ -103,10 +103,10 @@ class Model(MultimodalBaseModel):
         self.include_pv = False
         self.adapt_batches = adapt_batches
 
-        self.use_id_embedding = label_mapping is not None
+        self.use_id_embedding = location_id_mapping is not None
 
         if self.use_id_embedding:
-            num_embeddings = max(label_mapping.values())
+            num_embeddings = max(location_id_mapping.values())
 
         # This is set but modified later based on the teachers
         self.add_image_embedding_channel = False
@@ -220,7 +220,7 @@ class Model(MultimodalBaseModel):
 
         if self.use_id_embedding:
             id = torch.tensor(
-                [self.label_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
+                [self.location_id_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
                 device=self.device,
                 dtype=torch.int64,
             )
@@ -267,7 +267,7 @@ class Model(MultimodalBaseModel):
 
         if self.use_id_embedding:
             id = torch.tensor(
-                [self.label_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
+                [self.location_id_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
                 device=self.device,
                 dtype=torch.int64,
             )

@@ -47,7 +47,7 @@ class Model(MultimodalBaseModel):
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
         include_time: bool = False,
-        label_mapping: Optional[dict[Any, int]] = None,
+        location_id_mapping: Optional[dict[Any, int]] = None,
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
@@ -94,7 +94,7 @@ class Model(MultimodalBaseModel):
             include_gsp_yield_history: Include GSP yield data.
             include_sun: Include sun azimuth and altitude data.
             include_time: Include sine and cosine of dates and times.
-            label_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
+            location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is not
                 used if this is not provided.
             embedding_dim: Number of embedding dimensions to use for GSP ID.
             forecast_minutes: The amount of minutes that should be forecasted.
@@ -136,22 +136,22 @@ class Model(MultimodalBaseModel):
         self.include_sun = include_sun
         self.include_time = include_time
         self.include_sensor = sensor_encoder is not None
-        self.label_mapping = label_mapping
+        self.location_id_mapping = location_id_mapping
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
         self.interval_minutes = interval_minutes
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
 
-        if label_mapping is None and add_image_embedding_channel:
+        if location_id_mapping is None and add_image_embedding_channel:
             raise ValueError(
-                "If `add_image_embedding_channel` is set to True, `label_mapping` must be provided."
+                "If `add_image_embedding_channel` is set to True, `location_id_mapping` must be provided."
             )
 
-        self.use_id_embedding = label_mapping is not None
+        self.use_id_embedding = location_id_mapping is not None
 
         if self.use_id_embedding:
-            num_embeddings = max(label_mapping.values())
+            num_embeddings = max(location_id_mapping.values())
 
         super().__init__(
             history_minutes=history_minutes,
@@ -302,7 +302,7 @@ class Model(MultimodalBaseModel):
 
         if self.use_id_embedding:
             id = torch.tensor(
-                [self.label_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
+                [self.location_id_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
                 device=self.device,
                 dtype=torch.int64,
             )
