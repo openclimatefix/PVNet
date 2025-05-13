@@ -78,20 +78,22 @@ def save_samples_with_dataloader(
     """Save samples from a dataset using a dataloader."""
     save_func = SaveFuncFactory(save_dir)
 
+    gsp_ids = np.array([loc.id for loc in dataset.locations])
+
     dataloader = DataLoader(dataset, **dataloader_kwargs)
 
     pbar = tqdm(total=num_samples)
     for i, sample in zip(range(num_samples), dataloader):
-        check_sample(sample)
+        check_sample(sample, gsp_ids)
         save_func(sample, i)
         pbar.update()
     pbar.close()
 
 
-def check_sample(sample):
+def check_sample(sample, gsp_ids):
     """Check if sample is valid concurrent batch for all GSPs"""
     # Check all GSP IDs are included and in correct order
-    assert (sample["gsp_id"].flatten().numpy() == np.arange(1, 318)).all()
+    assert (sample["gsp_id"].flatten().numpy() == gsp_ids).all()
     # Check all times are the same
     assert len(np.unique(sample["gsp_time_utc"][:, 0].numpy())) == 1
 
