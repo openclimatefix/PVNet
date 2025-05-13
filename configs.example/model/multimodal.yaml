@@ -68,6 +68,13 @@ embedding_dim: 16
 include_sun: True
 include_gsp_yield_history: False
 
+# The mapping between the location IDs and their embedding indices
+location_id_mapping:
+  1: 1
+  5: 2
+  110: 3
+# ...
+
 #--------------------------------------------
 # Times
 #--------------------------------------------
