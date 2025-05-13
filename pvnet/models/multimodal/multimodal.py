@@ -302,6 +302,7 @@ class Model(MultimodalBaseModel):
             x = self._adapt_batch(x)
 
         if self.use_id_embedding:
+            # eg: x['gsp_id] = [1] with location_id_mapping = {1:0}, would give [0]
             id = torch.tensor(
                 [self.location_id_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
                 device=self.device,
