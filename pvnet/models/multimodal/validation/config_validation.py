@@ -102,8 +102,8 @@ def validate(
             hist_mins_source = nwp_hist_mins_dict.get(source)
             forecast_mins_source = nwp_forecast_mins_dict.get(source)
             hist_steps, forecast_steps = get_time_steps(
-                hist_mins_source, 
-                forecast_mins_source, 
+                hist_mins_source,
+                forecast_mins_source,
                 time_res_mins
             )
             expected_shape_no_batch = (hist_steps + forecast_steps, c, h, w)
