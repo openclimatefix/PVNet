@@ -47,7 +47,7 @@ class Model(MultimodalBaseModel):
         include_gsp_yield_history: bool = True,
         include_sun: bool = True,
         include_time: bool = False,
-        location_id_mapping: Optional[dict[Any, int]] = None,
+        location_id_mapping: Optional[dict[Any, int]] = {i:i for i in range(0, 318)},
         embedding_dim: Optional[int] = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
