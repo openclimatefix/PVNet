@@ -15,6 +15,7 @@ import pandas as pd
 import pkg_resources
 import torch
 import torch.nn.functional as F
+import wandb
 import yaml
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
 from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
@@ -22,7 +23,6 @@ from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
 
-import wandb
 from pvnet.models.utils import (
     BatchAccumulator,
     MetricAccumulator,
