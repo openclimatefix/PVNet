@@ -8,15 +8,15 @@ from omegaconf import DictConfig
 from torch import nn
 
 import pvnet
+from pvnet.models.base_model import BaseModel
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
-from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
 
 
-class Model(MultimodalBaseModel):
+class Model(BaseModel):
     """Neural network which combines information from different sources
 
     Architecture is roughly as follows:

@@ -11,12 +11,12 @@ from pyaml_env import parse_config
 from torch import nn
 
 import pvnet
+from pvnet.models.base_model import BaseModel
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
-from pvnet.models.multimodal.multimodal_base import MultimodalBaseModel
 from pvnet.optimizers import AbstractOptimizer
 
 
-class Model(MultimodalBaseModel):
+class Model(BaseModel):
     """Neural network which combines information from different sources
 
     The network is trained via unimodal teachers [1].
