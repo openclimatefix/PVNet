@@ -109,7 +109,7 @@ def validate(
             source_key_str = f"{key}[{source}]"
             logger.debug(f"Validating NWP source: {source}")
             source_data_array = validate_nwp_source_structure(nwp_batch_data, source)
-            
+
             time_res_mins = nwp_interval_mins_config_dict.get(source)
             if time_res_mins is None:
                 logger.warning(
@@ -117,7 +117,7 @@ def validate(
                     f"cfg['nwp_interval_minutes']. Defaulting to 60 minutes for validation."
                 )
                 time_res_mins = 60
-            
+
             source_model_cfg = get_encoder_config(
                 cfg, config_key_nwp, source_key_str, source_key=source
             )
@@ -140,8 +140,8 @@ def validate(
                 raise KeyError(error_message)
 
             hist_steps, forecast_steps = get_time_steps(
-                hist_mins_source, 
-                forecast_mins_source, 
+                hist_mins_source,
+                forecast_mins_source,
                 time_res_mins
             )
             expected_shape_no_batch = (hist_steps + forecast_steps, c, h, w)
@@ -245,7 +245,7 @@ def validate(
                      "'time_resolution_minutes' found, and no suitable fallback modality ('gsp', "
                      "'site', or 'pv') found as a dictionary in input_data_dict."
                 ) from e_sun_direct
-        
+
         hist_steps, forecast_steps = get_time_steps(
             cfg["history_minutes"], cfg["forecast_minutes"], sun_time_res_mins
         )
