@@ -1,6 +1,5 @@
 """Base model for all PVNet submodels"""
 import copy
-
 import json
 import logging
 import os
@@ -16,7 +15,6 @@ import pandas as pd
 import pkg_resources
 import torch
 import torch.nn.functional as F
-from torchvision.transforms.functional import center_crop
 import wandb
 import yaml
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
@@ -24,6 +22,7 @@ from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
+from torchvision.transforms.functional import center_crop
 
 from pvnet.models.utils import (
     BatchAccumulator,
@@ -536,7 +535,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # save all validation results to array, so we can save these to weights n biases
         self.validation_epoch_results = []
-        
+
     def _adapt_batch(self, batch):
         """Slice batches into appropriate shapes for model.
 
@@ -740,7 +739,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
     def training_step(self, batch, batch_idx):
         """Run training step"""
         y_hat = self(batch)
-        
+
         # Batch is adapted in the model forward method, but needs to be adapted here too
         batch = self._adapt_batch(batch)
 
@@ -823,7 +822,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         """Run validation step"""
 
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
-        
+
         y_hat = self(batch)
         # Batch is adapted in the model forward method, but needs to be adapted here too
         batch = self._adapt_batch(batch)
