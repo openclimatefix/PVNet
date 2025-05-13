@@ -106,7 +106,7 @@ class Model(MultimodalBaseModel):
         self.use_id_embedding = location_id_mapping is not None
 
         if self.use_id_embedding:
-            num_embeddings = max(location_id_mapping.values())
+            num_embeddings = max(location_id_mapping.values()) + 1
 
         # This is set but modified later based on the teachers
         self.add_image_embedding_channel = False
