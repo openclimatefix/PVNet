@@ -128,7 +128,7 @@ class Model(MultimodalBaseModel):
                 data we need for a model run.
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
-            save_validation_results_csv: whether to save full csv outputs from validation results. 
+            save_validation_results_csv: whether to save full csv outputs from validation results.
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history

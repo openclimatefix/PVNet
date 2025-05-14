@@ -883,7 +883,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                     )
                     validation_artifact.add_file(filename)
                     wandb.log_artifact(validation_artifact)
-                    
+
         except Exception as e:
             print("Failed to log validation results to wandb")
             print(e)
