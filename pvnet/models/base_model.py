@@ -491,6 +491,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
+            save_validation_results_csv: whether to save full csv outputs from validation results.
         """
         super().__init__()
 
