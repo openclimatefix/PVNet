@@ -232,7 +232,7 @@ def validate_array_shape(
                 f"Full Expected Shape: {final_expected_shape}, Full Actual Shape: {data.shape}. "
                 f"(Time resolution for context: {time_resolution_minutes} mins)."
             )
-    
+
     if data.shape != final_expected_shape:
          raise ValueError(
              f"'{data_key}' general shape mismatch (unexpected). "
