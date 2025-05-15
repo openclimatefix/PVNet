@@ -167,7 +167,7 @@ def test_validate_static_error_nwp_sub_item_missing_target(
         pytest.skip("nwp_encoders_dict is empty in fixture.")
 
     match_str = rf"Config for NWP source '{nwp_key}' missing required key: '_target_'"
-
+    
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
 
@@ -196,10 +196,10 @@ def test_validate_static_error_missing_req_time_param(
         pytest.skip("'sat_history_minutes' not in fixture.")
 
     match_str = r"includes 'sat_encoder' but is missing 'sat_history_minutes'"
-
+    
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     with pytest.raises(KeyError, match=match_str):
         validate(
             dummy_batch,
@@ -261,10 +261,10 @@ def test_validate_batch_error_missing_modality_key(
         )
 
     match_str = f"Batch missing required '{key_to_check}' data"
-
+    
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     with pytest.raises(KeyError, match=match_str):
         validate(
             batch,
@@ -296,10 +296,10 @@ def test_validate_batch_error_modality_wrong_type(
     batch[key_to_check] = "this is not a numpy array"
 
     match_str = f"'{key_to_check}' data must be ndarray, found str"
-
+    
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     with pytest.raises(TypeError, match=match_str):
         validate(
             batch,
@@ -382,22 +382,20 @@ def test_validate_batch_error_wrong_shape_time(
     wrong_time_shape = list(correct_shape)
     wrong_time_shape[1] += 1
     batch[key_to_check] = np.zeros(tuple(wrong_time_shape))
-
-
-    match_str = (
-        rf"'{key_to_check}' shape error at dimension 1 \(0-indexed, after batch\)\. "
-        rf"Expected size {correct_shape[1]}, Got {wrong_time_shape[1]}\."
-    )
-
+    
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
+    match_str = (
+        rf"'{key_to_check}' shape error for time_steps\. "
+        rf"Expected size {correct_shape[1]}, Got {wrong_time_shape[1]}\."
+    )
     with pytest.raises(ValueError, match=match_str):
         validate(
             batch,
             omega_config,
             omega_input_data_config,
-            expected_batch_size=4
+            expected_batch_size=4 
         )
 
 
@@ -426,16 +424,14 @@ def test_validate_batch_error_wrong_shape_spatial(
     wrong_spatial_shape = list(correct_shape)
     wrong_spatial_shape[3] += 1
     batch[key_to_check] = np.zeros(tuple(wrong_spatial_shape))
-
-
-    match_str = (
-        rf"'{key_to_check}' shape error at dimension 3 \(0-indexed, after batch\)\. "
-        rf"Expected size {correct_shape[3]}, Got {wrong_spatial_shape[3]}\."
-    )
-
+    
     omega_config = OmegaConf.create(config_as_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
+    match_str = (
+        rf"'{key_to_check}' shape error for height\. "
+        rf"Expected size {correct_shape[3]}, Got {wrong_spatial_shape[3]}\."
+    )
     with pytest.raises(ValueError, match=match_str):
         validate(
             batch,
@@ -508,13 +504,13 @@ def test_validate_error_mismatch_expected_batch_size(
             expected_batch_size=incorrect_expected_size
         )
     error_message = str(exc_info.value)
-
-    expected_data_key_in_error = "satellite_actual"
-    actual_runtime_batch_size = actual_batch_size_from_fixture
+    
+    expected_data_key_in_error = "satellite_actual" 
+    actual_runtime_batch_size_for_error = actual_batch_size_from_fixture
 
     expected_message_pattern = (
-        rf"Batch size mismatch for '{expected_data_key_in_error}'\. "
-        rf"Expected {incorrect_expected_size}, Got {actual_runtime_batch_size}\."
+        rf"Mismatch for '{expected_data_key_in_error}' in batch_size\. "
+        rf"Expected size {incorrect_expected_size}, Got {actual_runtime_batch_size_for_error}\."
     )
     assert re.search(expected_message_pattern, error_message), \
         f"Pattern <{expected_message_pattern}> not found in error: <{error_message}>"
@@ -576,7 +572,7 @@ def test_validate_error_internal_mismatch_with_expected_size(
     mod_to_change = ""
     if "satellite_actual" in mods_present:
          mod_to_change = "satellite_actual"
-    elif "pv" in mods_present:
+    elif "pv" in mods_present: 
         mod_to_change = "pv"
     elif "gsp" in mods_present:
          mod_to_change = "gsp"
@@ -635,7 +631,7 @@ def test_validate_error_internal_mismatch_with_expected_size(
             f"({type(batch.get(mod_to_change))}) is not testable."
         )
         pytest.fail(fail_msg)
-
+        
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
 
@@ -644,14 +640,14 @@ def test_validate_error_internal_mismatch_with_expected_size(
             batch,
             omega_config,
             omega_input_data_config,
-            expected_batch_size=bs1
+            expected_batch_size=bs1 
         )
-
+    
     error_message = str(exc_info.value)
 
     expected_message_pattern = (
-        rf"Batch size mismatch for '{mod_to_change}'\. "
-        rf"Expected {bs1}, Got {new_bs}\."
+        rf"Mismatch for '{mod_to_change}' in batch_size\. "
+        rf"Expected size {bs1}, Got {new_bs}\."
     )
     assert re.search(expected_message_pattern, error_message), \
         f"Pattern <{expected_message_pattern}> not found in error: <{error_message}>"
