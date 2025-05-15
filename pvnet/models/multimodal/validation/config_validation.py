@@ -82,9 +82,9 @@ def validate(
         full_expected_shape = (expected_batch_size,) + expected_shape_no_batch
         dimension_names = ["batch_size", "time_steps", "channels", "height", "width"]
         validate_array_shape(
-            data=data, 
-            expected_shape_with_batch=full_expected_shape, 
-            data_key=key, 
+            data=data,
+            expected_shape_with_batch=full_expected_shape,
+            data_key=key,
             time_resolution_minutes=time_res_mins,
             dim_names=dimension_names
         )
@@ -114,7 +114,7 @@ def validate(
             source_key_str = f"{key}[{source}]"
             logger.debug(f"Validating NWP source: {source}")
             source_data_array = validate_nwp_source_structure(nwp_batch_data, source)
-            
+
             time_res_mins = nwp_interval_mins_config_dict.get(source)
             if time_res_mins is None:
                 logger.warning(
@@ -122,7 +122,7 @@ def validate(
                     f"cfg['nwp_interval_minutes']. Defaulting to 60 minutes for validation."
                 )
                 time_res_mins = 60
-            
+
             source_model_cfg = get_encoder_config(
                 cfg, config_key_nwp, source_key_str, source_key=source
             )
@@ -145,18 +145,18 @@ def validate(
                 raise KeyError(error_message)
 
             hist_steps, forecast_steps = get_time_steps(
-                hist_mins_source, 
-                forecast_mins_source, 
+                hist_mins_source,
+                forecast_mins_source,
                 time_res_mins
             )
             expected_shape_no_batch = (hist_steps + forecast_steps, c, h, w)
             full_expected_shape = (expected_batch_size,) + expected_shape_no_batch
             dimension_names = ["batch_size", "time_steps", "channels", "height", "width"]
-            
+
             validate_array_shape(
-                data=source_data_array, 
-                expected_shape_with_batch=full_expected_shape, 
-                data_key=source_key_str, 
+                data=source_data_array,
+                expected_shape_with_batch=full_expected_shape,
+                data_key=source_key_str,
                 time_resolution_minutes=time_res_mins,
                 dim_names=dimension_names
             )
@@ -190,14 +190,14 @@ def validate(
         expected_shape_no_batch = (hist_steps, num_sites)
         full_expected_shape = (expected_batch_size,) + expected_shape_no_batch
         dimension_names = ["batch_size", "time_steps", "num_sites"]
-        
+
         validate_array_shape(
-            data=data, 
-            expected_shape_with_batch=full_expected_shape, 
-            data_key=key, 
+            data=data,
+            expected_shape_with_batch=full_expected_shape,
+            data_key=key,
             time_resolution_minutes=time_res_mins,
             allow_ndim_plus_one=True,
-            dim_names=dimension_names 
+            dim_names=dimension_names
         )
         logger.debug(f"'{key}' shape validation passed (time resolution: {time_res_mins} mins).")
 
@@ -226,7 +226,7 @@ def validate(
 
     config_key_sun = "include_sun"
     if cfg.get(config_key_sun):
-        logger.debug("Validating modality: sun (azimuth, elevation)")        
+        logger.debug("Validating modality: sun (azimuth, elevation)")
         possible_fallback_keys = ["gsp", "site", "pv"]
         fallback_key_sun = next(
             (k_sun for k_sun in possible_fallback_keys if k_sun in input_data_dict and
@@ -237,8 +237,8 @@ def validate(
             sun_time_res_mins = get_modality_interval(input_data_dict, "sun", fallback_key_sun)
             log_message_sun_res = f"Time resolution for 'sun' obtained: {sun_time_res_mins} mins."
             if fallback_key_sun and (
-                not input_data_dict.get("sun") 
-                or not isinstance(input_data_dict.get("sun"), dict) 
+                not input_data_dict.get("sun")
+                or not isinstance(input_data_dict.get("sun"), dict)
                 or 'time_resolution_minutes' not in input_data_dict.get("sun", {})
             ):
                 log_message_sun_res += f" (Used fallback: '{fallback_key_sun}')"
@@ -268,9 +268,9 @@ def validate(
         for key_sun_data in ["solar_azimuth", "solar_elevation"]:
             data_sun = check_batch_data(numpy_batch, key_sun_data, np.ndarray, config_key_sun)
             validate_array_shape(
-                data=data_sun, 
-                expected_shape_with_batch=full_expected_shape, 
-                data_key=key_sun_data, 
+                data=data_sun,
+                expected_shape_with_batch=full_expected_shape,
+                data_key=key_sun_data,
                 time_resolution_minutes=sun_time_res_mins,
                 dim_names=dimension_names
             )
