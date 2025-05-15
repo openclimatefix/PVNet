@@ -91,7 +91,7 @@ def get_modality_interval(
         if "nwp" not in input_data_config or not isinstance(input_data_config["nwp"], dict):
                 raise KeyError(
                     "NWP section ('nwp') not found or is not a dictionary "
-                    "in input_data_config."
+                    "in data configuration."
                 )
 
         config_section_to_search = input_data_config["nwp"]
@@ -103,9 +103,11 @@ def get_modality_interval(
     if modality_config_dict is None:
         if primary_modality_key == "sun" and secondary_modality_key is not None:
             logger.debug(
-                f"Config for '{primary_modality_key}' not found directly, "
-                f"attempting fallback to '{secondary_modality_key}' "
-                f"from top-level input_data_config."
+                f"No specific 'time_resolution_minutes' found for 'sun' "
+                f"(via key '{primary_modality_key}'). "
+                f"Attempting to use time resolution from fallback modality "
+                f"'{secondary_modality_key}' "
+                f"defined in input_data_config."
             )
             modality_config_dict = input_data_config.get(secondary_modality_key)
             if modality_config_dict is not None:
@@ -150,6 +152,7 @@ def validate_array_shape(
     data_key: str,
     time_resolution_minutes: int,
     allow_ndim_plus_one: bool = False,
+    dim_names: list[str] | None = None,
 ) -> None:
     """Validate array dimensions, checking batch size, ndim, and per-dimension sizes.
 
@@ -162,8 +165,9 @@ def validate_array_shape(
         time_resolution_minutes: The time resolution (in minutes) of the data,
             used for context in error messages.
         allow_ndim_plus_one: If True, allows the array's number of dimensions
-            to be one greater than defined by `expected_shape_with_batch`
-            (typically for an added channel dimension of size 1). Defaults to False.
+            # ...
+        dim_names: Optional list of strings providing semantic names for each
+            dimension in `final_expected_shape` (e.g., ["batch", "time", "channels"]).
 
     Raises:
         TypeError: If `data` is not a NumPy array.
@@ -182,9 +186,12 @@ def validate_array_shape(
 
     expected_batch_dim_value = expected_shape_with_batch[0]
     if actual_batch_size != expected_batch_dim_value:
+        dim_0_name = "batch_size (dimension 0)"
+        if dim_names and len(dim_names) > 0:
+            dim_0_name = dim_names[0]
         raise ValueError(
-            f"Batch size mismatch for '{data_key}'. Expected {expected_batch_dim_value}, "
-            f"Got {actual_batch_size}. "
+            f"Mismatch for '{data_key}' in {dim_0_name}. "
+            f"Expected size {expected_batch_dim_value}, Got {actual_batch_size}. "
             f"(Time resolution for context: {time_resolution_minutes} mins)."
         )
 
@@ -210,13 +217,22 @@ def validate_array_shape(
 
     for i in range(1, actual_ndim):
         if data.shape[i] != final_expected_shape[i]:
+            dimension_semantic_name = f"dimension index {i} (after batch)"
+            if dim_names and i < len(dim_names):
+                dimension_semantic_name = dim_names[i]
+            elif dim_names and i == expected_ndim_base and actual_ndim == expected_ndim_base + 1:
+                if i < len(dim_names):
+                     dimension_semantic_name = dim_names[i]
+                else:
+                     dimension_semantic_name = f"extra channel/feature (dimension index {i})"
+
             raise ValueError(
-                f"'{data_key}' shape error at dimension {i} (0-indexed, after batch). "
+                f"'{data_key}' shape error for {dimension_semantic_name}. "
                 f"Expected size {final_expected_shape[i]}, Got {data.shape[i]}. "
                 f"Full Expected Shape: {final_expected_shape}, Full Actual Shape: {data.shape}. "
                 f"(Time resolution for context: {time_resolution_minutes} mins)."
             )
-
+    
     if data.shape != final_expected_shape:
          raise ValueError(
              f"'{data_key}' general shape mismatch (unexpected). "
