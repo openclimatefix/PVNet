@@ -477,6 +477,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         interval_minutes: int = 30,
         timestep_intervals_to_plot: Optional[list[int]] = None,
         forecast_minutes_ignore: Optional[int] = 0,
+        save_validation_results_csv: Optional[bool] = False,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -491,6 +492,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             timestep_intervals_to_plot: Intervals, in timesteps, to plot during training
             forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
                 For example if set to 60, the model doesnt predict the first 60 minutes
+            save_validation_results_csv: whether to save full csv outputs from validation results.
         """
         super().__init__()
 
@@ -535,6 +537,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
 
         # save all validation results to array, so we can save these to weights n biases
         self.validation_epoch_results = []
+        self.save_validation_results_csv = save_validation_results_csv
 
     def _adapt_batch(self, batch):
         """Slice batches into appropriate shapes for model.
@@ -921,17 +924,19 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                         ).quantile(0.98),
                     }
                 )
+            # saving validation result csvs
+            if self.save_validation_results_csv:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    filename = os.path.join(tempdir, f"validation_results_{self.current_epoch}.csv")
+                    validation_results_df.to_csv(filename, index=False)
 
-            with tempfile.TemporaryDirectory() as tempdir:
-                filename = os.path.join(tempdir, f"validation_results_{self.current_epoch}.csv")
-                validation_results_df.to_csv(filename, index=False)
+                    # make and log wand artifact
+                    validation_artifact = wandb.Artifact(
+                        f"validation_results_epoch_{self.current_epoch}", type="dataset"
+                    )
+                    validation_artifact.add_file(filename)
+                    wandb.log_artifact(validation_artifact)
 
-                # make and log wand artifact
-                validation_artifact = wandb.Artifact(
-                    f"validation_results_epoch_{self.current_epoch}", type="dataset"
-                )
-                validation_artifact.add_file(filename)
-                wandb.log_artifact(validation_artifact)
         except Exception as e:
             print("Failed to log validation results to wandb")
             print(e)
