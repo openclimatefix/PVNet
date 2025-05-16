@@ -1,0 +1,71 @@
+_target_: pvnet.models.multimodal.multimodal.Model
+output_quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+
+nwp_encoders_dict:
+  ukv:
+    _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+    _partial_: True
+    in_channels: 11
+    out_features: 256
+    number_of_conv3d_layers: 6
+    conv3d_channels: 32
+    image_size_pixels: 24
+  ecmwf:
+    _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+    _partial_: True
+    in_channels: 12
+    out_features: 256
+    number_of_conv3d_layers: 4
+    conv3d_channels: 32
+    image_size_pixels: 12
+
+sat_encoder:
+  _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+  _partial_: True
+  in_channels: 11
+  out_features: 256
+  number_of_conv3d_layers: 6
+  conv3d_channels: 32
+  image_size_pixels: 24
+
+add_image_embedding_channel: False
+
+output_network:
+  _target_: pvnet.models.multimodal.linear_networks.networks.ResFCNet2
+  _partial_: True
+  fc_hidden_features: 128
+  n_res_blocks: 6
+  res_block_layers: 2
+  dropout_frac: 0.0
+
+embedding_dim: 16
+include_sun: True
+include_gsp_yield_history: False
+forecast_minutes: 480
+history_minutes: 120
+min_sat_delay_minutes: 60
+sat_history_minutes: 30
+pv_history_minutes: 180
+
+nwp_history_minutes:
+  ukv: 120
+  ecmwf: 120
+nwp_forecast_minutes:
+  ukv: 480
+  ecmwf: 480
+nwp_interval_minutes:
+  ukv: 60
+  ecmwf: 60
+
+optimizer:
+  _target_: pvnet.optimizers.EmbAdamWReduceLROnPlateau
+  lr: 0.0001
+  weight_decay: 0.01
+  amsgrad: True
+  patience: 5
+  factor: 0.1
+  threshold: 0.002
+
+satellite_time_resolution_minutes: 5
+gsp_time_resolution_minutes: 30
+sun_time_resolution_minutes: 30

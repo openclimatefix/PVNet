@@ -1,0 +1,48 @@
+input_data:
+  satellite:
+    time_resolution_minutes: 5
+    interval_start_minutes: 0
+    interval_end_minutes: 0
+    image_size_pixels_height: 1
+    image_size_pixels_width: 1
+    zarr_path: "dummy_sat.zarr"
+    channels:
+      - "dummy_sat_chan"
+    normalisation_constants:
+      dummy_sat_chan:
+        mean: 0
+        std: 1
+  nwp:
+    ukv:
+      time_resolution_minutes: 60
+      interval_start_minutes: 0
+      interval_end_minutes: 0
+      image_size_pixels_height: 1
+      image_size_pixels_width: 1
+      zarr_path: "dummy_ukv.zarr"
+      channels:
+        - "dummy_ukv_chan"
+      provider: "ukv"
+      normalisation_constants:
+        dummy_ukv_chan:
+          mean: 0
+          std: 1
+    ecmwf:
+      time_resolution_minutes: 60
+      interval_start_minutes: 0
+      interval_end_minutes: 0
+      image_size_pixels_height: 1
+      image_size_pixels_width: 1
+      zarr_path: "dummy_ecmwf.zarr"
+      channels:
+        - "dummy_ecmwf_chan"
+      provider: "ecmwf"
+      normalisation_constants:
+        dummy_ecmwf_chan:
+          mean: 0
+          std: 1
+  gsp:
+    time_resolution_minutes: 30
+    interval_start_minutes: 0
+    interval_end_minutes: 0
+    zarr_path: "dummy_gsp.zarr"
