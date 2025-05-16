@@ -1,6 +1,5 @@
 """Base model for all PVNet submodels"""
 import copy
-import json
 import logging
 import os
 import tempfile
@@ -263,8 +262,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 wait_time=10,
             )
 
-        with open(config_file, "r", encoding="utf-8") as f:
-            config = json.load(f)
+        with open(config_file, "r") as f:
+            config = yaml.safe_load(f)
 
         model = hydra.utils.instantiate(config)
 
@@ -356,7 +355,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         # saving model and data config
         if isinstance(config, dict):
-            (save_directory / CONFIG_NAME).write_text(json.dumps(config, indent=4))
+            with open(save_directory / CONFIG_NAME, "w") as f:
+                yaml.dump(config, f)
 
         # Save cleaned configuration file
         if data_config is not None:
