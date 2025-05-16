@@ -261,7 +261,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 max_retries=5,
                 wait_time=10,
             )
-            
+
         with open(config_file, "r") as f:
             config = yaml.safe_load(f)
 
@@ -357,7 +357,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         if isinstance(config, dict):
             with open(save_directory / CONFIG_NAME, "w") as f:
                 yaml.dump(config, f)
-        
+
         # Save cleaned configuration file
         if data_config is not None:
             new_data_config_path = save_directory / DATA_CONFIG_NAME
