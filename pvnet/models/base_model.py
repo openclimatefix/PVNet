@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import wandb
 import yaml
 from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
-from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
+from huggingface_hub.constants import PYTORCH_WEIGHTS_NAME
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
@@ -32,6 +32,7 @@ from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import plot_batch_forecasts
 
 DATA_CONFIG_NAME = "data_config.yaml"
+CONFIG_NAME = "config.yaml"
 
 
 logger = logging.getLogger(__name__)
@@ -356,7 +357,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         # saving model and data config
         if isinstance(config, dict):
             with open(save_directory / CONFIG_NAME, "w") as f:
-                yaml.dump(config, f)
+                yaml.dump(config, f, sort_keys=False, default_flow_style=False)
 
         # Save cleaned configuration file
         if data_config is not None:
