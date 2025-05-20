@@ -353,7 +353,7 @@ class Model(BaseModel):
             site_history = x["site"][:, : self.history_len + 1].float()
             site_history = site_history.reshape(site_history.shape[0], -1)
             modes["site"] = site_history
-        
+
         # Add site-level yield history through PV encoder
         if self.include_pv:
             if self._target_key != "site":
