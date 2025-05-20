@@ -143,6 +143,10 @@ def minimize_data_config(input_path, output_path, model):
         # Replace the forecast minutes
         gsp_config["interval_end_minutes"] = model.forecast_minutes
 
+    if "solar_position" in config["input_data"]:
+        solar_config = config["input_data"]["solar_position"]
+        solar_config["interval_end_minutes"] = model.forecast_minutes
+
     with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
 
