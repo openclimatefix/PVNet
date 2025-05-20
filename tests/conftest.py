@@ -486,6 +486,44 @@ def multimodal_model(multimodal_model_kwargs):
     model = Model(**multimodal_model_kwargs)
     return model
 
+@pytest.fixture()
+def raw_multimodal_model_kwargs_site_history(model_minutes_kwargs):
+    kwargs = dict(
+        # setting inputs to None/False apart from site history
+        sat_encoder=None,
+        nwp_encoders_dict=None,
+        add_image_embedding_channel=False,
+        pv_encoder=None,
+        output_network=dict(
+            _target_="pvnet.models.multimodal.linear_networks.networks.ResFCNet2",
+            _partial_=True,
+            fc_hidden_features=128,
+            n_res_blocks=6,
+            res_block_layers=2,
+            dropout_frac=0.0,
+        ),
+        location_id_mapping=None,
+        embedding_dim=None,
+        include_sun=False,
+        include_gsp_yield_history=False,
+        include_site_yield_history=True
+    )
+
+    kwargs.update(model_minutes_kwargs)
+
+    return kwargs
+
+
+@pytest.fixture()
+def multimodal_model_kwargs_site_history(raw_multimodal_model_kwargs_site_history):
+    return hydra.utils.instantiate(raw_multimodal_model_kwargs_site_history)
+
+
+@pytest.fixture()
+def multimodal_model_site_history(multimodal_model_kwargs_site_history):
+    model = Model(**multimodal_model_kwargs_site_history)
+    return model
+
 
 @pytest.fixture()
 def multimodal_quantile_model(multimodal_model_kwargs):
