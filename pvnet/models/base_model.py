@@ -32,7 +32,7 @@ from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import plot_batch_forecasts
 
 DATA_CONFIG_NAME = "data_config.yaml"
-CONFIG_NAME = "config.yaml"
+MODEL_CONFIG_NAME = "model_config.yaml"
 
 
 logger = logging.getLogger(__name__)
@@ -231,7 +231,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         if os.path.isdir(model_id):
             print("Loading weights from local directory")
             model_file = os.path.join(model_id, PYTORCH_WEIGHTS_NAME)
-            config_file = os.path.join(model_id, CONFIG_NAME)
+            config_file = os.path.join(model_id, MODEL_CONFIG_NAME)
         else:
             # load model file
             model_file = download_hf_hub_with_retries(
@@ -251,7 +251,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             # load config file
             config_file = download_hf_hub_with_retries(
                 repo_id=model_id,
-                filename=CONFIG_NAME,
+                filename=MODEL_CONFIG_NAME,
                 revision=revision,
                 cache_dir=cache_dir,
                 force_download=force_download,
@@ -356,7 +356,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         # saving model and data config
         if isinstance(config, dict):
-            with open(save_directory / CONFIG_NAME, "w") as f:
+            with open(save_directory / MODEL_CONFIG_NAME, "w") as f:
                 yaml.dump(config, f, sort_keys=False, default_flow_style=False)
 
         # Save cleaned configuration file
