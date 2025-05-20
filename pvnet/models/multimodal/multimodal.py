@@ -45,7 +45,7 @@ class Model(BaseModel):
         sensor_encoder: Optional[AbstractSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
-        include_site_yield_history: bool = True,
+        include_site_yield_history: Optional[bool] = False,
         include_sun: bool = True,
         include_time: bool = False,
         location_id_mapping: Optional[dict[Any, int]] = None,
