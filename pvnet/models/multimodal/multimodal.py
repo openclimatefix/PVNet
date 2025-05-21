@@ -45,6 +45,7 @@ class Model(BaseModel):
         sensor_encoder: Optional[AbstractSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
+        include_site_yield_history: Optional[bool] = False,
         include_sun: bool = True,
         include_time: bool = False,
         location_id_mapping: Optional[dict[Any, int]] = None,
@@ -93,6 +94,7 @@ class Model(BaseModel):
             add_image_embedding_channel: Add a channel to the NWP and satellite data with the
                 embedding of the GSP ID.
             include_gsp_yield_history: Include GSP yield data.
+            include_site_yield_history: Include Site yield data.
             include_sun: Include sun azimuth and altitude data.
             include_time: Include sine and cosine of dates and times.
             location_id_mapping: A dictionary mapping the location ID to an integer. ID embedding is
@@ -132,6 +134,7 @@ class Model(BaseModel):
         """
 
         self.include_gsp_yield_history = include_gsp_yield_history
+        self.include_site_yield_history = include_site_yield_history
         self.include_sat = sat_encoder is not None
         self.include_nwp = nwp_encoders_dict is not None and len(nwp_encoders_dict) != 0
         self.include_pv = pv_encoder is not None
@@ -291,6 +294,10 @@ class Model(BaseModel):
             # Update num features
             fusion_input_features += self.history_len
 
+        if include_site_yield_history:
+            # Update num features
+            fusion_input_features += self.history_len + 1
+
         self.output_network = output_network(
             in_features=fusion_input_features,
             out_features=self.num_output_features,
@@ -341,7 +348,13 @@ class Model(BaseModel):
                 modes[f"nwp/{nwp_source}"] = nwp_out
 
         # *********************** Site Data *************************************
-        # Add site-level PV yield
+        # Add site-level yield history
+        if self.include_site_yield_history:
+            site_history = x["site"][:, : self.history_len + 1].float()
+            site_history = site_history.reshape(site_history.shape[0], -1)
+            modes["site"] = site_history
+
+        # Add site-level yield history through PV encoder
         if self.include_pv:
             if self._target_key != "site":
                 modes["site"] = self.pv_encoder(x)

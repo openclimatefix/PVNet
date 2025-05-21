@@ -8,6 +8,14 @@ def test_model_forward(multimodal_model, sample_batch):
     # batch size=2, forecast_len=15
     assert tuple(y.shape) == (2, 16), y.shape
 
+def test_model_forward_site_history(multimodal_model_site_history, sample_site_batch):
+
+    y = multimodal_model_site_history(sample_site_batch)
+
+    # check output is the correct shape
+    # batch size=2, forecast_len=15
+    assert tuple(y.shape) == (2, 16), y.shape
+
 
 def test_model_backward(multimodal_model, sample_batch):
     opt = SGD(multimodal_model.parameters(), lr=0.001)
