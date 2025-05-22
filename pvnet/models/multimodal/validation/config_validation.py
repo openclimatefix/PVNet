@@ -6,14 +6,14 @@ import numpy as np
 from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 from omegaconf import DictConfig, OmegaConf
 
-from pvnet.models.multimodal.validation.config_batch_validation import (
+from pvnet.models.multimodal.validation.batch_content_validator import (
     check_batch_data,
     get_modality_interval,
     get_time_steps,
     validate_array_shape,
     validate_nwp_source_structure,
 )
-from pvnet.models.multimodal.validation.config_static_validation import (
+from pvnet.models.multimodal.validation.config_structure_validator import (
     get_encoder_config,
     validate_static_config,
 )
