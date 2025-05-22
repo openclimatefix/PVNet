@@ -165,7 +165,6 @@ def validate_array_shape(
         time_resolution_minutes: The time resolution (in minutes) of the data,
             used for context in error messages.
         allow_ndim_plus_one: If True, allows the array's number of dimensions
-            # ...
         dim_names: Optional list of strings providing semantic names for each
             dimension in `final_expected_shape` (e.g., ["batch", "time", "channels"]).
 
@@ -182,7 +181,7 @@ def validate_array_shape(
 
     actual_batch_size = data.shape[0]
     if actual_batch_size <= 0:
-        raise ValueError(f"'{data_key}' batch dimension has size <= 0: {actual_batch_size}.")
+        raise ValueError(f"'{data_key}' batch dimension has size = 0: {actual_batch_size}.")
 
     expected_batch_dim_value = expected_shape_with_batch[0]
     if actual_batch_size != expected_batch_dim_value:
@@ -191,8 +190,7 @@ def validate_array_shape(
             dim_0_name = dim_names[0]
         raise ValueError(
             f"Mismatch for '{data_key}' in {dim_0_name}. "
-            f"Expected size {expected_batch_dim_value}, Got {actual_batch_size}. "
-            f"(Time resolution for context: {time_resolution_minutes} mins)."
+            f"Expected size {expected_batch_dim_value}, Got {actual_batch_size}."
         )
 
     expected_ndim_base = len(expected_shape_with_batch)
@@ -205,8 +203,7 @@ def validate_array_shape(
         allowed_ndims_str = " or ".join(map(str, sorted(list(allowed_ndims))))
         raise ValueError(
             f"'{data_key}' dimension count error. "
-            f"Expected {allowed_ndims_str} dims, Got {actual_ndim}. "
-            f"(Time resolution for context: {time_resolution_minutes} mins)."
+            f"Expected {allowed_ndims_str} dims, Got {actual_ndim}."
         )
 
     final_expected_shape: tuple
@@ -232,7 +229,7 @@ def validate_array_shape(
                 f"Full Expected Shape: {final_expected_shape}, Full Actual Shape: {data.shape}. "
                 f"(Time resolution for context: {time_resolution_minutes} mins)."
             )
-
+    
     if data.shape != final_expected_shape:
          raise ValueError(
              f"'{data_key}' general shape mismatch (unexpected). "
