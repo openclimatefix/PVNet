@@ -311,7 +311,7 @@ def _check_dict_values_are_int(
     data: dict[str, Any],
     dict_name: str,
 ) -> None:
-    """Check if all values in a dictionary are integers (raises TypeError on mismatch)."""
+    """Check if all values in a dictionary are integers (logs warning on mismatch)."""
     expected_type = int
     for source, value in data.items():
         if not isinstance(value, expected_type):
