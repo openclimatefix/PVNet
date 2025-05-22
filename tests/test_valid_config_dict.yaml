@@ -67,5 +67,3 @@ optimizer:
   threshold: 0.002
 
 satellite_time_resolution_minutes: 5
-gsp_time_resolution_minutes: 30
-sun_time_resolution_minutes: 30
