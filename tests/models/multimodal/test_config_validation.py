@@ -1,12 +1,11 @@
 """Tests for multimodal configuration and batch validation functions."""
 
 import logging
+import re
 from copy import deepcopy
 
 import numpy as np
 import pytest
-import re
-
 from omegaconf import OmegaConf
 
 from pvnet.models.multimodal.validation.config_validation import validate
@@ -167,7 +166,7 @@ def test_validate_static_error_nwp_sub_item_missing_target(
         pytest.skip("nwp_encoders_dict is empty in fixture.")
 
     match_str = rf"Config for NWP source '{nwp_key}' missing required key: '_target_'"
-
+    
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
 
@@ -196,10 +195,10 @@ def test_validate_static_error_missing_req_time_param(
         pytest.skip("'sat_history_minutes' not in fixture.")
 
     match_str = r"includes 'sat_encoder' but is missing 'sat_history_minutes'"
-
+    
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     with pytest.raises(KeyError, match=match_str):
         validate(
             dummy_batch,
@@ -261,10 +260,10 @@ def test_validate_batch_error_missing_modality_key(
         )
 
     match_str = f"Batch missing required '{key_to_check}' data"
-
+    
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     with pytest.raises(KeyError, match=match_str):
         validate(
             batch,
@@ -296,10 +295,10 @@ def test_validate_batch_error_modality_wrong_type(
     batch[key_to_check] = "this is not a numpy array"
 
     match_str = f"'{key_to_check}' data must be ndarray, found str"
-
+    
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     with pytest.raises(TypeError, match=match_str):
         validate(
             batch,
@@ -343,7 +342,10 @@ def test_validate_batch_error_wrong_ndim(
     except IndexError:
         pytest.skip("Cannot modify array dimensions reliably for test.")
 
-    match_str = rf"'{key_to_check}' dimension count error\. Expected {len(correct_shape)} dims, Got {len(wrong_ndim_shape)}\."
+    match_str = (
+        rf"'{key_to_check}' dimension count error\. "
+        rf"Expected {len(correct_shape)} dims, Got {len(wrong_ndim_shape)}\."
+    )
 
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
@@ -382,10 +384,10 @@ def test_validate_batch_error_wrong_shape_time(
     wrong_time_shape = list(correct_shape)
     wrong_time_shape[1] += 1
     batch[key_to_check] = np.zeros(tuple(wrong_time_shape))
-
+    
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     match_str = (
         rf"'{key_to_check}' shape error for time_steps\. "
         rf"Expected size {correct_shape[1]}, Got {wrong_time_shape[1]}\."
@@ -395,7 +397,7 @@ def test_validate_batch_error_wrong_shape_time(
             batch,
             omega_config,
             omega_input_data_config,
-            expected_batch_size=4
+            expected_batch_size=4 
         )
 
 
@@ -424,10 +426,10 @@ def test_validate_batch_error_wrong_shape_spatial(
     wrong_spatial_shape = list(correct_shape)
     wrong_spatial_shape[3] += 1
     batch[key_to_check] = np.zeros(tuple(wrong_spatial_shape))
-
+    
     omega_config = OmegaConf.create(config_as_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
-
+    
     match_str = (
         rf"'{key_to_check}' shape error for height\. "
         rf"Expected size {correct_shape[3]}, Got {wrong_spatial_shape[3]}\."
@@ -504,8 +506,8 @@ def test_validate_error_mismatch_expected_batch_size(
             expected_batch_size=incorrect_expected_size
         )
     error_message = str(exc_info.value)
-
-    expected_data_key_in_error = "satellite_actual"
+    
+    expected_data_key_in_error = "satellite_actual" 
     actual_runtime_batch_size_for_error = actual_batch_size_from_fixture
 
     expected_message_pattern = (
@@ -516,14 +518,8 @@ def test_validate_error_mismatch_expected_batch_size(
         f"Pattern <{expected_message_pattern}> not found in error: <{error_message}>"
 
 
-def test_validate_error_internal_mismatch_with_expected_size(
-    valid_config_dict,
-    sample_numpy_batch,
-    valid_input_data_config
-):
-    """Test ValueError when a modality's batch size internally mismatches expected_batch_size."""
-    config_dict = deepcopy(valid_config_dict)
-    batch = deepcopy(sample_numpy_batch)
+def _get_expected_data_keys(config_dict):
+    """Determines the expected data keys based on the configuration."""
     expected_data_keys = set()
     if config_dict.get("sat_encoder"):
         expected_data_keys.add("satellite_actual")
@@ -536,7 +532,11 @@ def test_validate_error_internal_mismatch_with_expected_size(
     if config_dict.get("include_sun"):
         expected_data_keys.add("solar_azimuth")
         expected_data_keys.add("solar_elevation")
+    return expected_data_keys
 
+
+def _get_modality_batch_sizes(batch, expected_data_keys):
+    """Calculates batch sizes for each expected modality in the batch."""
     modality_batch_sizes = {}
     for k in expected_data_keys:
         if k not in batch:
@@ -548,7 +548,15 @@ def test_validate_error_internal_mismatch_with_expected_size(
             logger.info(
                 f"Skipping modality {k} for inconsistency check (cannot get batch size): {e_inner}"
             )
+    return modality_batch_sizes
 
+
+def _check_initial_batch_consistency(modality_batch_sizes):
+    """
+    Checks if all modalities in the fixture have consistent batch sizes.
+
+    Returns the reference batch size if consistent, otherwise skips the test.
+    """
     if len(modality_batch_sizes) < 1:
         pytest.skip("Need at least one valid modality with retrievable batch size.")
 
@@ -567,87 +575,129 @@ def test_validate_error_internal_mismatch_with_expected_size(
 
     if bs1 <= 1:
         pytest.skip(f"Batch size ({bs1}) too small to test inconsistency reliably.")
+    return bs1
 
+
+def _select_modality_to_modify(modality_batch_sizes):
+    """Selects a modality to modify for the batch size test."""
     mods_present = list(modality_batch_sizes.keys())
-    mod_to_change = ""
-    if "satellite_actual" in mods_present:
-         mod_to_change = "satellite_actual"
-    elif "pv" in mods_present:
-        mod_to_change = "pv"
-    elif "gsp" in mods_present:
-         mod_to_change = "gsp"
-    elif "solar_azimuth" in mods_present:
-         mod_to_change = "solar_azimuth"
-    elif "nwp" in mods_present:
-         mod_to_change = "nwp"
-    else:
-         pytest.skip("Could not find a suitable modality to modify for batch size test.")
+    priority_modalities = [
+        "satellite_actual", "pv", "gsp", "solar_azimuth", "nwp"
+    ]
+    for mod in priority_modalities:
+        if mod in mods_present:
+            return mod
+    pytest.skip("Could not find a suitable modality to modify for batch size test.")
+    return None
 
-    new_bs = bs1 - 1
+
+def _modify_nwp_batch_data(batch_nwp_data, original_bs, new_bs):
+    """Modifies the batch size of NWP data."""
+    if not isinstance(batch_nwp_data, dict):
+        pytest.skip("NWP not a dict in batch, cannot modify.")
+
+    modified_nwp = False
+    try:
+        first_source = next(iter(batch_nwp_data.keys()))
+        first_source_dict = batch_nwp_data[first_source]
+
+        if not isinstance(first_source_dict, dict):
+            raise TypeError("NWP source value is not a dict")
+
+        array_key = next(
+            k_inner for k_inner, v_inner in first_source_dict.items()
+            if isinstance(v_inner, np.ndarray)
+            and v_inner.ndim > 0
+            and v_inner.shape[0] == original_bs
+        )
+
+        source_data = first_source_dict[array_key]
+        new_shape = (new_bs,) + source_data.shape[1:]
+        batch_nwp_data[first_source][array_key] = np.zeros(new_shape, dtype=source_data.dtype)
+        modified_nwp = True
+        logger.info(f"Modified NWP source '{first_source}', key '{array_key}'")
+    except (StopIteration, KeyError, AttributeError, IndexError, TypeError) as e_inner:
+        logger.warning(f"Could not modify NWP for batch size test: {e_inner}")
+        pytest.skip("Could not modify any NWP source for batch size test.")
+
+    if not modified_nwp:
+        pytest.skip("Failed to modify NWP source.")
+
+
+def _modify_array_batch_data(data_to_change, original_bs, new_bs, mod_to_change):
+    """Modifies the batch size of a standard numpy array."""
+    if not isinstance(data_to_change, np.ndarray):
+        fail_msg = (
+            f"Selected modality '{mod_to_change}' "
+            f"({type(data_to_change)}) is not a direct np.ndarray and not NWP."
+        )
+        pytest.fail(fail_msg)
+
+    if data_to_change.ndim == 0 or data_to_change.shape[0] != original_bs:
+        skip_msg = (
+            f"Cannot modify batch size for array {mod_to_change}, "
+            f"shape {data_to_change.shape} or original_bs {original_bs} mismatch."
+        )
+        pytest.skip(skip_msg)
+    new_shape = (new_bs,) + data_to_change.shape[1:]
+    return np.zeros(new_shape, dtype=data_to_change.dtype)
+
+
+def _modify_batch_for_test(batch, mod_to_change, original_bs, new_bs):
+    """Modifies the specified modality in the batch to have a new batch size."""
     logger.info(
         f"Testing batch size inconsistency check via expected_batch_size: "
-        f"Modifying '{mod_to_change}' from {bs1} to {new_bs}, expecting {bs1}."
+        f"Modifying '{mod_to_change}' from {original_bs} to {new_bs}, expecting {original_bs}."
     )
 
     if mod_to_change == "nwp":
-        if not isinstance(batch.get(mod_to_change), dict):
-             pytest.skip("NWP not a dict in batch, cannot modify.")
-        modified_nwp = False
-        try:
-            first_source = next(iter(batch[mod_to_change].keys()))
-            first_source_dict = batch[mod_to_change][first_source]
-            if not isinstance(first_source_dict, dict):
-                 raise TypeError("Source value is not dict")
-            array_key = next(
-                k_inner for k_inner, v_inner in first_source_dict.items()
-                if isinstance(v_inner, np.ndarray) and v_inner.ndim > 0 and v_inner.shape[0] == bs1
-            )
-            source_data = first_source_dict[array_key]
-            new_shape = (new_bs,) + source_data.shape[1:]
-            batch[mod_to_change][first_source][array_key] = np.zeros(
-                new_shape, dtype=source_data.dtype
-            )
-            modified_nwp = True
-            logger.info(f"Modified NWP source '{first_source}', key '{array_key}'")
-        except (StopIteration, KeyError, AttributeError, IndexError, TypeError) as e_inner:
-            logger.warning(f"Could not modify NWP for batch size test: {e_inner}")
-            pytest.skip("Could not modify any NWP source for batch size test.")
-        if not modified_nwp:
-             pytest.skip("Failed to modify NWP source.")
-    elif isinstance(batch.get(mod_to_change), np.ndarray):
-        data_to_change = batch[mod_to_change]
-        if data_to_change.ndim == 0 or data_to_change.shape[0] != bs1:
-            skip_msg = (
-                f"Cannot modify batch size for array {mod_to_change}, "
-                f"shape {data_to_change.shape}"
-            )
-            pytest.skip(skip_msg)
-        new_shape = (new_bs,) + data_to_change.shape[1:]
-        batch[mod_to_change] = np.zeros(new_shape, dtype=data_to_change.dtype)
+        _modify_nwp_batch_data(batch.get(mod_to_change), original_bs, new_bs)
+    elif mod_to_change in batch and isinstance(batch.get(mod_to_change), np.ndarray):
+        batch[mod_to_change] = _modify_array_batch_data(
+            batch[mod_to_change], original_bs, new_bs, mod_to_change
+        )
         logger.info(f"Modified non-NWP modality '{mod_to_change}'")
     else:
         fail_msg = (
             f"Selected modality '{mod_to_change}' "
-            f"({type(batch.get(mod_to_change))}) is not testable."
+            f"({type(batch.get(mod_to_change))}) is not testable or not found."
         )
         pytest.fail(fail_msg)
+    return batch
+
+
+def test_validate_error_internal_mismatch_with_expected_size(
+    valid_config_dict,
+    sample_numpy_batch,
+    valid_input_data_config
+):
+    """Test ValueError when a modality's batch size internally mismatches expected_batch_size."""
+    config_dict = deepcopy(valid_config_dict)
+    batch = deepcopy(sample_numpy_batch)
+
+    expected_data_keys = _get_expected_data_keys(config_dict)
+    modality_batch_sizes = _get_modality_batch_sizes(batch, expected_data_keys)
+    original_bs = _check_initial_batch_consistency(modality_batch_sizes)
+    mod_to_change = _select_modality_to_modify(modality_batch_sizes)
+
+    new_bs = original_bs - 1
+    modified_batch = _modify_batch_for_test(batch, mod_to_change, original_bs, new_bs)
 
     omega_config = OmegaConf.create(config_dict)
     omega_input_data_config = OmegaConf.create(valid_input_data_config)
 
     with pytest.raises(ValueError) as exc_info:
         validate(
-            batch,
+            modified_batch,
             omega_config,
             omega_input_data_config,
-            expected_batch_size=bs1
+            expected_batch_size=original_bs
         )
 
     error_message = str(exc_info.value)
-
     expected_message_pattern = (
         rf"Mismatch for '{mod_to_change}' in batch_size\. "
-        rf"Expected size {bs1}, Got {new_bs}\."
+        rf"Expected size {original_bs}, Got {new_bs}\."
     )
     assert re.search(expected_message_pattern, error_message), \
         f"Pattern <{expected_message_pattern}> not found in error: <{error_message}>"
