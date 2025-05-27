@@ -155,7 +155,7 @@ class Model(BaseModel):
             logger.warning("Multimodel: add_image_embedding_channel` is set to True "
                            "but no `location_id_mapping` provided, we'll set a default")
 
-            # Note 318 is the 2024 GSP count, so this is a temporary fix
+            # Note 318 is the 2024 UK GSP count, so this is a temporary fix
             # for models trained with this default embedding
             location_id_mapping = {i: i for i in range(318)}
 
