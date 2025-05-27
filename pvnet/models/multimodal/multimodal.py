@@ -151,9 +151,8 @@ class Model(BaseModel):
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
 
-        if location_id_mapping is None and add_image_embedding_channel:
-            logger.warning("Multimodel: add_image_embedding_channel` is set to True "
-                           "but no `location_id_mapping` provided, we'll set a default")
+        if location_id_mapping is None:
+            logger.warning("location_id_mapping` is not provided, we'll set a default")
 
             # Note 318 is the 2024 UK GSP count, so this is a temporary fix
             # for models trained with this default embedding
