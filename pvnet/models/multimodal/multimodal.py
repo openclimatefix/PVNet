@@ -152,7 +152,7 @@ class Model(BaseModel):
         self.adapt_batches = adapt_batches
 
         if location_id_mapping is None:
-            logger.warning("location_id_mapping` is not provided, we'll set a default")
+            logger.warning("location_id_mapping` is not provided, defaulting to outdated GSP mapping (1 to 318)")
 
             # Note 318 is the 2024 UK GSP count, so this is a temporary fix
             # for models trained with this default embedding
