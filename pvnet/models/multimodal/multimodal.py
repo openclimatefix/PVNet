@@ -1,5 +1,6 @@
 """The default composite model architecture for PVNet"""
 
+import logging
 from collections import OrderedDict
 from typing import Any, Optional
 
@@ -14,6 +15,8 @@ from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEn
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
+
+logger = logging.getLogger(__name__)
 
 
 class Model(BaseModel):
@@ -149,10 +152,12 @@ class Model(BaseModel):
         self.adapt_batches = adapt_batches
 
         if location_id_mapping is None and add_image_embedding_channel:
-            raise ValueError(
-                "If `add_image_embedding_channel` is set to True, `location_id_mapping` must be "
-                "provided."
-            )
+            logger.warning("Multimodel: add_image_embedding_channel` is set to True "
+                           "but no `location_id_mapping` provided, we'll set a default")
+
+            # Note 318 is the 2024 GSP count, so this is a temporary fix
+            # for models trained with this default embedding
+            location_id_mapping = {i: i for i in range(318)}
 
         self.use_id_embedding = location_id_mapping is not None
 
