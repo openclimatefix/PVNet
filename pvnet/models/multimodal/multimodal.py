@@ -158,7 +158,7 @@ class Model(BaseModel):
             # for models trained with this default embedding
             location_id_mapping = {i: i for i in range(318)}
 
-        self.use_id_embedding = location_id_mapping is not None
+        self.use_id_embedding = (location_id_mapping is not None) and (self.embedding_dim is not None)
 
         if self.use_id_embedding:
             num_embeddings = max(location_id_mapping.values()) + 1
