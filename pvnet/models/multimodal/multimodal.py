@@ -1,5 +1,6 @@
 """The default composite model architecture for PVNet"""
 
+import logging
 from collections import OrderedDict
 from typing import Any, Optional
 
@@ -14,6 +15,8 @@ from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEn
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
 from pvnet.optimizers import AbstractOptimizer
+
+logger = logging.getLogger(__name__)
 
 
 class Model(BaseModel):
@@ -148,13 +151,17 @@ class Model(BaseModel):
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
 
-        if location_id_mapping is None and add_image_embedding_channel:
-            raise ValueError(
-                "If `add_image_embedding_channel` is set to True, `location_id_mapping` must be "
-                "provided."
-            )
+        if location_id_mapping is None:
+            logger.warning("location_id_mapping` is not provided, "
+                           "defaulting to outdated GSP mapping (0 to 317)")
 
-        self.use_id_embedding = location_id_mapping is not None
+            # Note 318 is the 2024 UK GSP count, so this is a temporary fix
+            # for models trained with this default embedding
+            location_id_mapping = {i: i for i in range(318)}
+
+        # in the future location_id_mapping could be None,
+        # and in this case use_id_embedding should be False
+        self.use_id_embedding = self.embedding_dim is not None
 
         if self.use_id_embedding:
             num_embeddings = max(location_id_mapping.values()) + 1
