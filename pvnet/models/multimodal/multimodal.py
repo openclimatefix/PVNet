@@ -164,7 +164,7 @@ class Model(BaseModel):
         self.use_id_embedding = self.embedding_dim is not None
 
         if self.use_id_embedding:
-            num_embeddings = max(location_id_mapping.values()) + 1
+            num_embeddings = max(self.location_id_mapping.values()) + 1
 
         super().__init__(
             history_minutes=history_minutes,
