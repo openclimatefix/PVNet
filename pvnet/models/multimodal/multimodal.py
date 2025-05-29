@@ -151,13 +151,13 @@ class Model(BaseModel):
         self.min_sat_delay_minutes = min_sat_delay_minutes
         self.adapt_batches = adapt_batches
 
-        if location_id_mapping is None:
+        if self.location_id_mapping is None:
             logger.warning("location_id_mapping` is not provided, "
                            "defaulting to outdated GSP mapping (0 to 317)")
 
             # Note 318 is the 2024 UK GSP count, so this is a temporary fix
             # for models trained with this default embedding
-            location_id_mapping = {i: i for i in range(318)}
+            self.location_id_mapping = {i: i for i in range(318)}
 
         # in the future location_id_mapping could be None,
         # and in this case use_id_embedding should be False
