@@ -105,6 +105,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "carderne",
+      "name": "Chris Arderne",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19817302?v=4",
+      "profile": "https://rdrn.me/",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
