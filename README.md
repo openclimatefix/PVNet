@@ -1,6 +1,6 @@
 # PVNet 2.1
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-13-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-14-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
  [![Python Bump Version & release](https://github.com/openclimatefix/PVNet/actions/workflows/release.yml/badge.svg)](https://github.com/openclimatefix/PVNet/actions/workflows/release.yml) [![ease of contribution: hard](https://img.shields.io/badge/ease%20of%20contribution:%20hard-bb2629)](https://github.com/openclimatefix/ocf-meta-repo?tab=readme-ov-file#overview-of-ocfs-nowcasting-repositories)
@@ -260,6 +260,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/tmi"><img src="https://avatars.githubusercontent.com/u/147159?v=4?s=100" width="100px;" alt="tmi"/><br /><sub><b>tmi</b></sub></a><br /><a href="https://github.com/openclimatefix/PVNet/commits?author=tmi" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://rdrn.me/"><img src="https://avatars.githubusercontent.com/u/19817302?v=4?s=100" width="100px;" alt="Chris Arderne"/><br /><sub><b>Chris Arderne</b></sub></a><br /><a href="https://github.com/openclimatefix/PVNet/commits?author=carderne" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Dakshbir"><img src="https://avatars.githubusercontent.com/u/144359831?v=4?s=100" width="100px;" alt="Dakshbir"/><br /><sub><b>Dakshbir</b></sub></a><br /><a href="https://github.com/openclimatefix/PVNet/commits?author=Dakshbir" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/lambaaryan011"><img src="https://avatars.githubusercontent.com/u/153702847?v=4?s=100" width="100px;" alt="aryan lamba "/><br /><sub><b>aryan lamba </b></sub></a><br /><a href="https://github.com/openclimatefix/PVNet/commits?author=lambaaryan011" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
