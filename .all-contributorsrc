@@ -96,6 +96,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "tmi",
+      "name": "tmi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/147159?v=4",
+      "profile": "https://github.com/tmi",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
