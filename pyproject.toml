@@ -27,6 +27,7 @@ dependencies = [
     "hydra-core",
     "rich",
     "einops",
+    "albumentations",
 ]
 
 [tool.setuptools.dynamic]
