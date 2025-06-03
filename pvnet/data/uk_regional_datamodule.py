@@ -3,8 +3,11 @@
 from ocf_data_sampler.torch_datasets.datasets.pvnet_uk import PVNetUKRegionalDataset
 from ocf_data_sampler.torch_datasets.sample.uk_regional import UKRegionalSample
 from torch.utils.data import Dataset
+from omegaconf import DictConfig
+from typing import Optional
 
 from pvnet.data.base_datamodule import BaseDataModule, PremadeSamplesDataset
+from pvnet.utils import get_train_augmentations, get_logger
 
 
 class DataModule(BaseDataModule):
@@ -19,6 +22,7 @@ class DataModule(BaseDataModule):
         prefetch_factor: int | None = None,
         train_period: list[str | None] = [None, None],
         val_period: list[str | None] = [None, None],
+        train_augmentations_config: Optional[DictConfig] = None,
     ):
         """Datamodule for training pvnet architecture.
 
@@ -33,7 +37,8 @@ class DataModule(BaseDataModule):
             prefetch_factor: Number of data will be prefetched at the end of each worker process.
             train_period: Date range filter for train dataloader.
             val_period: Date range filter for val dataloader.
-
+            train_augmentations_config: Configuration for train-time augmentations. Applied only
+                when `configuration` is used (streamed samples) and for the training set.
         """
         super().__init__(
             configuration=configuration,
@@ -44,11 +49,29 @@ class DataModule(BaseDataModule):
             train_period=train_period,
             val_period=val_period,
         )
+        self.train_augmentations_config = train_augmentations_config
+        self.log = get_logger(__name__)
+
 
     def _get_streamed_samples_dataset(self, start_time, end_time) -> Dataset:
-        return PVNetUKRegionalDataset(self.configuration, start_time=start_time, end_time=end_time)
+        is_training = (self.train_period[0] == start_time and self.train_period[1] == end_time)
+
+        transforms_for_dataset = None
+        if is_training and self.train_augmentations_config is not None:
+            self.log.info("Creating training augmentations for streamed dataset.")
+            transforms_for_dataset = get_train_augmentations(self.train_augmentations_config)
+        elif self.train_augmentations_config is None:
+            self.log.info("No training augmentations configured in datamodule.")
+        else:
+            self.log.info("No training augmentations applied for validation/test dataset split.")
+
+        return PVNetUKRegionalDataset(
+            self.configuration,
+            start_time=start_time,
+            end_time=end_time,
+            transforms=transforms_for_dataset,
+        )
 
     def _get_premade_samples_dataset(self, subdir) -> Dataset:
         split_dir = f"{self.sample_dir}/{subdir}"
-        # Returns a dict of np arrays
         return PremadeSamplesDataset(split_dir, UKRegionalSample)
