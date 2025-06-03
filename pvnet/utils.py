@@ -6,7 +6,9 @@ from typing import Optional
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import albumentations as A
 import pylab
 import rich.syntax
 import rich.tree
@@ -319,3 +321,59 @@ def plot_batch_forecasts(
     plt.tight_layout()
 
     return fig
+
+
+def get_satellite_augmentations(
+    rotate_limit: int = 5,
+    gaussian_noise_var_limit: tuple[float, float] = (10.0, 50.0),
+    p_rotate: float = 0.5,
+    p_gaussian_noise: float = 0.5,
+) -> A.Compose:
+    return A.Compose(
+        [
+            A.Rotate(limit=rotate_limit, p=p_rotate, interpolation=1, border_mode=4),
+            A.GaussNoise(var_limit=gaussian_noise_var_limit, p=p_gaussian_noise),
+        ]
+    )
+
+
+def get_nwp_augmentations(
+    rotate_limit: int = 1,
+    gaussian_noise_var_limit: tuple[float, float] = (5.0, 20.0),
+    p_rotate: float = 0.2,
+    p_gaussian_noise: float = 0.3,
+) -> A.Compose:
+    return A.Compose(
+        [
+            A.Rotate(limit=rotate_limit, p=p_rotate, interpolation=1, border_mode=4),
+            A.GaussNoise(var_limit=gaussian_noise_var_limit, p=p_gaussian_noise),
+        ]
+    )
+
+
+def get_train_augmentations(
+    config: DictConfig
+) -> dict[str, A.Compose]:
+    log = get_logger()
+    aug_params = config.get("augmentations", OmegaConf.create())
+
+    satellite_augs = get_satellite_augmentations(
+        rotate_limit=aug_params.get("satellite_rotate_limit", 5),
+        gaussian_noise_var_limit=tuple(aug_params.get("satellite_gaussian_noise_var_limit", (10.0, 50.0))),
+        p_rotate=aug_params.get("satellite_p_rotate", 0.5),
+        p_gaussian_noise=aug_params.get("satellite_p_gaussian_noise", 0.5),
+    )
+    log.info(f"Satellite Augmentations Configured: {satellite_augs.transforms}")
+
+    nwp_augs = get_nwp_augmentations(
+        rotate_limit=aug_params.get("nwp_rotate_limit", 1),
+        gaussian_noise_var_limit=tuple(aug_params.get("nwp_gaussian_noise_var_limit", (5.0, 20.0))),
+        p_rotate=aug_params.get("nwp_p_rotate", 0.2),
+        p_gaussian_noise=aug_params.get("nwp_p_gaussian_noise", 0.3),
+    )
+    log.info(f"NWP Augmentations Configured: {nwp_augs.transforms}")
+
+    return {
+        "satellite": satellite_augs,
+        "nwp": nwp_augs,
+    }
