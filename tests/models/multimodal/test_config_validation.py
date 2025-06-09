@@ -136,7 +136,7 @@ def test_validate_static_error_missing_req_time_param(valid_config_dict):
     else:
         pytest.skip("'sat_history_minutes' not in fixture.")
 
-    match_str = r"Config includes 'sat_encoder' but is missing 'sat_history_minutes'"
+    match_str = r"Config with 'sat_encoder' missing required key: 'sat_history_minutes'"
 
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
 

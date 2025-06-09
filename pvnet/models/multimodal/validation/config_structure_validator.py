@@ -114,44 +114,6 @@ def _check_dict_section(
     return section_content
 
 
-def _check_time_parameter(
-    cfg: dict[str, Any],
-    param_name: str,
-    owner_key: str,
-    required_if_owner_present: bool = True,
-) -> None:
-    """Check for a time parameter if its associated feature key is present/truthy.
-
-    Args:
-        cfg: The main configuration dictionary.
-        param_name: Name of the time parameter key (e.g., 'sat_history_minutes').
-        owner_key: Key indicating the associated feature is enabled (e.g., 'sat_encoder').
-        required_if_owner_present: If True, raise error if param_name is missing.
-
-    Raises:
-        KeyError: If `required_if_owner_present` is True and the parameter is missing.
-    """
-
-    # Only if associated feature / encoder is configured and enabled
-    if owner_key in cfg and cfg.get(owner_key):
-        context = f"Config includes '{owner_key}'"
-        if param_name not in cfg:
-            message = f"{context} but is missing '{param_name}'."
-            if required_if_owner_present:
-                raise KeyError(message)
-            else:
-                logger.warning(message)
-        else:
-            _check_key(
-                cfg,
-                param_name,
-                required=False,
-                expected_type=int,
-                warn_on_type_mismatch=False,
-                context=f"Parameter '{param_name}' associated with '{owner_key}'",
-            )
-
-
 def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) -> None:
     """Validate NWP-specific time/interval dictionaries against NWP sources.
 
@@ -426,13 +388,14 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     sat_section = _check_dict_section(
         cfg, "sat_encoder", required=False, check_target=True
     )
-    _check_time_parameter(
-        cfg,
-        "sat_history_minutes",
-        owner_key="sat_encoder",
-        required_if_owner_present=True,
-    )
     if sat_section:
+        _check_key(
+            cfg,
+            "sat_history_minutes",
+            required=True,
+            expected_type=int,
+            context="Config with 'sat_encoder'",
+        )
         _check_convnet_encoder_params(
             cfg, section_key="sat_encoder", context="sat_encoder"
         )
@@ -441,14 +404,15 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     pv_section = _check_dict_section(
         cfg, "pv_encoder", required=False, check_target=True
     )
-    _check_time_parameter(
-        cfg,
-        "pv_history_minutes",
-        owner_key="pv_encoder",
-        required_if_owner_present=True,
-    )
     if pv_section:
-        # TODO: Validation for attention encoder params
+        _check_key(
+            cfg,
+            "pv_history_minutes",
+            required=True,
+            expected_type=int,
+            context="Config with 'pv_encoder'",
+        )
+        # TODO: Re-enable validation for attention encoder parameters.
         pass
 
     # NWP Encoders
