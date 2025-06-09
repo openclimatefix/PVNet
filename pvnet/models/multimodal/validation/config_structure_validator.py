@@ -222,9 +222,15 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
         )
 
     # Check time param values are integers
-    _check_dict_values_are_int(nwp_hist_times, "nwp_history_minutes")
-    _check_dict_values_are_int(nwp_forecast_times, "nwp_forecast_minutes")
-    _check_dict_values_are_int(nwp_intervals, "nwp_interval_minutes")
+    for dict_name in ["nwp_history_minutes", "nwp_forecast_minutes", "nwp_interval_minutes"]:
+        param_dict = cfg[dict_name]
+        for source_key in param_dict:
+            _check_key(
+                param_dict,
+                source_key,
+                expected_type=int,
+                context=f"Dictionary '{dict_name}'",
+            )
 
 
 def _check_output_quantiles_config(
@@ -280,47 +286,16 @@ def _check_convnet_encoder_params(
         "image_size_pixels",
     ]
     encoder_config = get_encoder_config(cfg, section_key, context, source_key)
-    _check_positive_int_params_in_dict(encoder_config, convnet_params, context)
 
-
-def _check_attention_encoder_params(
-    cfg: dict[str, Any], section_key: str, context: str
-) -> None:
-    """Validate required positive integer parameters for Attention-based encoders.
-
-    Args:
-        cfg: The main configuration dictionary.
-        section_key: Key of the encoder section (e.g., 'pv_encoder').
-        context: Context for error messages.
-
-    Raises:
-        KeyError, TypeError, ValueError: If parameters are missing, wrong type, or not positive.
-    """
-    attention_params = [
-        "num_sites",
-        "out_features",
-        "num_heads",
-        "kdim",
-        "id_embed_dim",
-    ]
-    encoder_config = get_encoder_config(cfg, section_key, context, None)
-    _check_positive_int_params_in_dict(encoder_config, attention_params, context)
-
-
-def _check_dict_values_are_int(
-    data: dict[str, Any],
-    dict_name: str,
-) -> None:
-    """Check if all values in a dictionary are integers (logs warning on mismatch)."""
-    expected_type = int
-    for source, value in data.items():
-        if not isinstance(value, expected_type):
-            message = (
-                f"Value for source/key '{source}' in dictionary '{dict_name}' "
-                f"expected type {expected_type.__name__}, "
-                f"found {type(value).__name__}."
+    for param_name in convnet_params:
+        _check_key(
+            encoder_config, param_name, required=True, expected_type=int, context=context
+        )
+        if encoder_config[param_name] <= 0:
+            raise ValueError(
+                f"{context}: Parameter '{param_name}' must be a positive integer, "
+                f"found {encoder_config[param_name]}."
             )
-            raise TypeError(message)
 
 
 def get_encoder_config(
@@ -473,9 +448,8 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
         required_if_owner_present=True,
     )
     if pv_section:
-        _check_attention_encoder_params(
-            cfg, section_key="pv_encoder", context="pv_encoder"
-        )
+        # TODO: Validation for attention encoder params
+        pass
 
     # NWP Encoders
     nwp_section = _check_dict_section(

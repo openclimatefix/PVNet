@@ -105,12 +105,6 @@ def valid_config_dict() -> Dict[str, Any]:
     conftest_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(conftest_dir, config_filename)
 
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(
-            f"Test configuration file not found: {config_path}. "
-            f"Ensure '{config_filename}' exists in the '{conftest_dir}' directory."
-        )
-
     cfg_omegaconf = OmegaConf.load(config_path)
     cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
 
@@ -136,35 +130,7 @@ def valid_input_data_config() -> Dict[str, Any]:
     config_dict = configuration_object.model_dump(mode='python')
     input_data_dict = config_dict.get("input_data")
 
-    if input_data_dict is None:
-         raise KeyError(f"Key 'input_data' not found in configuration loaded from {config_path}")
-
     return input_data_dict
-
-
-def convert_pytorch_dict_to_numpy(pytorch_dict: dict[str, object]) -> dict[str, object]:
-    numpy_dict: dict[str, object] = {}
-    for key, value in pytorch_dict.items():
-        if isinstance(value, torch.Tensor):
-            numpy_dict[key] = value.detach().cpu().numpy()
-        elif isinstance(value, dict):
-            numpy_dict[key] = convert_pytorch_dict_to_numpy(value)
-        else:
-            numpy_dict[key] = value
-    return numpy_dict
-
-
-@pytest.fixture()
-def sample_numpy_batch() -> NumpyBatch:
-    batch_size = 4
-    sample_list = []
-    for i in range(batch_size):
-        pytorch_sample = generate_synthetic_sample()
-        sample_list.append(pytorch_sample)
-
-    final_batch = stack_np_samples_into_batch(sample_list)
-
-    return final_batch
 
 
 def generate_synthetic_sample():
