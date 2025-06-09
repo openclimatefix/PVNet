@@ -23,37 +23,19 @@ def _check_key(
         expected_type: The expected type or tuple of types for the key's value.
         warn_on_type_mismatch: If True, log warning on type mismatch instead of raising.
         context: Context for error/warning messages.
-
-    Raises:
-        KeyError: If `required` is True and the `key` is missing.
-        TypeError: If value type mismatches `expected_type` and `warn_on_type_mismatch` is False.
     """
     if key not in cfg:
         if required:
             raise KeyError(f"{context} missing required key: '{key}'")
-        else:
-            return
+        return
 
     value: Any = cfg[key]
-    # Type validation checking
+    
     if expected_type is not None and not isinstance(value, expected_type):
-        # Attempt to get a meaningful name for the expected type
-        try:
-             # Handle single types
-             expected_type_name = expected_type.__name__
-        except AttributeError:
-             # Handle tuples of types e.g. (list, tuple)
-             if isinstance(expected_type, tuple):
-                  expected_type_name = " or ".join(t.__name__ for t in expected_type)
-             else:
-                  # Fallback for complex types without __name__
-                  expected_type_name = str(expected_type)
-
         message = (
-            f"{context} key '{key}' expected type {expected_type_name}, "
+            f"{context} key '{key}' expected type {expected_type}, "
             f"found {type(value).__name__}."
         )
-        # Non critical / critical type mismatches
         if warn_on_type_mismatch:
             logger.warning(message)
         else:
@@ -312,32 +294,6 @@ def get_encoder_config(
         )
 
     return encoder_config
-
-
-def _check_positive_int_params_in_dict(
-    config_dict: dict[str, Any], param_names: list[str], context: str
-) -> None:
-    """Check if specified keys in a dict exist, their values are integers, and are positive.
-
-    Args:
-        config_dict: The dictionary containing the parameters.
-        param_names: A list of keys to check.
-        context: Context string for error messages.
-
-    Raises:
-        KeyError: If a parameter key is missing.
-        TypeError: If a parameter value is not an integer.
-        ValueError: If a parameter value is not positive.
-    """
-    for param_name in param_names:
-        _check_key(
-            config_dict, param_name, required=True, expected_type=int, context=context
-        )
-        if config_dict[param_name] <= 0:
-            raise ValueError(
-                f"{context}: Parameter '{param_name}' must be a positive integer, "
-                f"found {config_dict[param_name]}."
-            )
 
 
 def validate_static_config(cfg: dict[str, Any]) -> None:
