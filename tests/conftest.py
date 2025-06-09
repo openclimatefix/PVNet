@@ -1,20 +1,30 @@
 import os
 import tempfile
 from datetime import timedelta
+from typing import Dict, Any
+from omegaconf import OmegaConf
 
-import pytest
-import pandas as pd
-import numpy as np
-import xarray as xr
-import torch
 import hydra
+import numpy as np
+import pandas as pd
+import pytest
+import torch
+import xarray as xr
+from ocf_data_sampler.config.model import (
+    GSP,
+    NWP,
+    Configuration,
+    InputData,
+    MultiNWP,
+    NormalisationValues,
+    Satellite,
+)
+from ocf_data_sampler.config.load import load_yaml_configuration
+from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
+from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
 
 from pvnet.data import DataModule, SiteDataModule
-import pvnet.models.multimodal.encoders.encoders3d
-import pvnet.models.multimodal.linear_networks.networks
-import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
-
 
 xr.set_options(keep_attrs=True)
 
@@ -89,11 +99,79 @@ def sat_data():
     return ds
 
 
+@pytest.fixture
+def valid_config_dict() -> Dict[str, Any]:
+    config_filename = "test_valid_config_dict.yaml"
+    conftest_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(conftest_dir, config_filename)
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"Test configuration file not found: {config_path}. "
+            f"Ensure '{config_filename}' exists in the '{conftest_dir}' directory."
+        )
+
+    cfg_omegaconf = OmegaConf.load(config_path)
+    cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
+
+    if cfg_dict is None:
+         raise ValueError(f"OmegaConf failed to load or parse YAML from {config_path}")
+
+    return cfg_dict
+
+
+@pytest.fixture
+def valid_input_data_config() -> Dict[str, Any]:
+    config_filename = "test_input_data_config.yaml"
+    conftest_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(conftest_dir, config_filename)
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"Test configuration file not found: {config_path}. "
+            f"Ensure '{config_filename}' exists in the '{conftest_dir}' directory."
+        )
+
+    configuration_object: Configuration = load_yaml_configuration(config_path)
+    config_dict = configuration_object.model_dump(mode='python')
+    input_data_dict = config_dict.get("input_data")
+
+    if input_data_dict is None:
+         raise KeyError(f"Key 'input_data' not found in configuration loaded from {config_path}")
+
+    return input_data_dict
+
+
+def convert_pytorch_dict_to_numpy(pytorch_dict: dict[str, object]) -> dict[str, object]:
+    numpy_dict: dict[str, object] = {}
+    for key, value in pytorch_dict.items():
+        if isinstance(value, torch.Tensor):
+            numpy_dict[key] = value.detach().cpu().numpy()
+        elif isinstance(value, dict):
+            numpy_dict[key] = convert_pytorch_dict_to_numpy(value)
+        else:
+            numpy_dict[key] = value
+    return numpy_dict
+
+
+@pytest.fixture()
+def sample_numpy_batch() -> NumpyBatch:
+    batch_size = 4
+    sample_list = []
+    for i in range(batch_size):
+        pytorch_sample = generate_synthetic_sample()
+        sample_list.append(pytorch_sample)
+
+    final_batch = stack_np_samples_into_batch(sample_list)
+
+    return final_batch
+
+
 def generate_synthetic_sample():
     """
     Generate synthetic sample for testing
     """
-    now = pd.Timestamp.now(tz=None)
+    now = pd.Timestamp.now(tz='UTC')
     sample = {}
 
     # NWP define
@@ -168,17 +246,20 @@ def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True)
         variation_index: Index to use for coordinate variations
         add_noise: Whether to add random noise to data variables
     """
-    now = pd.Timestamp.now(tz=None)
+    now = pd.Timestamp.now(tz='UTC')
 
     # Create time and space coordinates
-    site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
-    nwp_time_coords = pd.date_range(start=now, periods=50, freq="1h")
+    site_time_coords_aware = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
+    nwp_time_coords_aware = pd.date_range(start=now, periods=50, freq="1h")
+    nwp_init_time_aware = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
+    site_time_coords = site_time_coords_aware.tz_convert(None)
+    nwp_time_coords = nwp_time_coords_aware.tz_convert(None)
+    nwp_init_time = nwp_init_time_aware.tz_convert(None)
     nwp_lat = np.linspace(50.0, 60.0, 24)
     nwp_lon = np.linspace(-10.0, 2.0, 24)
     nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
 
     # Generate NWP data
-    nwp_init_time = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
     nwp_steps = pd.timedelta_range(start=pd.Timedelta(hours=0), periods=50, freq="1h")
     nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
 
@@ -461,7 +542,6 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
             res_block_layers=2,
             dropout_frac=0.0,
         ),
-        location_id_mapping={i:i for i in range(1, 318)},
         embedding_dim=16,
         include_sun=True,
         include_gsp_yield_history=True,
@@ -484,44 +564,6 @@ def multimodal_model_kwargs(raw_multimodal_model_kwargs):
 @pytest.fixture()
 def multimodal_model(multimodal_model_kwargs):
     model = Model(**multimodal_model_kwargs)
-    return model
-
-@pytest.fixture()
-def raw_multimodal_model_kwargs_site_history(model_minutes_kwargs):
-    kwargs = dict(
-        # setting inputs to None/False apart from site history
-        sat_encoder=None,
-        nwp_encoders_dict=None,
-        add_image_embedding_channel=False,
-        pv_encoder=None,
-        output_network=dict(
-            _target_="pvnet.models.multimodal.linear_networks.networks.ResFCNet2",
-            _partial_=True,
-            fc_hidden_features=128,
-            n_res_blocks=6,
-            res_block_layers=2,
-            dropout_frac=0.0,
-        ),
-        location_id_mapping=None,
-        embedding_dim=None,
-        include_sun=False,
-        include_gsp_yield_history=False,
-        include_site_yield_history=True
-    )
-
-    kwargs.update(model_minutes_kwargs)
-
-    return kwargs
-
-
-@pytest.fixture()
-def multimodal_model_kwargs_site_history(raw_multimodal_model_kwargs_site_history):
-    return hydra.utils.instantiate(raw_multimodal_model_kwargs_site_history)
-
-
-@pytest.fixture()
-def multimodal_model_site_history(multimodal_model_kwargs_site_history):
-    model = Model(**multimodal_model_kwargs_site_history)
     return model
 
 
