@@ -30,7 +30,7 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-    
+
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
@@ -343,7 +343,7 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
             if "required_parameters" in source_specific_encoder_config:
                 context = f"nwp_encoders_dict[{source}]"
                 for param in source_specific_encoder_config["required_parameters"]:
-                    _check_key(source_specific_encoder_config, param, required=True, 
+                    _check_key(source_specific_encoder_config, param, required=True,
                                expected_type=int, context=context)
                     if source_specific_encoder_config.get(param, 0) <= 0:
                         raise ValueError(f"{context}: Parameter '{param}' must be positive integer.")
