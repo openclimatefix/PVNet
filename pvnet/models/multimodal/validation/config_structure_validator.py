@@ -30,7 +30,7 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-    
+
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
@@ -320,10 +320,10 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
         if "required_parameters" in sat_section:
             for param in sat_section["required_parameters"]:
                 _check_key(
-                    sat_section, 
-                    param, 
-                    required=True, 
-                    expected_type=int, 
+                    sat_section,
+                    param,
+                    required=True,
+                    expected_type=int,
                     context="sat_encoder",
                 )
                 if sat_section.get(param, 0) <= 0:
