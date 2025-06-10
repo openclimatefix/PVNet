@@ -30,7 +30,7 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-
+    
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
@@ -208,40 +208,6 @@ def _check_output_quantiles_config(
             )
 
 
-def _check_convnet_encoder_params(
-    cfg: dict[str, Any], section_key: str, context: str, source_key: str | None = None
-) -> None:
-    """Validate required positive integer parameters for ConvNet encoders.
-
-    Args:
-        cfg: The main configuration dictionary.
-        section_key: Key of the encoder section (e.g., 'sat_encoder', 'nwp_encoders_dict').
-        context: Context for error messages.
-        source_key: Sub-key if section_key points to a dict of encoders (e.g., NWP source).
-
-    Raises:
-        KeyError, TypeError, ValueError: If parameters are missing, wrong type, or not positive.
-    """
-    convnet_params = [
-        "in_channels",
-        "out_features",
-        "number_of_conv3d_layers",
-        "conv3d_channels",
-        "image_size_pixels",
-    ]
-    encoder_config = get_encoder_config(cfg, section_key, context, source_key)
-
-    for param_name in convnet_params:
-        _check_key(
-            encoder_config, param_name, required=True, expected_type=int, context=context
-        )
-        if encoder_config[param_name] <= 0:
-            raise ValueError(
-                f"{context}: Parameter '{param_name}' must be a positive integer, "
-                f"found {encoder_config[param_name]}."
-            )
-
-
 def get_encoder_config(
     cfg: dict[str, Any], section_key: str, context: str, source_key: str | None = None
 ) -> dict[str, Any]:
@@ -336,7 +302,6 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
     _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
 
-    # Check required sections are dicts with targets
     _check_dict_section(cfg, "output_network", required=True, check_target=True)
     _check_dict_section(cfg, "optimizer", required=True, check_target=True)
 
@@ -352,24 +317,11 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
             expected_type=int,
             context="Config with 'sat_encoder'",
         )
-        _check_convnet_encoder_params(
-            cfg, section_key="sat_encoder", context="sat_encoder"
-        )
-
-    # PV Encoder
-    pv_section = _check_dict_section(
-        cfg, "pv_encoder", required=False, check_target=True
-    )
-    if pv_section:
-        _check_key(
-            cfg,
-            "pv_history_minutes",
-            required=True,
-            expected_type=int,
-            context="Config with 'pv_encoder'",
-        )
-        # TODO: Re-enable validation for attention encoder parameters.
-        pass
+        if "required_parameters" in sat_section:
+            for param in sat_section["required_parameters"]:
+                _check_key(sat_section, param, required=True, expected_type=int, context="sat_encoder")
+                if sat_section.get(param, 0) <= 0:
+                    raise ValueError(f"sat_encoder: Parameter '{param}' must be positive integer.")
 
     # NWP Encoders
     nwp_section = _check_dict_section(
@@ -387,9 +339,10 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
             _check_key(source_specific_encoder_config, "_target_", required=True,
                        context=f"Config for NWP source '{source}'")
 
-            _check_convnet_encoder_params(
-                cfg=cfg,
-                section_key="nwp_encoders_dict",
-                context=f"nwp_encoders_dict[{source}]",
-                source_key=source,
-            )
+            if "required_parameters" in source_specific_encoder_config:
+                context = f"nwp_encoders_dict[{source}]"
+                for param in source_specific_encoder_config["required_parameters"]:
+                    _check_key(source_specific_encoder_config, param, required=True, 
+                               expected_type=int, context=context)
+                    if source_specific_encoder_config.get(param, 0) <= 0:
+                        raise ValueError(f"{context}: Parameter '{param}' must be positive integer.")
