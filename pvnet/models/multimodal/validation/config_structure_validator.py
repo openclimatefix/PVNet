@@ -30,7 +30,7 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-
+    
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
@@ -319,7 +319,13 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
         )
         if "required_parameters" in sat_section:
             for param in sat_section["required_parameters"]:
-                _check_key(sat_section, param, required=True, expected_type=int, context="sat_encoder")
+                _check_key(
+                    sat_section, 
+                    param, 
+                    required=True, 
+                    expected_type=int, 
+                    context="sat_encoder",
+                )
                 if sat_section.get(param, 0) <= 0:
                     raise ValueError(f"sat_encoder: Parameter '{param}' must be positive integer.")
 
@@ -346,4 +352,7 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
                     _check_key(source_specific_encoder_config, param, required=True,
                                expected_type=int, context=context)
                     if source_specific_encoder_config.get(param, 0) <= 0:
-                        raise ValueError(f"{context}: Parameter '{param}' must be positive integer.")
+                        error_message = (
+                            f"{context}: Parameter '{param}' must be positive integer."
+                        )
+                        raise ValueError(error_message)
