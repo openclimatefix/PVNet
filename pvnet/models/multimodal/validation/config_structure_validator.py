@@ -30,7 +30,7 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-
+    
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
@@ -329,20 +329,21 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     )
     if nwp_section is not None:
         _validate_nwp_specifics(cfg, nwp_section)
-        for source in nwp_section.keys():
-            source_specific_encoder_config = get_encoder_config(
-                cfg,
-                "nwp_encoders_dict",
-                context=f"Config for NWP source '{source}'",
-                source_key=source
-            )
+        for source, source_specific_encoder_config in nwp_section.items():
+            if not isinstance(source_specific_encoder_config, dict):
+                raise TypeError(
+                    f"Config for NWP source '{source}' in 'nwp_encoders_dict' "
+                    f"must be a dictionary, found "
+                    f"{type(source_specific_encoder_config).__name__}."
+                )
+
             _check_key(source_specific_encoder_config, "_target_", required=True,
                        context=f"Config for NWP source '{source}'")
 
             if "required_parameters" in source_specific_encoder_config:
                 context = f"nwp_encoders_dict[{source}]"
                 for param in source_specific_encoder_config["required_parameters"]:
-                    _check_key(source_specific_encoder_config, param, required=True,
+                    _check_key(source_specific_encoder_config, param, required=True, 
                                expected_type=int, context=context)
                     if source_specific_encoder_config.get(param, 0) <= 0:
                         raise ValueError(f"{context}: Parameter '{param}' must be positive integer.")
