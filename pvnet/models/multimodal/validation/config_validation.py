@@ -27,16 +27,11 @@ def validate(
     Raises:
         KeyError, TypeError, ValueError: If static configuration rules are violated.
     """
-    logger.info("Starting static configuration validation...")
+    logger.info("Starting configuration validation...")
 
-    try:
-        mm_config_dict: dict = OmegaConf.to_container(
-            multimodal_config, resolve=True, throw_on_missing=True
-        )
+    mm_config_dict: dict = OmegaConf.to_container(
+        multimodal_config, resolve=True, throw_on_missing=True
+    )
 
-        validate_static_config(mm_config_dict)
-        logger.info("Static configuration validation completed successfully.")
-
-    except (KeyError, TypeError, ValueError) as e:
-        logger.error(f"Static configuration validation failed: {e}")
-        raise
+    validate_static_config(mm_config_dict)
+    logger.info("Configuration validation completed successfully.")
