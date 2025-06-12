@@ -24,7 +24,7 @@ def test_validate_valid_config(valid_config_dict):
     "key_to_delete, expected_error_match",
     [
         ("forecast_minutes", r"missing required key: 'forecast_minutes'"),
-        ("output_network", r"missing required section: 'output_network'"),
+        ("output_network", r"missing required key: 'output_network'"),
     ],
     ids=[
         "missing_top_level_key",
@@ -68,7 +68,7 @@ def test_validate_static_error_section_wrong_type(
         pytest.skip(f"'{section_name}' not in fixture.")
 
     invalid_cfg_dict[section_name] = invalid_value
-    match_str = rf"Config section '{section_name}' must be a dictionary"
+    match_str = rf"key '{section_name}' expected type <class 'dict'>"
 
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
 
@@ -96,7 +96,7 @@ def test_validate_static_error_section_missing_target(
         pytest.skip(f"'{section_name}' not in fixture.")
 
     invalid_cfg_dict[section_name] = invalid_sub_dict
-    match_str = rf"Config section '{section_name}' is missing required sub-key: '_target_'"
+    match_str = rf"Section '{section_name}' missing required key: '_target_'"
 
     omega_invalid_cfg = OmegaConf.create(invalid_cfg_dict)
 
