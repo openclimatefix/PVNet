@@ -1,30 +1,23 @@
 import os
 import tempfile
 from datetime import timedelta
+
+import pytest
+import pandas as pd
+import numpy as np
+import xarray as xr
+import torch
+import hydra
+
 from typing import Dict, Any
 from omegaconf import OmegaConf
 
-import hydra
-import numpy as np
-import pandas as pd
-import pytest
-import torch
-import xarray as xr
-from ocf_data_sampler.config.model import (
-    GSP,
-    NWP,
-    Configuration,
-    InputData,
-    MultiNWP,
-    NormalisationValues,
-    Satellite,
-)
-from ocf_data_sampler.config.load import load_yaml_configuration
-from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
-from ocf_data_sampler.torch_datasets.sample.base import NumpyBatch
-
 from pvnet.data import DataModule, SiteDataModule
+import pvnet.models.multimodal.encoders.encoders3d
+import pvnet.models.multimodal.linear_networks.networks
+import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
+
 
 xr.set_options(keep_attrs=True)
 
@@ -99,45 +92,11 @@ def sat_data():
     return ds
 
 
-@pytest.fixture
-def valid_config_dict() -> Dict[str, Any]:
-    config_filename = "test_valid_config_dict.yaml"
-    conftest_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(conftest_dir, config_filename)
-
-    cfg_omegaconf = OmegaConf.load(config_path)
-    cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
-
-    if cfg_dict is None:
-         raise ValueError(f"OmegaConf failed to load or parse YAML from {config_path}")
-
-    return cfg_dict
-
-
-@pytest.fixture
-def valid_input_data_config() -> Dict[str, Any]:
-    config_filename = "test_input_data_config.yaml"
-    conftest_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(conftest_dir, config_filename)
-
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(
-            f"Test configuration file not found: {config_path}. "
-            f"Ensure '{config_filename}' exists in the '{conftest_dir}' directory."
-        )
-
-    configuration_object: Configuration = load_yaml_configuration(config_path)
-    config_dict = configuration_object.model_dump(mode='python')
-    input_data_dict = config_dict.get("input_data")
-
-    return input_data_dict
-
-
 def generate_synthetic_sample():
     """
     Generate synthetic sample for testing
     """
-    now = pd.Timestamp.now(tz='UTC')
+    now = pd.Timestamp.now(tz=None)
     sample = {}
 
     # NWP define
@@ -212,20 +171,17 @@ def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True)
         variation_index: Index to use for coordinate variations
         add_noise: Whether to add random noise to data variables
     """
-    now = pd.Timestamp.now(tz='UTC')
+    now = pd.Timestamp.now(tz=None)
 
     # Create time and space coordinates
-    site_time_coords_aware = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
-    nwp_time_coords_aware = pd.date_range(start=now, periods=50, freq="1h")
-    nwp_init_time_aware = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
-    site_time_coords = site_time_coords_aware.tz_convert(None)
-    nwp_time_coords = nwp_time_coords_aware.tz_convert(None)
-    nwp_init_time = nwp_init_time_aware.tz_convert(None)
+    site_time_coords = pd.date_range(start=now - pd.Timedelta(hours=48), periods=197, freq="15min")
+    nwp_time_coords = pd.date_range(start=now, periods=50, freq="1h")
     nwp_lat = np.linspace(50.0, 60.0, 24)
     nwp_lon = np.linspace(-10.0, 2.0, 24)
     nwp_channels = np.array(['t2m', 'ssrd', 'ssr', 'sp', 'r', 'tcc', 'u10', 'v10'], dtype='<U5')
 
     # Generate NWP data
+    nwp_init_time = pd.date_range(start=now - pd.Timedelta(hours=12), periods=1, freq="12h").repeat(50)
     nwp_steps = pd.timedelta_range(start=pd.Timedelta(hours=0), periods=50, freq="1h")
     nwp_data = np.random.randn(50, 8, 24, 24).astype(np.float32)
 
@@ -361,14 +317,6 @@ def sample_site_datamodule():
                 variation_index=i,
                 add_noise=True
             )
-
-            # Compatibility ensure
-            encoding = {
-                "nwp-ecmwf__step": {"dtype": "int64", "_FillValue": None},
-                "nwp-ecmwf__init_time_utc": {"dtype": "int64", "_FillValue": None},
-                "nwp-ecmwf__target_time_utc": {"dtype": "int64", "_FillValue": None},
-                "site__time_utc": {"dtype": "int64", "_FillValue": None},
-            }
 
             # Save as netCDF format for both train and val
             for subset in ["train", "val"]:
@@ -516,6 +464,7 @@ def raw_multimodal_model_kwargs(model_minutes_kwargs):
             res_block_layers=2,
             dropout_frac=0.0,
         ),
+        location_id_mapping={i:i for i in range(1, 318)},
         embedding_dim=16,
         include_sun=True,
         include_gsp_yield_history=True,
@@ -538,21 +487,6 @@ def multimodal_model_kwargs(raw_multimodal_model_kwargs):
 @pytest.fixture()
 def multimodal_model(multimodal_model_kwargs):
     model = Model(**multimodal_model_kwargs)
-    return model
-
-
-@pytest.fixture()
-def multimodal_quantile_model(multimodal_model_kwargs):
-    model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
-    return model
-
-
-@pytest.fixture()
-def multimodal_quantile_model_ignore_minutes(multimodal_model_kwargs):
-    """Only forecsat second half of the 8 hours"""
-    model = Model(
-        output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, forecast_minutes_ignore=240
-    )
     return model
 
 @pytest.fixture()
@@ -592,3 +526,32 @@ def multimodal_model_kwargs_site_history(raw_multimodal_model_kwargs_site_histor
 def multimodal_model_site_history(multimodal_model_kwargs_site_history):
     model = Model(**multimodal_model_kwargs_site_history)
     return model
+
+
+@pytest.fixture()
+def multimodal_quantile_model(multimodal_model_kwargs):
+    model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
+    return model
+
+
+@pytest.fixture()
+def multimodal_quantile_model_ignore_minutes(multimodal_model_kwargs):
+    """Only forecsat second half of the 8 hours"""
+    model = Model(
+        output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, forecast_minutes_ignore=240
+    )
+    return model
+
+@pytest.fixture
+def valid_config_dict() -> Dict[str, Any]:
+    config_filename = "test_valid_config_dict.yaml"
+    conftest_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(conftest_dir, config_filename)
+
+    cfg_omegaconf = OmegaConf.load(config_path)
+    cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
+
+    if cfg_dict is None:
+         raise ValueError(f"OmegaConf failed to load or parse YAML from {config_path}")
+
+    return cfg_dict
