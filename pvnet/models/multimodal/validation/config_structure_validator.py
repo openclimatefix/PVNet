@@ -28,7 +28,7 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-    
+
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
