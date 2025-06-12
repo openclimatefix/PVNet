@@ -11,7 +11,6 @@ def _check_key(
     key: str,
     required: bool = True,
     expected_type: Type | None = None,
-    warn_on_type_mismatch: bool = False,
     context: str = "Configuration",
 ) -> None:
     """Check if a key exists in a dictionary and optionally validate its type.
@@ -21,7 +20,6 @@ def _check_key(
         key: The key to check.
         required: If True, raise error if key is missing.
         expected_type: The expected type or tuple of types for the key's value.
-        warn_on_type_mismatch: If True, log warning on type mismatch instead of raising.
         context: Context for error/warning messages.
     """
     if key not in cfg:
@@ -30,70 +28,13 @@ def _check_key(
         return
 
     value: Any = cfg[key]
-
+    
     if expected_type is not None and not isinstance(value, expected_type):
         message = (
             f"{context} key '{key}' expected type {expected_type}, "
             f"found {type(value).__name__}."
         )
-        if warn_on_type_mismatch:
-            logger.warning(message)
-        else:
-            raise TypeError(message)
-
-
-def _check_dict_section(
-    cfg: dict[str, Any],
-    section_name: str,
-    required: bool = True,
-    check_target: bool = True,
-) -> dict[str, Any] | None:
-    """Validate a config section, ensuring it's a dict and optionally checking targets.
-
-    Args:
-        cfg: The main configuration dictionary.
-        section_name: Key of the section to validate.
-        required: If True, raise error if section is missing.
-        check_target: If True, check for '_target_' key within the section dict.
-        check_sub_items_target: If True, check for '_target_' within sub-dictionaries.
-
-    Returns:
-        The section dictionary if valid, or None if optional and missing.
-
-    Raises:
-        KeyError: If required section/target is missing.
-        TypeError: If section or sub-items are not dictionaries as expected.
-    """
-    if section_name not in cfg:
-        if required:
-            raise KeyError(f"Configuration missing required section: '{section_name}'")
-        else:
-            return None
-
-    section_content: Any = cfg.get(section_name)
-
-    # Ensure section follows dict structure
-    if not isinstance(section_content, dict):
-        raise TypeError(
-            f"Config section '{section_name}' must be a dictionary, "
-            f"found {type(section_content).__name__}."
-        )
-
-    if not section_content and not required:
-        logger.warning(
-            f"Optional config section '{section_name}' is present but empty."
-        )
-        return section_content
-
-    if check_target:
-         if section_content or required:
-              if "_target_" not in section_content:
-                  raise KeyError(
-                      f"Config section '{section_name}' is missing required "
-                      f"sub-key: '_target_'"
-                  )
-
-    return section_content
+        raise TypeError(message)
 
 
 def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) -> None:
@@ -280,21 +221,18 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
         "forecast_minutes",
         required=True,
         expected_type=int,
-        warn_on_type_mismatch=True,
     )
     _check_key(
         cfg,
         "history_minutes",
         required=True,
         expected_type=int,
-        warn_on_type_mismatch=True,
     )
     _check_key(
         cfg,
         "min_sat_delay_minutes",
         required=False,
         expected_type=int,
-        warn_on_type_mismatch=True,
     )
     _check_key(cfg, "nwp_interval_minutes", required=False, expected_type=dict)
     _check_key(cfg, "embedding_dim", required=False, expected_type=int)
@@ -302,14 +240,15 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
     _check_key(cfg, "add_image_embedding_channel", required=False, expected_type=bool)
 
-    _check_dict_section(cfg, "output_network", required=True, check_target=True)
-    _check_dict_section(cfg, "optimizer", required=True, check_target=True)
+    _check_key(cfg, "output_network", required=True, expected_type=dict)
+    _check_key(cfg["output_network"], "_target_", required=True, context="Section 'output_network'")
+    _check_key(cfg, "optimizer", required=True, expected_type=dict)
+    _check_key(cfg["optimizer"], "_target_", required=True, context="Section 'optimizer'")
 
     # Satellite Encoder
-    sat_section = _check_dict_section(
-        cfg, "sat_encoder", required=False, check_target=True
-    )
-    if sat_section:
+    _check_key(cfg, "sat_encoder", required=False, expected_type=dict)
+    if sat_section := cfg.get("sat_encoder"):
+        _check_key(sat_section, "_target_", required=True, context="Section 'sat_encoder'")
         _check_key(
             cfg,
             "sat_history_minutes",
@@ -330,9 +269,9 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
                     raise ValueError(f"sat_encoder: Parameter '{param}' must be positive integer.")
 
     # NWP Encoders
-    nwp_section = _check_dict_section(
-        cfg, "nwp_encoders_dict", required=False, check_target=False
-    )
+    _check_key(cfg, "nwp_encoders_dict", required=False, expected_type=dict)
+    nwp_section = cfg.get("nwp_encoders_dict")
+
     if nwp_section is not None:
         _validate_nwp_specifics(cfg, nwp_section)
         for source, source_specific_encoder_config in nwp_section.items():
