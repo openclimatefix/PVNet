@@ -263,7 +263,7 @@ def generate_synthetic_site_sample(site_id=1, variation_index=0, add_noise=True)
             "nwp-ecmwf__channel": nwp_channels,
             "nwp-ecmwf__target_time_utc": nwp_time_coords,
             "nwp-ecmwf__init_time_utc": (["nwp-ecmwf__target_time_utc"], nwp_init_time),
-            "nwp-ecmwf__step": (["nwp-ecmwf__target_time_utc"], nwp_steps),
+            "nwp-ecmwf__step": (["nwp-ecmwf__target_time_utc"], nwp_steps.total_seconds().astype(float)),
 
             # Site coordinates
             "site__site_id": np.int32(site_id),
@@ -361,9 +361,6 @@ def sample_site_datamodule():
                 variation_index=i,
                 add_noise=True
             )
-
-            for var in site_data.variables:
-                site_data[var].encoding.clear()
 
             # Save as netCDF format for both train and val
             for subset in ["train", "val"]:
