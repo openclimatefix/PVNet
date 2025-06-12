@@ -362,6 +362,9 @@ def sample_site_datamodule():
                 add_noise=True
             )
 
+            for var in site_data.variables:
+                site_data[var].encoding.clear()
+
             # Save as netCDF format for both train and val
             for subset in ["train", "val"]:
                 file_path = f"{tmpdirname}/{subset}/{i:08d}.nc"
