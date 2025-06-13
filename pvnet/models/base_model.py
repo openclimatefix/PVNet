@@ -563,6 +563,24 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             new_batch["gsp"] = new_batch["gsp"][:, :gsp_len]
             new_batch["gsp_time_utc"] = new_batch["gsp_time_utc"][:, :gsp_len]
 
+        if "site" in new_batch.keys():
+            # Slice off the end of the site data
+            site_len = self.forecast_len + self.history_len + 1
+            new_batch["site"] = new_batch["site"][:, :site_len]
+
+            # Slice all site related datetime coordinates and features
+            site_time_keys = [
+                "site_time_utc",
+                "site_date_sin",
+                "site_date_cos", 
+                "site_time_sin",
+                "site_time_cos",
+            ]
+            
+            for key in site_time_keys:
+                if key in new_batch.keys():
+                    new_batch[key] = new_batch[key][:, :site_len]
+
         if self.include_sat:
             # Slice off the end of the satellite data and spatially crop
             # Shape: batch_size, seq_length, channel, height, width
