@@ -6,7 +6,7 @@ dynamic = ["version", "readme"]
 license={file="LICENCE"}
 
 dependencies = [
-    "ocf-data-sampler>=0.2.10",
+    "ocf-data-sampler>=0.2.32",
     "numpy",
     "pandas",
     "matplotlib",
