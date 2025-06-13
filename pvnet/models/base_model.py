@@ -572,11 +572,11 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             site_time_keys = [
                 "site_time_utc",
                 "site_date_sin",
-                "site_date_cos", 
+                "site_date_cos",
                 "site_time_sin",
                 "site_time_cos",
             ]
-            
+
             for key in site_time_keys:
                 if key in new_batch.keys():
                     new_batch[key] = new_batch[key][:, :site_len]
