@@ -37,41 +37,6 @@ class AbstractLinearNetwork(nn.Module, metaclass=ABCMeta):
         pass
 
 
-class ResidualLinearBlock(nn.Module):
-    """A 1D fully-connected residual block using ELU activations and including optional dropout."""
-
-    def __init__(
-        self,
-        in_features: int,
-        n_layers: int = 2,
-        dropout_frac: float = 0.0,
-    ):
-        """A 1D fully-connected residual block using ELU activations and including optional dropout.
-
-        Args:
-            in_features: Number of input features.
-            n_layers: Number of layers in residual pathway.
-            dropout_frac: Probability of an element to be zeroed.
-        """
-        super().__init__()
-
-        layers = []
-        for i in range(n_layers):
-            layers += [
-                nn.ELU(),
-                nn.Linear(
-                    in_features=in_features,
-                    out_features=in_features,
-                ),
-                nn.Dropout(p=dropout_frac),
-            ]
-        self.model = nn.Sequential(*layers)
-
-    def forward(self, x):
-        """Run model forward"""
-        return self.model(x) + x
-
-
 class ResidualLinearBlock2(nn.Module):
     """Residual block of 'full pre-activation' similar to the block in figure 4(e) of [1].
 

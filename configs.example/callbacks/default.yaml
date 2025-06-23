@@ -1,5 +1,5 @@
 early_stopping:
-  _target_: pvnet.callbacks.MainEarlyStopping
+  _target_: lightning.pytorch.callbacks.EarlyStopping
   # name of the logged metric which determines when model is improving
   monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
   mode: "min" # can be "max" or "min"

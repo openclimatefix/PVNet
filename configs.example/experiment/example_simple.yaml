@@ -5,11 +5,10 @@
 
 defaults:
   - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
-  - override /model: conv3d_sat_nwp.yaml
+  - override /model: multimodal.yaml
   - override /datamodule: premade_samples.yaml
   - override /callbacks: default.yaml
-  - override /logger: tensorboard.yaml
-  - override /hparams_search: null
+  - override /logger: wandb.yaml
   - override /hydra: default.yaml
 
 # all parameters below will be merged with parameters from default configurations set above
