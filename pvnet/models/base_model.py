@@ -31,6 +31,8 @@ from pvnet.models.utils import (
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import plot_batch_forecasts
 
+from pvnet.optimizers import EmbAdamWLayerwiseAdaptive
+
 DATA_CONFIG_NAME = "data_config.yaml"
 MODEL_CONFIG_NAME = "model_config.yaml"
 
@@ -483,6 +485,7 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         timestep_intervals_to_plot: Optional[list[int]] = None,
         forecast_minutes_ignore: Optional[int] = 0,
         save_validation_results_csv: Optional[bool] = False,
+        total_epochs: Optional[int] = None,
     ):
         """Abtstract base class for PVNet submodels.
 
@@ -526,6 +529,8 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         self.forecast_len = (forecast_minutes - forecast_minutes_ignore) // interval_minutes
         self.forecast_len_ignore = forecast_minutes_ignore // interval_minutes
 
+        self.total_epochs = total_epochs
+
         self._accumulated_metrics = MetricAccumulator()
         self._accumulated_batches = BatchAccumulator(key_to_keep=self._target_key)
         self._accumulated_y_hat = PredAccumulator()
@@ -562,24 +567,6 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             gsp_len = self.forecast_len + self.history_len + 1
             new_batch["gsp"] = new_batch["gsp"][:, :gsp_len]
             new_batch["gsp_time_utc"] = new_batch["gsp_time_utc"][:, :gsp_len]
-
-        if "site" in new_batch.keys():
-            # Slice off the end of the site data
-            site_len = self.forecast_len + self.history_len + 1
-            new_batch["site"] = new_batch["site"][:, :site_len]
-
-            # Slice all site related datetime coordinates and features
-            site_time_keys = [
-                "site_time_utc",
-                "site_date_sin",
-                "site_date_cos",
-                "site_time_sin",
-                "site_time_cos",
-            ]
-
-            for key in site_time_keys:
-                if key in new_batch.keys():
-                    new_batch[key] = new_batch[key][:, :site_len]
 
         if self.include_sat:
             # Slice off the end of the satellite data and spatially crop
@@ -983,9 +970,20 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
                 print("Failed to log horizon_loss_curve to wandb")
                 print(e)
 
+    def on_train_epoch_start(self):
+        """
+        PyTorch Lightning hook to update adaptive weight decay at the start of each training epoch.
+        """
+        if isinstance(self._optimizer, EmbAdamWLayerwiseAdaptive) and self.total_epochs is not None:
+            current_epoch_idx = self.trainer.current_epoch
+            self._optimizer.update_weight_decay(current_epoch_idx, self.total_epochs)
+
     def configure_optimizers(self):
         """Configure the optimizers using learning rate found with LR finder if used"""
         if self.lr is not None:
-            # Use learning rate found by learning rate finder callback
-            self._optimizer.lr = self.lr
-        return self._optimizer(self)
+            if hasattr(self._optimizer, '_lr'):
+                self._optimizer._lr = self.lr 
+            
+        optimizer, scheduler = self._optimizer(self)
+        
+        return optimizer, scheduler
