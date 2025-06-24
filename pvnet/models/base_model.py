@@ -979,11 +979,15 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
             self._optimizer.update_weight_decay(current_epoch_idx, self.total_epochs)
 
     def configure_optimizers(self):
-        """Configure the optimizers using learning rate found with LR finder if used"""
         if self.lr is not None:
             if hasattr(self._optimizer, '_lr'):
                 self._optimizer._lr = self.lr 
             
-        optimizer, scheduler = self._optimizer(self)
+        result = self._optimizer(self)
         
-        return optimizer, scheduler
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[0], list) and isinstance(result[1], list):
+            return result
+        elif isinstance(result, torch.optim.Optimizer):
+            return [result], []
+        else:
+            raise TypeError(f"Optimizer __call__ returned unexpected type or format: {type(result)}, value: {result}")
