@@ -3,7 +3,9 @@
 
 from abc import ABC, abstractmethod
 
+import math
 import torch
+import torch.nn as nn
 
 
 class AbstractOptimizer(ABC):
@@ -49,6 +51,80 @@ class AdamW(AbstractOptimizer):
     def __call__(self, model):
         """Return optimizer"""
         return torch.optim.AdamW(model.parameters(), lr=self.lr, **self.kwargs)
+
+
+def get_layerwise_parameters(model, lr_scaling_factor=0.1):
+    param_groups = []
+    assigned_params = set()
+
+    embedding_params = []
+    for name, param in model.named_parameters():
+        is_embedding = False
+        parts = name.split('.')
+        current_module = model
+        for part in parts[:-1]:
+            if hasattr(current_module, part):
+                current_module = getattr(current_module, part)
+            else:
+                current_module = None
+                break
+        if current_module and isinstance(current_module, nn.Embedding):
+            embedding_params.append(param)
+            assigned_params.add(param)
+    
+    if embedding_params:
+        param_groups.append({
+            "params": embedding_params,
+            "weight_decay": 0.0,
+            "lr_scale": lr_scaling_factor ** 0
+        })
+
+    depth_groups = {}
+    for name, param in model.named_parameters():
+        if param in assigned_params:
+            continue
+
+        depth = name.count('.')
+        
+        if depth not in depth_groups:
+            depth_groups[depth] = []
+        depth_groups[depth].append(param)
+        assigned_params.add(param)
+
+    sorted_depths = sorted(depth_groups.keys())
+    
+    for depth in sorted_depths:
+        lr_scale = lr_scaling_factor ** depth 
+        
+        param_groups.append({
+            "params": depth_groups[depth],
+            "lr_scale": lr_scale,
+        })
+
+    return param_groups
+
+
+def compute_adaptive_weight_decay(
+    initial_wd: float,
+    final_wd: float,
+    schedule_type: str,
+    current_epoch: int,
+    total_epochs: int,
+) -> float:
+    if total_epochs == 0:
+        return final_wd
+    
+    progress = current_epoch / total_epochs 
+
+    if schedule_type == "cosine":
+        return final_wd + 0.5 * (initial_wd - final_wd) * (1 + math.cos(math.pi * progress))
+    elif schedule_type == "linear":
+        return initial_wd * (1 - progress) + final_wd * progress
+    elif schedule_type == "exponential":
+        if initial_wd == 0: return final_wd
+        return initial_wd * ((final_wd / initial_wd) ** progress)
+    else:
+        raise ValueError(f"Unknown weight decay schedule type: {schedule_type}")
 
 
 def find_submodule_parameters(model, search_modules):
@@ -198,3 +274,72 @@ class AdamWReduceLROnPlateau(AbstractOptimizer):
                 "monitor": "quantile_loss/val" if model.use_quantile_regression else "MAE/val",
             }
             return [opt], [sch]
+
+
+class EmbAdamWLayerwiseAdaptive(AbstractOptimizer):
+    def __init__(
+        self,
+        lr: float = 0.0001,
+        lr_scaling_factor: float = 0.1,
+        wd_initial: float = 0.25,
+        wd_final: float = 0.1,
+        wd_schedule: str = "cosine",
+        patience: int = 3,
+        factor: float = 0.5,
+        threshold: float = 2e-4,
+        **opt_kwargs,
+    ):
+        super().__init__()
+        self._lr = lr
+        self.lr_scaling_factor = lr_scaling_factor
+        self.wd_initial = wd_initial
+        self.wd_final = wd_final
+        self.wd_schedule = wd_schedule
+        self.patience = patience
+        self.factor = factor
+        self.threshold = threshold
+        self.opt_kwargs = opt_kwargs
+        self.current_wd = wd_initial
+        self.num_epochs = None
+        self.optimizer = None
+
+    def __call__(self, model: torch.nn.Module):
+        param_groups_info = get_layerwise_parameters(model, self.lr_scaling_factor)
+
+        optim_groups = []
+        for group_info in param_groups_info:
+            group = {
+                "params": group_info["params"],
+                "lr": self._lr * group_info["lr_scale"],
+                "weight_decay": group_info.get("weight_decay", self.wd_initial)
+            }
+            optim_groups.append(group)
+            
+        opt = torch.optim.AdamW(optim_groups, **self.opt_kwargs)
+        self.optimizer = opt
+        
+        sch = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            opt,
+            factor=self.factor,
+            patience=self.patience,
+            threshold=self.threshold,
+        )
+        sch = {
+            "scheduler": sch,
+            "monitor": "quantile_loss/val" if model.use_quantile_regression else "MAE/val",
+        }
+        return [opt], [sch]
+
+    def update_weight_decay(self, epoch: int, total_epochs: int):
+        self.num_epochs = total_epochs
+        new_wd = compute_adaptive_weight_decay(
+            self.wd_initial, self.wd_final, self.wd_schedule, epoch, total_epochs
+        )
+        self.current_wd = new_wd
+        
+        if self.optimizer is None:
+            return
+
+        for param_group in self.optimizer.param_groups:
+            if param_group.get("weight_decay") != 0.0:
+                param_group["weight_decay"] = new_wd
