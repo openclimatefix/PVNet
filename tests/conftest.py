@@ -9,11 +9,19 @@ import xarray as xr
 import torch
 import hydra
 
+from typing import Dict, Any
+from omegaconf import OmegaConf
+
 from pvnet.data import DataModule, SiteDataModule
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
 from pvnet.models.multimodal.multimodal import Model
+
+import torch.nn as nn
+from unittest.mock import MagicMock
+from pvnet.optimizers import EmbAdamWLayerwiseAdaptive, AbstractOptimizer
+from pvnet.models.base_model import BaseModel
 
 
 xr.set_options(keep_attrs=True)
@@ -538,3 +546,107 @@ def multimodal_quantile_model_ignore_minutes(multimodal_model_kwargs):
         output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, forecast_minutes_ignore=240
     )
     return model
+
+@pytest.fixture
+def valid_config_dict() -> Dict[str, Any]:
+    config_filename = "test_valid_config_dict.yaml"
+    conftest_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(conftest_dir, config_filename)
+
+    cfg_omegaconf = OmegaConf.load(config_path)
+    cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
+
+    if cfg_dict is None:
+         raise ValueError(f"OmegaConf failed to load or parse YAML from {config_path}")
+
+    return cfg_dict
+
+
+class DummyLayeredModel(BaseModel):
+    def __init__(self, optimizer: AbstractOptimizer, total_epochs: int):
+        super().__init__(
+            history_minutes=30,
+            forecast_minutes=30,
+            optimizer=optimizer,
+            output_quantiles=None,
+            target_key="gsp",
+            interval_minutes=30,
+            total_epochs=total_epochs,
+        )
+        self.layer0 = nn.Linear(10, 5)
+        self.block1 = nn.Sequential(
+            nn.Linear(5, 5),
+            nn.ReLU(),
+        )
+        self.block1.sub_layer = nn.Linear(5, 5)
+        self.layer2 = nn.Linear(5, 1)
+        self.embedding = nn.Embedding(10, 4)
+
+        self.use_quantile_regression = False
+        self.num_output_features = 1
+        self.forecast_len = 1
+
+    def forward(self, x_in):
+        dummy_gsp_id = torch.tensor([0], device=x_in.device, dtype=torch.int64)
+
+        x = self.layer0(x_in["dummy_input"])
+        x = self.block1(x)
+        x = self.layer2(x)
+        _ = self.embedding(dummy_gsp_id)
+        return x
+
+class MockTrainer:
+    def __init__(self, max_epochs: int):
+        self.current_epoch = 0
+        self.max_epochs = max_epochs
+        self.optimizers = []
+        self.strategy = MagicMock()
+        self.log_dict = lambda *args, **kwargs: None
+        self.callbacks = []
+        self.global_step = 0
+        self.num_training_batches = 1
+        self.accumulate_grad_batches = 1
+
+
+@pytest.fixture
+def dummy_simple_batch():
+    return {
+        "dummy_input": torch.randn(2, 10),
+        "gsp_id": torch.tensor([0, 1], dtype=torch.int64),
+    }
+
+
+@pytest.fixture
+def adaptive_model_setup(request):
+    initial_lr = 0.001
+    lr_scaling_factor = request.param.get("lr_scaling_factor", 0.5)
+    wd_initial = request.param.get("wd_initial", 0.2)
+    wd_final = request.param.get("wd_final", 0.05)
+    wd_schedule = request.param.get("wd_schedule", "cosine")
+    total_epochs = request.param.get("total_epochs", 10)
+
+    optimizer_config = EmbAdamWLayerwiseAdaptive(
+        lr=initial_lr,
+        lr_scaling_factor=lr_scaling_factor,
+        wd_initial=wd_initial,
+        wd_final=wd_final,
+        wd_schedule=wd_schedule,
+    )
+    
+    model = DummyLayeredModel(optimizer=optimizer_config, total_epochs=total_epochs)
+    
+    model.trainer = MockTrainer(max_epochs=total_epochs)
+    optimizers, schedulers = model.configure_optimizers()
+    
+    model.trainer.optimizers.append(optimizers[0]) 
+
+    return {
+        "model": model,
+        "optimizer_instance": optimizers[0],
+        "total_epochs": total_epochs,
+        "wd_initial": wd_initial,
+        "wd_final": wd_final,
+        "wd_schedule": wd_schedule,
+        "lr_scaling_factor": lr_scaling_factor,
+        "initial_lr": initial_lr,
+    }
