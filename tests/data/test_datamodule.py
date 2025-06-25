@@ -5,7 +5,11 @@ import torch
 import numpy as np
 import pandas as pd
 import xarray as xr
+from omegaconf import OmegaConf
+from unittest.mock import patch
+
 from pvnet.data import DataModule, SiteDataModule
+
 
 @pytest.fixture
 def temp_pt_sample_dir():
@@ -156,3 +160,82 @@ def test_site_init_config(temp_nc_sample_dir):
     # Verify datamodule initialisation w/ config
     assert dm is not None
     assert hasattr(dm, "train_dataloader")
+
+
+def test_hardcoded_augmentations_applied_on_premade_samples():
+    """Test that the hard-coded augmentations are applied to pre-made samples."""
+    # Define sizes for synthetic image-like data
+    nwp_channels, nwp_height, nwp_width = 5, 16, 16
+    sat_channels, sat_height, sat_width = 12, 32, 32
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Create a temporary directory for pre-made samples
+        train_dir = f"{tmpdirname}/train"
+        os.makedirs(train_dir, exist_ok=True)
+        
+        # We need a class that matches the one used in the datamodule
+        # It needs `load` and `to_numpy` methods for the test
+        class DummySample:
+            def __init__(self, data):
+                self.data = data
+            
+            @classmethod
+            def load(cls, path):
+                return cls(torch.load(path, map_location='cpu', weights_only=False))
+
+            def to_numpy(self):
+                # Convert torch tensors in the sample to numpy arrays
+                numpy_sample = {}
+                for key, value in self.data.items():
+                    if isinstance(value, torch.Tensor):
+                        numpy_sample[key] = value.numpy()
+                    elif isinstance(value, dict):
+                         numpy_sample[key] = {
+                             k: v.numpy() if isinstance(v, torch.Tensor) else v
+                             for k, v in value.items()
+                         }
+                    else:
+                        numpy_sample[key] = value
+                return numpy_sample
+
+        # Create an original sample file to compare against
+        original_sample_dict = {
+            "gsp_id": 12,
+            "nwp": {
+                "ecmwf": {
+                    "data": np.random.rand(nwp_channels, nwp_height, nwp_width).astype(np.float32)
+                }
+            },
+            "satellite": np.random.rand(sat_channels, sat_height, sat_width).astype(np.float32)
+        }
+        torch.save(original_sample_dict, f"{train_dir}/00000000.pt")
+
+        # The PremadeSamplesDataset needs to be patched to use our DummySample class
+        with patch('pvnet.data.uk_regional_datamodule.UKRegionalSample', new=DummySample):
+        
+            # Instantiate DataModule to use the pre-made samples path.
+            # No augmentation config is needed as it's hard-coded.
+            dm = DataModule(
+                configuration=None,
+                sample_dir=tmpdirname,
+                batch_size=1,
+                num_workers=0,
+            )
+
+            # Get one batch from the training dataloader
+            augmented_batch = next(iter(dm.train_dataloader()))
+
+            # Extract tensors for comparison
+            augmented_nwp = augmented_batch["nwp"]["ecmwf"]["data"].squeeze(0)
+            augmented_satellite = augmented_batch["satellite"].squeeze(0)
+
+            original_nwp = torch.from_numpy(original_sample_dict["nwp"]["ecmwf"]["data"])
+            original_satellite = torch.from_numpy(original_sample_dict["satellite"])
+
+            # Assert that the augmentations have changed the data
+            assert not torch.equal(augmented_nwp, original_nwp)
+            assert not torch.equal(augmented_satellite, original_satellite)
+
+            # Assert that the shapes are still the same
+            assert augmented_nwp.shape == original_nwp.shape
+            assert augmented_satellite.shape == original_satellite.shape
