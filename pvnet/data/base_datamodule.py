@@ -1,6 +1,9 @@
 """ Data module for pytorch lightning """
 
 from glob import glob
+import numpy as np
+import albumentations as A
+import os
 
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
@@ -18,25 +21,86 @@ def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
     return batch_to_tensor(stack_np_samples_into_batch(samples))
 
 
-class PremadeSamplesDataset(Dataset):
-    """Dataset to load samples from
-
-    Args:
-        sample_dir: Path to the directory of pre-saved samples.
-        sample_class: sample class type to use for save/load/to_numpy
+def _get_hardcoded_augmentations():
     """
+    Returns a dictionary of augmentations.
+    Reads the AUG_STRENGTH environment variable to switch between strengths.
+    Defaults to "moderate" if the variable is not set.
+    """
+    strength = os.getenv("AUG_STRENGTH", "moderate").lower()
+    
+    print(f"--- Using '{strength}' augmentations for training. ---")
 
-    def __init__(self, sample_dir: str, sample_class: SampleBase):
+    if strength == "strong":
+        # Very strong, obvious augmentations
+        return {
+            "satellite": A.Compose([
+                A.Rotate(limit=90, p=1.0),
+                A.GaussNoise(std_range=[0.2, 0.5], p=1.0),
+            ]),
+            "nwp": A.Compose([
+                A.Rotate(limit=90, p=1.0),
+                A.GaussNoise(std_range=[0.2, 0.5], p=1.0),
+            ]),
+        }
+    else:
+        # Default to moderate augmentations
+        return {
+            "satellite": A.Compose([
+                A.Rotate(limit=20, p=0.5),
+                A.GaussNoise(std_range=[0.0, 0.05], p=0.5),
+            ]),
+            "nwp": A.Compose([
+                A.Rotate(limit=10, p=0.5),
+                A.GaussNoise(std_range=[0.0, 0.02], p=0.5),
+            ]),
+        }
+
+
+class PremadeSamplesDataset(Dataset):
+    """Dataset to load samples from"""
+
+    def __init__(self, sample_dir: str, sample_class: SampleBase, apply_augmentations: bool = False):
         """Initialise PremadeSamplesDataset"""
-        self.sample_paths = glob(f"{sample_dir}/*")
+        self.sample_paths = sorted(glob(f"{sample_dir}/*"))
         self.sample_class = sample_class
+        self.apply_augmentations = apply_augmentations
+        
+        # The transforms will be created inside __getitem__ if needed, which is
+        # safe for multiprocessing (num_workers > 0).
+        self.transforms = None
 
     def __len__(self):
         return len(self.sample_paths)
 
     def __getitem__(self, idx):
-        sample = self.sample_class.load(self.sample_paths[idx])
-        return sample.to_numpy()
+        # Create transforms here if this is the training set.
+        # This is lazy-initialized to be compatible with multiprocessing.
+        if self.apply_augmentations and self.transforms is None:
+            self.transforms = _get_hardcoded_augmentations()
+
+        sample_object = self.sample_class.load(self.sample_paths[idx])
+        sample = sample_object.to_numpy()
+
+        # Apply augmentations if they have been created.
+        if self.transforms is not None:
+            # Apply NWP transforms
+            if "nwp" in self.transforms and "nwp" in sample:
+                for provider in sample["nwp"]:
+                    if "data" in sample["nwp"][provider]:
+                        nwp_data = sample["nwp"][provider]["data"]
+                        nwp_data_hwc = np.transpose(nwp_data, (1, 2, 0))
+                        transformed = self.transforms["nwp"](image=nwp_data_hwc)["image"]
+                        sample["nwp"][provider]["data"] = np.transpose(transformed, (2, 0, 1))
+
+            # Apply Satellite transforms
+            if "satellite" in self.transforms and "satellite" in sample:
+                sat_data = sample["satellite"]
+                sat_data_hwc = np.transpose(sat_data, (1, 2, 0))
+                transformed = self.transforms["satellite"](image=sat_data_hwc)["image"]
+                sample["satellite"] = np.transpose(transformed, (2, 0, 1))
+
+        return sample
 
 
 class BaseDataModule(LightningDataModule):
