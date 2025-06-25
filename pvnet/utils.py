@@ -325,28 +325,28 @@ def plot_batch_forecasts(
 
 def get_satellite_augmentations(
     rotate_limit: int = 5,
-    gaussian_noise_var_limit: tuple[float, float] = (10.0, 50.0),
+    gaussian_noise_std_range: tuple[float, float] = (0.0, 0.05),
     p_rotate: float = 0.5,
     p_gaussian_noise: float = 0.5,
 ) -> A.Compose:
     return A.Compose(
         [
             A.Rotate(limit=rotate_limit, p=p_rotate, interpolation=1, border_mode=4),
-            A.GaussNoise(var_limit=gaussian_noise_var_limit, p=p_gaussian_noise),
+            A.GaussNoise(std_range=gaussian_noise_std_range, p=p_gaussian_noise),
         ]
     )
 
 
 def get_nwp_augmentations(
     rotate_limit: int = 1,
-    gaussian_noise_var_limit: tuple[float, float] = (5.0, 20.0),
+    gaussian_noise_std_range: tuple[float, float] = (0.0, 0.02),
     p_rotate: float = 0.2,
     p_gaussian_noise: float = 0.3,
 ) -> A.Compose:
     return A.Compose(
         [
             A.Rotate(limit=rotate_limit, p=p_rotate, interpolation=1, border_mode=4),
-            A.GaussNoise(var_limit=gaussian_noise_var_limit, p=p_gaussian_noise),
+            A.GaussNoise(std_range=gaussian_noise_std_range, p=p_gaussian_noise),
         ]
     )
 
@@ -355,21 +355,22 @@ def get_train_augmentations(
     config: DictConfig
 ) -> dict[str, A.Compose]:
     log = get_logger()
-    aug_params = config.get("augmentations", OmegaConf.create())
+    # FIX: Remove the unnecessary commented-out line
+    # aug_params = config.get("augmentations", OmegaConf.create())
 
     satellite_augs = get_satellite_augmentations(
-        rotate_limit=aug_params.get("satellite_rotate_limit", 5),
-        gaussian_noise_var_limit=tuple(aug_params.get("satellite_gaussian_noise_var_limit", (10.0, 50.0))),
-        p_rotate=aug_params.get("satellite_p_rotate", 0.5),
-        p_gaussian_noise=aug_params.get("satellite_p_gaussian_noise", 0.5),
+        rotate_limit=config.get("satellite_rotate_limit", 5),
+        gaussian_noise_std_range=tuple(config.get("satellite_gaussian_noise_std_range", (0.0, 0.05))),
+        p_rotate=config.get("satellite_p_rotate", 0.5),
+        p_gaussian_noise=config.get("satellite_p_gaussian_noise", 0.5),
     )
     log.info(f"Satellite Augmentations Configured: {satellite_augs.transforms}")
 
     nwp_augs = get_nwp_augmentations(
-        rotate_limit=aug_params.get("nwp_rotate_limit", 1),
-        gaussian_noise_var_limit=tuple(aug_params.get("nwp_gaussian_noise_var_limit", (5.0, 20.0))),
-        p_rotate=aug_params.get("nwp_p_rotate", 0.2),
-        p_gaussian_noise=aug_params.get("nwp_p_gaussian_noise", 0.3),
+        rotate_limit=config.get("nwp_rotate_limit", 1),
+        gaussian_noise_std_range=tuple(config.get("nwp_gaussian_noise_std_range", (0.0, 0.02))),
+        p_rotate=config.get("nwp_p_rotate", 0.2),
+        p_gaussian_noise=config.get("nwp_p_gaussian_noise", 0.3),
     )
     log.info(f"NWP Augmentations Configured: {nwp_augs.transforms}")
 
