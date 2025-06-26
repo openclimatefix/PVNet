@@ -209,23 +209,29 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     Checks presence, types, and basic constraints of core config parameters
     and sections before checking batch data. Main five stages as follows:
 
-        1. Checks Output Quantiles: Ensures 'output_quantiles' is present, is list or tuple, and contains only numerical values.
+    1. Checks Output Quantiles: Ensures 'output_quantiles' is present,
+       is a list or tuple, and contains only numerical values.
 
-        2. Checks Core Keys: Validates presence and type of parameters such as 'forecast_minutes', 'history_minutes', and optional
-        parameters like 'min_sat_delay_minutes', 'embedding_dim', 'include_sun', 'include_gsp_yield_history', and
-        'add_image_embedding_channel'.
+    2. Checks Core Keys: Validates presence and type of parameters such as
+       'forecast_minutes', 'history_minutes', and optional parameters like
+       'min_sat_delay_minutes', 'embedding_dim', 'include_sun',
+       'include_gsp_yield_history', and 'add_image_embedding_channel'.
 
-        3. Checks Output Network and Optimizer: Verifies that 'output_network' and 'optimizer' sections exist and each contains
-        '_target_' key for component instantiation.
+    3. Checks Output Network and Optimizer: Verifies that 'output_network'
+       and 'optimizer' sections exist and each contains a '_target_' key
+       for component instantiation.
 
-        4. Checks Satellite Encoder: If 'sat_encoder' is present, it validates its structure, including '_target_' key,
-        'sat_history_minutes', and positive integer 'required_parameters'.
+    4. Checks Satellite Encoder: If 'sat_encoder' is present, it validates
+       its structure, including '_target_' key, 'sat_history_minutes',
+       and positive integer 'required_parameters'.
 
-        5. Checks NWP Encoders: If 'nwp_encoders_dict' is present, it performs validation:
-           Ensures 'nwp_history_minutes', 'nwp_forecast_minutes', and 'nwp_interval_minutes' are dictionaries whose keys
-           match the NWP sources in 'nwp_encoders_dict'.
-           Confirms values within these time/interval dictionaries are integers.
-           For each NWP source encoder config, it validates '_target_' key and checks for positive integer 'required_parameters'.
+    5. Checks NWP Encoders: If 'nwp_encoders_dict' is present, it performs validation:
+       Ensures 'nwp_history_minutes', 'nwp_forecast_minutes', and
+       'nwp_interval_minutes' are dictionaries whose keys match the NWP sources
+       in 'nwp_encoders_dict'.
+       Confirms values within these time/interval dictionaries are integers.
+       For each NWP source encoder config, it validates '_target_' key and
+       checks for positive integer 'required_parameters'.
 
     Args:
         cfg: The multimodal configuration dictionary to validate.
