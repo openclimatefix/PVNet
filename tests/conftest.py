@@ -562,6 +562,9 @@ def valid_config_dict() -> Dict[str, Any]:
     return cfg_dict
 
 
+# FOLLOWING FIXTURES TO NOT BE INCLUDED
+# PURELY FOR EXPERIMENTAL TESTING / SANITY CHECK
+
 class DummyLayeredModel(BaseModel):
     def __init__(self, optimizer: AbstractOptimizer, total_epochs: int):
         super().__init__(

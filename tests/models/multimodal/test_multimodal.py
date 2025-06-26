@@ -56,6 +56,9 @@ def test_weighted_quantile_model_forward(multimodal_quantile_model_ignore_minute
     y_quantiles.sum().backward()
 
 
+# FOLLOWING TEST TO NOT BE INCLUDED
+# PURELY FOR EXPERIMENTAL TESTING / SANITY CHECK
+
 @pytest.mark.parametrize(
     "adaptive_model_setup",
     [
