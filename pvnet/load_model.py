@@ -54,7 +54,7 @@ def get_model_from_checkpoints(
             data_configs.append(None)
 
         # check for datamodule config
-        datamodule_config = f"{path}/datamodule.yaml"
+        datamodule_config = f"{path}/datamodule_config.yaml"
         if os.path.isfile(datamodule_config):
             datamodule_configs.append(datamodule_config)
         else:
