@@ -75,7 +75,7 @@ def get_model_from_checkpoints(
         model = models[0]
     
     data_config = data_configs[0]
-    datamodule_configs = datamodule_configs[0]
+    datamodule_config = datamodule_configs[0]
 
 
-    return model, model_config, data_config, datamodule_configs
+    return model, model_config, data_config, datamodule_config
