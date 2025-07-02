@@ -20,6 +20,7 @@ def get_model_from_checkpoints(
     model_configs = []
     models = []
     data_configs = []
+    datamodule_configs = []
 
     for path in checkpoint_dir_paths:
         # Load the model
@@ -52,6 +53,13 @@ def get_model_from_checkpoints(
         else:
             data_configs.append(None)
 
+        # check for datamodule config
+        datamodule_config = f"{path}/datamodule.yaml"
+        if os.path.isfile(datamodule_config):
+            datamodule_configs.append(datamodule_config)
+        else:
+            datamodule_configs.append(None)
+
         model_configs.append(model_config)
         models.append(model)
 
@@ -61,11 +69,13 @@ def get_model_from_checkpoints(
             "model_list": model_configs,
         }
         model = Ensemble(model_list=models)
-        data_config = data_configs[0]
 
     else:
         model_config = model_configs[0]
         model = models[0]
-        data_config = data_configs[0]
+    
+    data_config = data_configs[0]
+    datamodule_configs = datamodule_configs[0]
 
-    return model, model_config, data_config
+
+    return model, model_config, data_config, datamodule_configs

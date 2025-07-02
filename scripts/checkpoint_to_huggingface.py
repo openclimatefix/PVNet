@@ -53,7 +53,7 @@ def push_to_huggingface(
             else:
                 wandb_ids.append(None)
 
-    model, model_config, data_config = get_model_from_checkpoints(checkpoint_dir_paths, val_best)
+    model, model_config, data_config, datamodule_config = get_model_from_checkpoints(checkpoint_dir_paths, val_best)
 
     if not is_ensemble:
         wandb_ids = wandb_ids[0]
@@ -69,6 +69,7 @@ def push_to_huggingface(
         model_output_dir,
         config=model_config,
         data_config=data_config,
+        datamodule_config = datamodule_config,
         wandb_repo=wandb_repo,
         wandb_ids=wandb_ids,
         push_to_hub=push_to_hub,

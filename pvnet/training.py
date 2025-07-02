@@ -113,6 +113,10 @@ def train(config: DictConfig) -> Optional[float]:
                     # batches to get the data config
                     data_config = f"{config.datamodule.sample_dir}/data_configuration.yaml"
 
+                    # Also save additonal datamodule config related to presaved batches
+                    datamodule_config = f"{config.datamodule.sample_dir}/datamodule.yaml"
+                    shutil.copyfile(datamodule_config, f"{callback.dirpath}/datamodule_config.yaml")
+
                 assert os.path.isfile(data_config), f"Data config file not found: {data_config}"
                 shutil.copyfile(data_config, f"{callback.dirpath}/data_config.yaml")
 
