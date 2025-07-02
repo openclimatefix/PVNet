@@ -73,7 +73,7 @@ def get_model_from_checkpoints(
     else:
         model_config = model_configs[0]
         model = models[0]
-    
+
     data_config = data_configs[0]
     datamodule_config = datamodule_configs[0]
 
