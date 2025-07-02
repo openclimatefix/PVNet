@@ -33,6 +33,7 @@ from pvnet.utils import plot_batch_forecasts
 
 DATA_CONFIG_NAME = "data_config.yaml"
 MODEL_CONFIG_NAME = "model_config.yaml"
+DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
 
 
 logger = logging.getLogger(__name__)
