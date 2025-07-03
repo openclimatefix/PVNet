@@ -13,7 +13,7 @@ def _check_key(
     expected_type: Type | None = None,
     context: str = "Configuration",
 ) -> None:
-    """Check if a key exists in a dictionary and optionally validate its type.
+    """Check if a key exists in the configuration and optionally validate its type.
 
     Args:
         cfg: The configuration dictionary.
@@ -54,9 +54,12 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
         logger.warning("'nwp_encoders_dict' is defined but contains no NWP sources.")
         return
 
-    context = f"Config includes 'nwp_encoders_dict' with sources: {nwp_sources}"
+    context = (
+        f"Config includes 'nwp_encoders_dict' with sources: {nwp_sources}. "
+        "NWP time parameters must be defined for all specified sources."
+    )
 
-    # Check time param values are integers
+    # Check that time and interval param sections are dicts
     _check_key(
         cfg, "nwp_history_minutes", required=True, expected_type=dict, context=context
     )
@@ -106,7 +109,7 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
             f"Missing: {missing_in_interval}, Extra: {extra_in_interval}"
         )
 
-    # Check time param values are integers
+    # Check that values within time interval dicts are integers
     for dict_name in ["nwp_history_minutes", "nwp_forecast_minutes", "nwp_interval_minutes"]:
         param_dict = cfg[dict_name]
         for source_key in param_dict:
@@ -119,7 +122,7 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
 
 
 def _check_output_quantiles_config(
-    cfg: dict[str, Any], context: str = "Top Level"
+    cfg: dict[str, Any], context: str = "Main Model Configuration"
 ) -> None:
     """Validate the 'output_quantiles' parameter in the configuration.
 
@@ -128,82 +131,35 @@ def _check_output_quantiles_config(
         context: Context for error messages.
 
     Raises:
-        KeyError: If 'output_quantiles' key is missing.
-        TypeError: If 'output_quantiles' is not a list/tuple or contains non-numbers.
-        ValueError: If 'output_quantiles' is empty.
+        TypeError: If 'output_quantiles' is present but not a list / tuple / None.
+        ValueError: If 'output_quantiles' is an empty list / tuple.
     """
     _check_key(
         cfg,
         "output_quantiles",
-        required=True,
-        expected_type=(list, tuple),
+        required=False,
+        expected_type=(list, tuple, type(None)),
         context=context,
     )
-    quantiles = cfg["output_quantiles"]
+    quantiles = cfg.get("output_quantiles")
+
+    if quantiles is None:
+        return
+
+    if not quantiles:
+        raise ValueError(
+            f"{context}: 'output_quantiles' cannot be empty list or tuple if provided."
+        )
 
     for i, q_value in enumerate(quantiles):
         if not isinstance(q_value, (int, float)):
             raise TypeError(
-                f"{context}: Element {i} in 'output_quantiles' must be a number, "
+                f"{context}: Element {i} in 'output_quantiles' must be number, "
                 f"found {type(q_value).__name__}."
             )
 
 
-def get_encoder_config(
-    cfg: dict[str, Any], section_key: str, context: str, source_key: str | None = None
-) -> dict[str, Any]:
-    """Retrieve an encoder's configuration dictionary (handles nesting).
-
-    Args:
-        cfg: The main configuration dictionary.
-        section_key: Key pointing to the encoder config or dict of configs.
-        context: Context string for error messages.
-        source_key: Optional sub-key for nested configs (like NWP sources).
-
-    Returns:
-        The specific encoder's configuration dictionary.
-
-    Raises:
-        KeyError: If `section_key` or `source_key` (if provided) is not found.
-        TypeError: If the retrieved configuration is not a dictionary.
-    """
-    encoder_config: dict[str, Any] | None = None
-    section_dict = cfg.get(section_key)
-
-    if not isinstance(section_dict, dict):
-        if section_dict is not None:
-            raise TypeError(
-                f"{context}: Section '{section_key}' is not a valid dictionary, "
-                f"found {type(section_dict).__name__}."
-            )
-        elif source_key:
-            raise KeyError(
-                f"{context}: Cannot find section '{section_key}' to retrieve source '{source_key}'."
-            )
-        else:
-            raise KeyError(f"{context}: Cannot find section '{section_key}'.")
-
-    if source_key:
-        encoder_config = section_dict.get(source_key)
-        if not isinstance(encoder_config, dict):
-            raise TypeError(
-                f"{context}: Config for source '{source_key}' in '{section_key}' "
-                f"must be a dictionary, found {type(encoder_config).__name__}."
-            )
-    else:
-        encoder_config = section_dict
-
-    if not isinstance(encoder_config, dict):
-        # This case should technically be caught by the first isinstance check if source_key is None
-        # but kept for robustness.
-        raise TypeError(
-            f"{context}: Final resolved encoder config is not a dictionary."
-        )
-
-    return encoder_config
-
-
-def validate_static_config(cfg: dict[str, Any]) -> None:
+def validate_model_config(cfg: dict[str, Any]) -> None:
     """Perform static validation of the multimodal configuration dictionary.
 
     Checks presence, types, and basic constraints of core config parameters
@@ -229,6 +185,7 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
        Ensures 'nwp_history_minutes', 'nwp_forecast_minutes', and
        'nwp_interval_minutes' are dictionaries whose keys match the NWP sources
        in 'nwp_encoders_dict'.
+
        Confirms values within these time/interval dictionaries are integers.
        For each NWP source encoder config, it validates '_target_' key and
        checks for positive integer 'required_parameters'.
@@ -239,7 +196,7 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     Raises:
         KeyError, TypeError, ValueError: If static configuration rules are violated.
     """
-    _check_output_quantiles_config(cfg, context="Top Level")
+    _check_output_quantiles_config(cfg, context="Main Model Configuration")
     _check_key(
         cfg,
         "forecast_minutes",
@@ -252,13 +209,6 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
         required=True,
         expected_type=int,
     )
-    _check_key(
-        cfg,
-        "min_sat_delay_minutes",
-        required=False,
-        expected_type=int,
-    )
-    _check_key(cfg, "nwp_interval_minutes", required=False, expected_type=dict)
     _check_key(cfg, "embedding_dim", required=False, expected_type=int)
     _check_key(cfg, "include_sun", required=False, expected_type=bool)
     _check_key(cfg, "include_gsp_yield_history", required=False, expected_type=bool)
@@ -272,6 +222,12 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
     # Satellite Encoder
     _check_key(cfg, "sat_encoder", required=False, expected_type=dict)
     if sat_section := cfg.get("sat_encoder"):
+        _check_key(
+            cfg,
+            "min_sat_delay_minutes",
+            required=False,
+            expected_type=int,
+        )
         _check_key(sat_section, "_target_", required=True, context="Section 'sat_encoder'")
         _check_key(
             cfg,
@@ -294,10 +250,8 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
 
     # NWP Encoders
     _check_key(cfg, "nwp_encoders_dict", required=False, expected_type=dict)
-    nwp_section = cfg.get("nwp_encoders_dict")
 
-    if nwp_section is not None:
-        _validate_nwp_specifics(cfg, nwp_section)
+    if nwp_section := cfg.get("nwp_encoders_dict"):
         for source, source_specific_encoder_config in nwp_section.items():
             if not isinstance(source_specific_encoder_config, dict):
                 raise TypeError(
@@ -319,3 +273,4 @@ def validate_static_config(cfg: dict[str, Any]) -> None:
                             f"{context}: Parameter '{param}' must be positive integer."
                         )
                         raise ValueError(error_message)
+        _validate_nwp_specifics(cfg, nwp_section)
