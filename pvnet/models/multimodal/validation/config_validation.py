@@ -5,7 +5,7 @@ import logging
 from omegaconf import DictConfig, OmegaConf
 
 from pvnet.models.multimodal.validation.config_structure_validator import (
-    validate_static_config,
+    validate_model_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,5 +33,5 @@ def validate(
         multimodal_config, resolve=True, throw_on_missing=True
     )
 
-    validate_static_config(mm_config_dict)
+    validate_model_config(mm_config_dict)
     logger.info("Configuration validation completed successfully.")
