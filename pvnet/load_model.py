@@ -2,11 +2,12 @@
 
 import glob
 import os
+from typing import Any
 
 import hydra
 import torch
-from typing import Any
 from pyaml_env import parse_config
+
 from pvnet.models.ensemble import Ensemble
 from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
 
