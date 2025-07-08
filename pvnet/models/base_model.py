@@ -383,7 +383,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
             new_datamodule_config_path = save_directory / DATAMODULE_CONFIG_NAME
             with open(new_datamodule_config_path, "w") as outfile:
-                yaml.dump(datamodule_config, outfile, default_flow_style=False)
+                yaml.dump(datamodule_config, outfile, default_flow_style=False, sort_keys=False)
 
         card = self.create_hugging_face_model_card(
             repo_id, wandb_repo, wandb_ids, card_template_path
