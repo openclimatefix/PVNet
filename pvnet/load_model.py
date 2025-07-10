@@ -1,6 +1,8 @@
-""" Load a model from its checkpoint directory """
+"""Load a model from its checkpoint directory"""
+
 import glob
 import os
+from typing import Any
 
 import hydra
 import torch
@@ -13,13 +15,23 @@ from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
 def get_model_from_checkpoints(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-):
-    """Load a model from its checkpoint directory"""
+) -> tuple[torch.nn.Module, dict[str, Any] | str, str | None, str | None]:
+    """Load a model from its checkpoint directory
+
+    Returns:
+        tuple:
+            model: nn.Module of pretrained model.
+            model_config: path to model config used to train the model.
+            data_config: path to data config used to create samples for the model.
+            datamodule_config: path to datamodule used to create samples e.g train/test split info.
+
+    """
     is_ensemble = len(checkpoint_dir_paths) > 1
 
     model_configs = []
     models = []
     data_configs = []
+    datamodule_configs = []
 
     for path in checkpoint_dir_paths:
         # Load the model
@@ -44,6 +56,9 @@ def get_model_from_checkpoints(
         if isinstance(model, UMTModel):
             model, model_config = model.convert_to_multimodal_model(model_config)
 
+        model_configs.append(model_config)
+        models.append(model)
+
         # Check for data config
         data_config = f"{path}/data_config.yaml"
 
@@ -52,8 +67,12 @@ def get_model_from_checkpoints(
         else:
             data_configs.append(None)
 
-        model_configs.append(model_config)
-        models.append(model)
+        # check for datamodule config
+        datamodule_config = f"{path}/datamodule_config.yaml"
+        if os.path.isfile(datamodule_config):
+            datamodule_configs.append(datamodule_config)
+        else:
+            datamodule_configs.append(None)
 
     if is_ensemble:
         model_config = {
@@ -61,11 +80,12 @@ def get_model_from_checkpoints(
             "model_list": model_configs,
         }
         model = Ensemble(model_list=models)
-        data_config = data_configs[0]
 
     else:
         model_config = model_configs[0]
         model = models[0]
-        data_config = data_configs[0]
 
-    return model, model_config, data_config
+    data_config = data_configs[0]
+    datamodule_config = datamodule_configs[0]
+
+    return model, model_config, data_config, datamodule_config

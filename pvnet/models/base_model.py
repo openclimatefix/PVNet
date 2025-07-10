@@ -33,6 +33,7 @@ from pvnet.utils import plot_batch_forecasts
 
 DATA_CONFIG_NAME = "data_config.yaml"
 MODEL_CONFIG_NAME = "model_config.yaml"
+DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
 
 
 logger = logging.getLogger(__name__)
@@ -321,6 +322,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         save_directory: Union[str, Path],
         config: dict,
         data_config: Optional[Union[str, Path]],
+        datamodule_config: Optional[Union[str, Path]] = None,
         repo_id: Optional[str] = None,
         push_to_hub: bool = False,
         wandb_repo: Optional[str] = None,
@@ -338,6 +340,8 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
                 Model configuration specified as a key/value dictionary.
             data_config (`str` or `Path`):
                 The path to the data config.
+            datamodule_config (`str` or `Path`):
+                The path to the datamodule config.
             repo_id (`str`, *optional*):
                 ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
@@ -372,6 +376,14 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
             # Taylor the data config to the model being saved
             minimize_data_config(new_data_config_path, new_data_config_path, self)
+
+        if datamodule_config is not None:
+            with open(datamodule_config) as dm_cfg:
+                datamodule_config = yaml.load(dm_cfg, Loader=yaml.FullLoader)
+
+            new_datamodule_config_path = save_directory / DATAMODULE_CONFIG_NAME
+            with open(new_datamodule_config_path, "w") as outfile:
+                yaml.dump(datamodule_config, outfile, default_flow_style=False, sort_keys=False)
 
         card = self.create_hugging_face_model_card(
             repo_id, wandb_repo, wandb_ids, card_template_path
