@@ -91,7 +91,7 @@ def load_model_from_hf(model_id: str,
                        token: str) -> Model:
     """Loads model and data config from HuggingFace
 
-    Adapts and saves data config to be used by datasampler. 
+    Adapts and saves data config to be used by datasampler.
 
     Args:
         model_id: model repo on HF (eg 'openclimatefix/model')
@@ -160,7 +160,7 @@ class ModelPipe:
             interval_start: The start timestamp (inclusive) for the prediction interval.
             interval_end: The end timestamp (exclusive) for the prediction interval.
             time_resolution: The time resolution (e.g., in minutes) for the prediction intervals.
-            
+
         """
         self.model = model
         self.ds_site = ds_site
@@ -177,7 +177,7 @@ class ModelPipe:
         Returns:
             xarray.Dataset of site forecasts for the sample
         """
-        
+
         tensor_batch = batch_to_tensor(batch)
         # First available timestamp in the sample (this is t0 + interval_start)
         first_time = pd.Timestamp(tensor_batch["site_time_utc"][0][0].item())
@@ -285,7 +285,7 @@ def main(config: DictConfig):
     # Loop through the samples
     pbar = tqdm(total=len(dataset))
     for i, sample in enumerate(dataloader):
-        try:            
+        try:
             # Make predictions
             ds_abs_all = model_pipe.predict_batch(sample)
             t0 = ds_abs_all.init_time_utc.values[0]
