@@ -33,6 +33,7 @@ import torch
 import xarray as xr
 from ocf_data_sampler.config import load_yaml_configuration
 from ocf_data_sampler.load.load_dataset import get_dataset_dict
+from ocf_data_sampler.numpy_sample.common_types import NumpyBatch
 from ocf_data_sampler.torch_datasets.datasets.site import SitesDatasetConcurrent
 from ocf_data_sampler.torch_datasets.sample.base import batch_to_tensor, copy_batch_to_device
 from omegaconf import DictConfig
@@ -167,7 +168,7 @@ class ModelPipe:
         self.interval_end = interval_end
         self.time_resolution = time_resolution
 
-    def predict_batch(self, batch: dict) -> xr.Dataset:
+    def predict_batch(self, batch: NumpyBatch) -> xr.Dataset:
         """Run the batch through the model and compile the predictions into an xarray DataArray
 
         Args:
