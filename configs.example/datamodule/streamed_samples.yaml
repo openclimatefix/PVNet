@@ -1,16 +1,11 @@
-_target_: pvnet.data.DataModule
+_target_: pvnet.data.UKRegionalStreamedDataModule
 # Path to the data configuration yaml file. You can find examples in the configuration subdirectory
 # in configs.example/datamodule/configuration
-# Use the full local path such as: /FULL/PATH/PVNet/configs/datamodule/configuration/gcp_configuration.yaml"
-
+# Use the full local path such as: /FULL/PATH/PVNet/configs/datamodule/configuration/example_configuration.yaml"
 configuration: "PLACEHOLDER.yaml"
 num_workers: 20
 prefetch_factor: 2
 batch_size: 8
-
-sample_output_dir: "PLACEHOLDER"
-num_train_samples: 2
-num_val_samples: 1
 
 train_period:
   - null
