@@ -5,7 +5,11 @@ import torch
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pvnet.data import DataModule, SiteDataModule
+from pvnet.data import (
+    SitePresavedDataModule, SiteStreamedDataModule, 
+    UKRegionalPresavedDataModule, UKRegionalStreamedDataModule,
+)
+
 
 @pytest.fixture
 def temp_pt_sample_dir():
@@ -66,14 +70,11 @@ def temp_nc_sample_dir():
 
 def test_init(temp_pt_sample_dir):
     """Test DataModule initialization"""
-    dm = DataModule(
-        configuration=None,
+    dm = UKRegionalPresavedDataModule(
         sample_dir=temp_pt_sample_dir,
         batch_size=2,
         num_workers=0,
         prefetch_factor=None,
-        train_period=[None, None],
-        val_period=[None, None],
     )
 
     # Verify datamodule initialisation
@@ -83,14 +84,11 @@ def test_init(temp_pt_sample_dir):
 
 def test_iter(temp_pt_sample_dir):
     """Test iteration through DataModule"""
-    dm = DataModule(
-        configuration=None,
+    dm = UKRegionalPresavedDataModule(
         sample_dir=temp_pt_sample_dir,
         batch_size=2,
         num_workers=0,
         prefetch_factor=None,
-        train_period=[None, None],
-        val_period=[None, None],
     )
 
     # Verify existing keys
@@ -101,14 +99,11 @@ def test_iter(temp_pt_sample_dir):
 
 def test_iter_multiprocessing(temp_pt_sample_dir):
     """Test DataModule with multiple workers"""
-    dm = DataModule(
-        configuration=None,
+    dm = UKRegionalPresavedDataModule(
         sample_dir=temp_pt_sample_dir,
         batch_size=1,
         num_workers=2,
         prefetch_factor=1,
-        train_period=[None, None],
-        val_period=[None, None],
     )
 
     served_batches = 0
@@ -124,14 +119,11 @@ def test_iter_multiprocessing(temp_pt_sample_dir):
 
 def test_site_init_sample_dir(temp_nc_sample_dir):
     """Test SiteDataModule initialization with sample dir"""
-    dm = SiteDataModule(
-        configuration=None,
+    dm = SitePresavedDataModule(
         sample_dir=temp_nc_sample_dir,
         batch_size=2,
         num_workers=0,
         prefetch_factor=None,
-        train_period=[None, None],
-        val_period=[None, None],
     )
 
     # Verify datamodule initialisation
@@ -143,14 +135,13 @@ def test_site_init_config(temp_nc_sample_dir):
     """Test SiteDataModule initialization with config file"""
     config_path = f"{temp_nc_sample_dir}/data_configuration.yaml"
 
-    dm = SiteDataModule(
+    dm = SiteStreamedDataModule(
         configuration=config_path,
         batch_size=2,
         num_workers=0,
         prefetch_factor=None,
         train_period=[None, None],
         val_period=[None, None],
-        sample_dir=None,
     )
 
     # Verify datamodule initialisation w/ config
