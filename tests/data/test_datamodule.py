@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from pvnet.data import (
-    SitePresavedDataModule, SiteStreamedDataModule, 
+    SitePresavedDataModule, SiteStreamedDataModule,
     UKRegionalPresavedDataModule, UKRegionalStreamedDataModule,
 )
 

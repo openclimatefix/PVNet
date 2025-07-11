@@ -10,7 +10,7 @@ import torch
 import hydra
 
 from pvnet.data import (
-    SitePresavedDataModule, 
+    SitePresavedDataModule,
     UKRegionalPresavedDataModule,
 )
 import pvnet.models.multimodal.encoders.encoders3d

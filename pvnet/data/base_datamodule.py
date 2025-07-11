@@ -134,8 +134,8 @@ class BaseStreamedDataModule(LightningDataModule):
         )
 
     def _get_streamed_samples_dataset(
-        self, 
-        start_time: str | None, 
+        self,
+        start_time: str | None,
         end_time: str | None
     ) -> Dataset:
         raise NotImplementedError
