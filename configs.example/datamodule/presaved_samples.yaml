@@ -1,6 +1,6 @@
 _target_: pvnet.data.UKRegionalPresavedDataModule
 
-# The sample_dir is the location batches were saved to using the save_samples.py script
+# The sample_dir is the location samples were saved to using the save_samples.py script
 # The sample_dir should contain train and val subdirectories with samples
 
 sample_dir: "PLACEHOLDER"
