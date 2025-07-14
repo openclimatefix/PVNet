@@ -282,12 +282,12 @@ def main(config: DictConfig):
     # Create object to make predictions
     model_pipe = ModelPipe(model, ds_sites, interval_start, interval_end, time_resolution)
 
-    # Loop through the samples
+    # Loop through the batches
     pbar = tqdm(total=len(dataset))
-    for i, sample in enumerate(dataloader):
+    for i, batch in enumerate(dataloader):
         try:
             # Make predictions
-            ds_abs_all = model_pipe.predict_batch(sample)
+            ds_abs_all = model_pipe.predict_batch(batch)
             t0 = ds_abs_all.init_time_utc.values[0]
             # Save the predictions
             filename = f"{output_dir}/{t0}.nc"
@@ -295,7 +295,7 @@ def main(config: DictConfig):
 
             pbar.update()
         except Exception as e:
-            print(f"Exception {e} at sample {i}")
+            print(f"Exception {e} at batch {i}")
             pass
 
     pbar.close()
