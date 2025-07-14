@@ -146,10 +146,10 @@ class BaseStreamedDataModule(LightningDataModule):
             val_dataset = self._get_streamed_samples_dataset(*self.val_period)
             shuffled_indices = torch.randperm(len(val_dataset))
             self.val_dataset = Subset(val_dataset, shuffled_indices)
-    
+
     def _get_streamed_samples_dataset(
-        self, 
-        start_time: str | None, 
+        self,
+        start_time: str | None,
         end_time: str | None
     ) -> Dataset:
         raise NotImplementedError
