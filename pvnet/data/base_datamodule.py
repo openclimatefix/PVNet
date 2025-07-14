@@ -2,6 +2,7 @@
 
 from glob import glob
 
+import torch
 from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
 from ocf_data_sampler.torch_datasets.sample.base import (
@@ -10,7 +11,7 @@ from ocf_data_sampler.torch_datasets.sample.base import (
     TensorBatch,
     batch_to_tensor,
 )
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
 
 
 def collate_fn(samples: list[NumpyBatch]) -> TensorBatch:
@@ -121,7 +122,6 @@ class BaseStreamedDataModule(LightningDataModule):
 
         self._common_dataloader_kwargs = dict(
             batch_size=batch_size,
-            sampler=None,
             batch_sampler=None,
             num_workers=num_workers,
             collate_fn=collate_fn,
@@ -133,19 +133,31 @@ class BaseStreamedDataModule(LightningDataModule):
             persistent_workers=False,
         )
 
+    def setup(self, stage: str | None = None):
+        """Called once to prepare the datasets."""
+
+        # This logic runs only once at the start of training making it robust.
+        # Therefore the val dataset is only shuffled once
+        if stage == "fit":
+            # Prepare the train dataset
+            self.train_dataset = self._get_streamed_samples_dataset(*self.train_period)
+
+            # Prepare and pre-shuffle the val dataset
+            val_dataset = self._get_streamed_samples_dataset(*self.val_period)
+            shuffled_indices = torch.randperm(len(val_dataset))
+            self.val_dataset = Subset(val_dataset, shuffled_indices)
+    
     def _get_streamed_samples_dataset(
-        self,
-        start_time: str | None,
+        self, 
+        start_time: str | None, 
         end_time: str | None
     ) -> Dataset:
         raise NotImplementedError
 
     def train_dataloader(self) -> DataLoader:
         """Construct train dataloader"""
-        dataset = self._get_streamed_samples_dataset(*self.train_period)
-        return DataLoader(dataset, shuffle=True, **self._common_dataloader_kwargs)
+        return DataLoader(self.train_dataset, shuffle=True, **self._common_dataloader_kwargs)
 
     def val_dataloader(self) -> DataLoader:
         """Construct val dataloader"""
-        dataset = self._get_streamed_samples_dataset(*self.val_period)
-        return DataLoader(dataset, shuffle=False, **self._common_dataloader_kwargs)
+        return DataLoader(self.val_dataset, shuffle=False, **self._common_dataloader_kwargs)
