@@ -127,7 +127,7 @@ cp -r configs.example configs
 
 ### Set up and config example for sample creation
 
-We will use the following example config file for creating samles: `/PVNet/configs/datamodule/configuration/example_configuration.yaml`. Ensure that the file paths are set to the correct locations in `example_configuration.yaml`: search for `PLACEHOLDER` to find where to input the location of the files. You will need to comment out or delete the parts of `example_configuration.yaml` pertaining to the data you are not using.
+We will use the following example config file for creating samples: `/PVNet/configs/datamodule/configuration/example_configuration.yaml`. Ensure that the file paths are set to the correct locations in `example_configuration.yaml`: search for `PLACEHOLDER` to find where to input the location of the files. You will need to comment out or delete the parts of `example_configuration.yaml` pertaining to the data you are not using.
 
 
 When creating samples, an additional datamodule config located in `PVNet/configs/datamodule` is passed into the sample creation script: `streamed_samples.yaml`. Like before, a placeholder variable is used when specifying which configuration to use:
