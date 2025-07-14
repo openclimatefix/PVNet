@@ -9,7 +9,10 @@ import xarray as xr
 import torch
 import hydra
 
-from pvnet.data import DataModule, SiteDataModule
+from pvnet.data import (
+    SitePresavedDataModule,
+    UKRegionalPresavedDataModule,
+)
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
@@ -278,14 +281,11 @@ def sample_train_val_datamodule():
             torch.save(sample, f"{tmpdirname}/val/{i:08d}.pt")
 
         # Define DataModule with temporary directory
-        dm = DataModule(
-            configuration=None,
+        dm = UKRegionalPresavedDataModule(
             sample_dir=tmpdirname,
             batch_size=2,
             num_workers=0,
             prefetch_factor=None,
-            train_period=[None, None],
-            val_period=[None, None],
         )
 
         yield dm
@@ -321,14 +321,11 @@ def sample_site_datamodule():
                 site_data.to_netcdf(file_path, mode="w", engine="h5netcdf")
 
         # Define SiteDataModule with temporary directory
-        dm = SiteDataModule(
-            configuration=None,
+        dm = SitePresavedDataModule(
             sample_dir=tmpdirname,
             batch_size=2,
             num_workers=0,
             prefetch_factor=None,
-            train_period=[None, None],
-            val_period=[None, None],
         )
 
         yield dm

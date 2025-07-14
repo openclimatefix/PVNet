@@ -72,7 +72,7 @@ You will be making local amendments to these configs. See the README in
 
 ### Datasets
 
-As a minimum, in order to create batches of data/run PVNet, you will need to
+As a minimum, in order to create samples of data/run PVNet, you will need to
 supply paths to NWP and GSP data. PV data can also be used. We list some
 suggested locations for downloading such datasets below:
 
@@ -94,7 +94,7 @@ OCF maintains a dataset of PV generation from 1311 private PV installations
 here: https://huggingface.co/datasets/openclimatefix/uk_pv
 
 
-### Connecting with ocf-data-sampler for batch creation
+### Connecting with ocf-data-sampler for sample creation
 
 Outside the PVNet repo, clone the ocf-data-sampler repo and exit the conda env created for PVNet: https://github.com/openclimatefix/ocf-data-sampler
 ```bash
@@ -116,21 +116,21 @@ pip install -e <PATH-TO-ocf-data-sampler-REPO>
 
 If you install the local version of `ocf-data-sampler` that is more recent than the version specified in PVNet, you might receive a warning. However, it should still function correctly.
 
-## Generating pre-made batches of data for training/validation of PVNet
+## Pre-saving samples of data for training/validation of PVNet
 
-PVNet contains a script for generating batches of data suitable for training the PVNet models. To run the script you will need to make some modifications to the datamodule configuration.
+PVNet contains a script for generating samples of data suitable for training the PVNet models. To run the script you will need to make some modifications to the datamodule configuration.
 
 Make sure you have copied the example configs (as already stated above):
 ```
 cp -r configs.example configs
 ```
 
-### Set up and config example for batch creation
+### Set up and config example for sample creation
 
-We will use the following example config file for creating batches: `/PVNet/configs/datamodule/configuration/example_configuration.yaml`. Ensure that the file paths are set to the correct locations in `example_configuration.yaml`: search for `PLACEHOLDER` to find where to input the location of the files. You will need to comment out or delete the parts of `example_configuration.yaml` pertaining to the data you are not using.
+We will use the following example config file for creating samples: `/PVNet/configs/datamodule/configuration/example_configuration.yaml`. Ensure that the file paths are set to the correct locations in `example_configuration.yaml`: search for `PLACEHOLDER` to find where to input the location of the files. You will need to comment out or delete the parts of `example_configuration.yaml` pertaining to the data you are not using.
 
 
-When creating batches, an additional datamodule config located in `PVNet/configs/datamodule` is passed into the batch creation script: `streamed_batches.yaml`. Like before, a placeholder variable is used when specifying which configuration to use:
+When creating samples, an additional datamodule config located in `PVNet/configs/datamodule` is passed into the sample creation script: `streamed_samples.yaml`. Like before, a placeholder variable is used when specifying which configuration to use:
 
 ```yaml
 configuration: "PLACEHOLDER.yaml"
@@ -146,9 +146,9 @@ Where `FULL-PATH-TO-REPO` represent the whole path to the PVNet repo on your loc
 
 This is also where you can update the train, val & test periods to cover the data you have access to.
 
-### Running the batch creation script
+### Running the sample creation script
 
-Run the `save_samples.py` script to create batches with the parameters specified in the datamodule config (`streamed_batches.yaml` in this example):
+Run the `save_samples.py` script to create samples with the parameters specified in the datamodule config (`streamed_samples.yaml` in this example):
 
 ```bash
 python scripts/save_samples.py
@@ -158,10 +158,10 @@ PVNet uses
 line that will override the configuration defined in the `./configs` directory, like this:
 
 ```bash
-python scripts/save_samples.py datamodule=streamed_batches datamodule.sample_output_dir="./output" datamodule.num_train_batches=10 datamodule.num_val_batches=5
+python scripts/save_samples.py datamodule=streamed_samples datamodule.sample_output_dir="./output" datamodule.num_train_samples=10 datamodule.num_val_samples=5
 ```
 
-`scripts/save_samples.py` needs a config under `PVNet/configs/datamodule`. You can adapt `streamed_batches.yaml` or create your own in the same folder.
+`scripts/save_samples.py` needs a config under `PVNet/configs/datamodule`. You can adapt `streamed_samples.yaml` or create your own in the same folder.
 
 If downloading private data from a GCP bucket make sure to authenticate gcloud (the public satellite data does not need authentication):
 
@@ -191,12 +191,12 @@ ocf-data-sampler is currently set up to use 11 channels from the satellite data,
 ### Training PVNet
 
 How PVNet is run is determined by the extensive configuration in the config
-files. The configs stored in `PVNet/configs.example` should work with batches created using the steps and batch creation config mentioned above.
+files. The configs stored in `PVNet/configs.example` should work with samples created using the steps and sample creation config mentioned above.
 
 Make sure to update the following config files before training your model:
 
-1. In `configs/datamodule/local_premade_batches.yaml`:
-    - update `batch_dir` to point to the directory you stored your batches in during batch creation
+1. In `configs/datamodule/local_presaved_samples.yaml`:
+    - update `sample_dir` to point to the directory you stored your samples in during sample creation
 2. In `configs/model/local_multimodal.yaml`:
     - update the list of encoders to reflect the data sources you are using. If you are using different NWP sources, the encoders for these should follow the same structure with two important updates:
         - `in_channels`: number of variables your NWP source supplies
@@ -211,7 +211,7 @@ your customised config files:
 defaults:
   - trainer: local_trainer.yaml
   - model: local_multimodal.yaml
-  - datamodule: local_premade_batches.yaml
+  - datamodule: local_presaved_samples.yaml
   - callbacks: null
   - logger: csv.yaml
   - experiment: null
@@ -219,8 +219,8 @@ defaults:
   - hydra: default.yaml
 ```
 
-Assuming you ran the `save_samples.py` script to generate some premade train and
-val data batches, you can now train PVNet by running:
+Assuming you ran the `save_samples.py` script to generate some presaved train and
+val data samples, you can now train PVNet by running:
 
 ```
 python run.py
