@@ -136,8 +136,8 @@ class BaseStreamedDataModule(LightningDataModule):
     def setup(self, stage: str | None = None):
         """Called once to prepare the datasets."""
 
-        # This logic runs only once at the start of training making it robust.
-        # Therefore the val dataset is only shuffled once
+        # This logic runs only once at the start of training, therefore the val dataset is only 
+        # shuffled once
         if stage == "fit":
             # Prepare the train dataset
             self.train_dataset = self._get_streamed_samples_dataset(*self.train_period)
