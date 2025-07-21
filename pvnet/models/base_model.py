@@ -29,11 +29,12 @@ from pvnet.models.utils import (
     PredAccumulator,
 )
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.utils import plot_batch_forecasts
-
-DATA_CONFIG_NAME = "data_config.yaml"
-MODEL_CONFIG_NAME = "model_config.yaml"
-DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
+from pvnet.utils import (
+    plot_batch_forecasts, 
+    DATA_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
+    DATAMODULE_CONFIG_NAME,
+)
 
 
 logger = logging.getLogger(__name__)

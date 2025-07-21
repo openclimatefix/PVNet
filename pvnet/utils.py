@@ -13,8 +13,12 @@ import rich.tree
 import xarray as xr
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
-from ocf_data_sampler.select.location import Location
 from omegaconf import DictConfig, OmegaConf
+
+
+DATA_CONFIG_NAME = "data_config.yaml"
+MODEL_CONFIG_NAME = "model_config.yaml"
+DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
@@ -37,61 +41,6 @@ def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
         setattr(logger, level, rank_zero_only(getattr(logger, level)))
 
     return logger
-
-
-class GSPLocationLookup:
-    """Query object for GSP location from GSP ID"""
-
-    def __init__(self, x_osgb: xr.DataArray, y_osgb: xr.DataArray):
-        """Query object for GSP location from GSP ID
-
-        Args:
-            x_osgb: DataArray of the OSGB x-coordinate for any given GSP ID
-            y_osgb: DataArray of the OSGB y-coordinate for any given GSP ID
-
-        """
-        self.x_osgb = x_osgb
-        self.y_osgb = y_osgb
-
-    def __call__(self, gsp_id: int) -> Location:
-        """Returns the locations for the input GSP IDs.
-
-        Args:
-            gsp_id: Integer ID of the GSP
-        """
-        return Location(
-            x=self.x_osgb.sel(gsp_id=gsp_id).item(),
-            y=self.y_osgb.sel(gsp_id=gsp_id).item(),
-            id=gsp_id,
-        )
-
-
-class SiteLocationLookup:
-    """Query object for site location from site ID"""
-
-    def __init__(self, long: xr.DataArray, lat: xr.DataArray):
-        """Query object for site location from site ID
-
-        Args:
-            long: DataArray of the longitude coordinates for any given site ID
-            lat: DataArray of the latitude coordinates for any given site ID
-
-        """
-        self.longitude = long
-        self.latitude = lat
-
-    def __call__(self, site_id: int) -> Location:
-        """Returns the locations for the input site IDs.
-
-        Args:
-            site_id: Integer ID of the site
-        """
-        return Location(
-            coordinate_system="lon_lat",
-            x=self.longitude.sel(pv_system_id=site_id).item(),
-            y=self.latitude.sel(pv_system_id=site_id).item(),
-            id=site_id,
-        )
 
 
 def extras(config: DictConfig) -> None:
