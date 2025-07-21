@@ -42,14 +42,13 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
         nwp_section: The validated 'nwp_encoders_dict' section content.
 
     Raises:
-        KeyError: If required NWP time/interval parameter dictionaries are missing.
+        KeyError: If required NWP time parameter dictionaries are missing.
         TypeError: If NWP time/interval parameters are not dictionaries.
         ValueError: If keys in time/interval dicts do not match NWP sources.
     """
     nwp_sources: list[str] = list(nwp_section.keys())
     if not nwp_sources:
         raise ValueError("'nwp_encoders_dict' is defined but contains no NWP sources.")
-        return
 
     context = (
         f"Config includes 'nwp_encoders_dict' with sources: {nwp_sources}. "
@@ -64,17 +63,15 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
         cfg, "nwp_forecast_minutes", required=True, expected_type=dict, context=context
     )
     _check_key(
-        cfg, "nwp_interval_minutes", required=True, expected_type=dict, context=context
+        cfg, "nwp_interval_minutes", required=False, expected_type=dict, context=context
     )
 
+    # Verify time params are provided for specifically defined NWP sources
     nwp_hist_times: dict[str, Any] = cfg["nwp_history_minutes"]
     nwp_forecast_times: dict[str, Any] = cfg["nwp_forecast_minutes"]
-
-    hist_keys: set[str] = set(nwp_hist_times.keys())
-    forecast_keys: set[str] = set(nwp_forecast_times.keys())
     encoder_keys: set[str] = set(nwp_sources)
 
-    # Verify time params are provided for specifically defined NWP sources
+    hist_keys: set[str] = set(nwp_hist_times.keys())
     if hist_keys != encoder_keys:
         missing_in_hist = encoder_keys - hist_keys
         extra_in_hist = hist_keys - encoder_keys
@@ -83,6 +80,8 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
             f"in 'nwp_encoders_dict' {encoder_keys}. "
             f"Missing: {missing_in_hist}, Extra: {extra_in_hist}"
         )
+
+    forecast_keys: set[str] = set(nwp_forecast_times.keys())
     if forecast_keys != encoder_keys:
         missing_in_forecast = encoder_keys - forecast_keys
         extra_in_forecast = forecast_keys - encoder_keys
@@ -92,22 +91,21 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
             f"Missing: {missing_in_forecast}, Extra: {extra_in_forecast}"
         )
 
-    _check_key(
-        cfg, "nwp_interval_minutes", required=True, expected_type=dict, context=context
-    )
-    nwp_intervals: dict[str, int] = cfg["nwp_interval_minutes"]
-    interval_keys: set[str] = set(nwp_intervals.keys())
-    if interval_keys != encoder_keys:
-        missing_in_interval = encoder_keys - interval_keys
+    dict_names_to_check = ["nwp_history_minutes", "nwp_forecast_minutes"]
+
+    if "nwp_interval_minutes" in cfg:
+        nwp_intervals: dict[str, int] = cfg["nwp_interval_minutes"]
+        interval_keys: set[str] = set(nwp_intervals.keys())
         extra_in_interval = interval_keys - encoder_keys
-        raise ValueError(
-            f"Keys in 'nwp_interval_minutes' {interval_keys} do not match sources "
-            f"in 'nwp_encoders_dict' {encoder_keys}. "
-            f"Missing: {missing_in_interval}, Extra: {extra_in_interval}"
-        )
+        if extra_in_interval:
+            raise ValueError(
+                f"Keys in 'nwp_interval_minutes' must be a subset of sources in "
+                f"'nwp_encoders_dict'. Extra keys found: {extra_in_interval}"
+            )
+        dict_names_to_check.append("nwp_interval_minutes")
 
     # Check that values within time interval dicts are integers
-    for dict_name in ["nwp_history_minutes", "nwp_forecast_minutes", "nwp_interval_minutes"]:
+    for dict_name in dict_names_to_check:
         param_dict = cfg[dict_name]
         for source_key in param_dict:
             _check_key(
