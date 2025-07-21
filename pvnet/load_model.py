@@ -10,11 +10,10 @@ from pyaml_env import parse_config
 
 from pvnet.models.ensemble import Ensemble
 from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
-
 from pvnet.utils import (
     DATA_CONFIG_NAME,
-    MODEL_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
 )
 
 

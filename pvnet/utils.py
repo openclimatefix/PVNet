@@ -10,11 +10,9 @@ import pandas as pd
 import pylab
 import rich.syntax
 import rich.tree
-import xarray as xr
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
-
 
 DATA_CONFIG_NAME = "data_config.yaml"
 MODEL_CONFIG_NAME = "model_config.yaml"

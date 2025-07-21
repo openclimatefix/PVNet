@@ -30,12 +30,11 @@ from pvnet.models.utils import (
 )
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import (
-    plot_batch_forecasts, 
     DATA_CONFIG_NAME,
-    MODEL_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
+    plot_batch_forecasts,
 )
-
 
 logger = logging.getLogger(__name__)
 
