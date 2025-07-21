@@ -412,19 +412,6 @@ def site_encoder_model_kwargs_dsampler():
 
 
 @pytest.fixture()
-def site_encoder_sensor_model_kwargs():
-    """Used to test site encoder model for sensor data"""
-    return dict(
-        sequence_length=180 // 5 + 1,
-        num_sites=26,
-        out_features=128,
-        num_channels=23,
-        target_key_to_use="wind",
-        input_key_to_use="sensor",
-    )
-
-
-@pytest.fixture()
 def raw_multimodal_model_kwargs(model_minutes_kwargs):
     kwargs = dict(
         sat_encoder=dict(

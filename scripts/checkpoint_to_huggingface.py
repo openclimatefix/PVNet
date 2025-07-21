@@ -4,6 +4,7 @@ use:
 python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
     --huggingface-repo="openclimatefix/pvnet_uk_region" \
     --wandb-repo="openclimatefix/pvnet2.1" \
+    --card-template-path="pvnet/models/model_cards/pv_uk_regional_model_card_template.md" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
 """
@@ -20,13 +21,14 @@ app = typer.Typer(pretty_exceptions_show_locals=False)
 
 @app.command()
 def push_to_huggingface(
-    checkpoint_dir_paths: list[str],
-    huggingface_repo: str = "openclimatefix/pvnet_uk_region",  # e.g. openclimatefix/windnet_india
-    wandb_repo: str = "openclimatefix/pvnet2.1",
-    val_best: bool = True,
-    wandb_ids: list[str] = [],
-    local_path: str = None,
-    push_to_hub: bool = True,
+    checkpoint_dir_paths: list[str] = typer.Argument(...,),
+    huggingface_repo: str = typer.Option(..., "--huggingface-repo"),
+    wandb_repo: str = typer.Option(..., "--wandb-repo"),
+    card_template_path: str = typer.Option(..., "--card-template-path"),
+    wandb_ids: list[str] = typer.Option([], "--wandb-id"),
+    val_best: bool = typer.Option(True),
+    local_path: str = typer.Option(None, "--local-path"),
+    push_to_hub: bool = typer.Option(True),
 ):
     """Push a local model to a huggingface model repo
 
@@ -34,8 +36,9 @@ def push_to_huggingface(
         checkpoint_dir_paths: Path(s) of the checkpoint directory(ies)
         huggingface_repo: Name of the HuggingFace repo to push the model to
         wandb_repo: Name of the wandb repo which has training logs
+        card_template_path: Path to the model card template.
+        wandb_ids: The wandb ID code(s) - if not filled out these are taken
         val_best: Use best model according to val loss, else last saved model
-        wandb_ids: The wandb ID code(s)
         local_path: Where to save the local copy of the model
         push_to_hub: Whether to push the model to the hub or just create local version.
     """
@@ -52,9 +55,9 @@ def push_to_huggingface(
             if dirname in all_wandb_ids:
                 wandb_ids.append(dirname)
             else:
-                wandb_ids.append(None)
+                raise Exception(f"Could not find wand run for {path} within {wandb_repo}")
 
-    model, model_config, data_config, datamodule_config = get_model_from_checkpoints(
+    model, model_config, data_config_path, datamodule_config_path = get_model_from_checkpoints(
         checkpoint_dir_paths, val_best
     )
 
@@ -69,14 +72,15 @@ def push_to_huggingface(
         model_output_dir = local_path
 
     model.save_pretrained(
-        model_output_dir,
-        config=model_config,
-        data_config=data_config,
-        datamodule_config=datamodule_config,
+        save_directory=model_output_dir,
+        model_config=model_config,
+        data_config_path=data_config_path,
+        datamodule_config_path=datamodule_config_path,
         wandb_repo=wandb_repo,
         wandb_ids=wandb_ids,
+        card_template_path=card_template_path,
         push_to_hub=push_to_hub,
-        repo_id=huggingface_repo if push_to_hub else None,
+        hf_repo_id=huggingface_repo if push_to_hub else None,
     )
 
     if local_path is None:

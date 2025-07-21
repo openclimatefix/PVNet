@@ -41,16 +41,6 @@ def test_singleattentionnetwork_forward(sample_site_batch, site_encoder_model_kw
     )
 
 
-# TODO once we have test data which inludes sensor data with sites include this test
-# def test_singleattentionnetwork_forward_4d(sample_wind_batch, site_encoder_sensor_model_kwargs):
-#     _test_model_forward(
-#         sample_wind_batch,
-#         SingleAttentionNetwork,
-#         site_encoder_sensor_model_kwargs,
-#         batch_size=2,
-#     )
-
-
 # Test model backward on all models
 def test_simplelearnedaggregator_backward(sample_pv_batch, site_encoder_model_kwargs):
     _test_model_backward(sample_pv_batch, SimpleLearnedAggregator, site_encoder_model_kwargs)
