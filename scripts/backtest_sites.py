@@ -5,7 +5,8 @@ Use:
 
 - This script uses hydra to construct the config, just like in `run.py`. So you need to make sure
   that the data config is set up appropriate for the model being run in this script
-- The following variables are hard coded near the top of the script and should be changed prior to use:
+- The following variables are hard coded near the top of the script and should be changed prior to 
+  use:
   The PVNet model checkpoint (either local or HuggingFace repo details);
   the time range over which predictions are made;
   the output directory where the results are stored; time parameters (window and frequency)
