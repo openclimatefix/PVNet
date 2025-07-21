@@ -173,8 +173,7 @@ def validate_model_config(cfg: dict[str, Any]) -> None:
        for component instantiation.
 
     4. Checks Satellite Encoder: If 'sat_encoder' is present, it validates
-       its structure, including '_target_' key, 'sat_history_minutes',
-       and positive integer 'required_parameters'.
+       its structure, including '_target_' key, 'sat_history_minutes'.
 
     5. Checks NWP Encoders: If 'nwp_encoders_dict' is present, it performs validation:
        Ensures 'nwp_history_minutes', 'nwp_forecast_minutes', and
@@ -182,8 +181,7 @@ def validate_model_config(cfg: dict[str, Any]) -> None:
        in 'nwp_encoders_dict'.
 
        Confirms values within these time/interval dictionaries are integers.
-       For each NWP source encoder config, it validates '_target_' key and
-       checks for positive integer 'required_parameters'.
+       For each NWP source encoder config, it validates '_target_' key.
 
     Args:
         cfg: The multimodal configuration dictionary to validate.
@@ -231,17 +229,6 @@ def validate_model_config(cfg: dict[str, Any]) -> None:
             expected_type=int,
             context="Config with 'sat_encoder'",
         )
-        if "required_parameters" in sat_section:
-            for param in sat_section["required_parameters"]:
-                _check_key(
-                    sat_section,
-                    param,
-                    required=True,
-                    expected_type=int,
-                    context="sat_encoder",
-                )
-                if sat_section.get(param, 0) <= 0:
-                    raise ValueError(f"sat_encoder: Parameter '{param}' must be positive integer.")
 
     # NWP Encoders
     _check_key(cfg, "nwp_encoders_dict", required=False, expected_type=dict)
@@ -258,14 +245,4 @@ def validate_model_config(cfg: dict[str, Any]) -> None:
             _check_key(source_specific_encoder_config, "_target_", required=True,
                        context=f"Config for NWP source '{source}'")
 
-            if "required_parameters" in source_specific_encoder_config:
-                context = f"nwp_encoders_dict[{source}]"
-                for param in source_specific_encoder_config["required_parameters"]:
-                    _check_key(source_specific_encoder_config, param, required=True,
-                               expected_type=int, context=context)
-                    if source_specific_encoder_config.get(param, 0) <= 0:
-                        error_message = (
-                            f"{context}: Parameter '{param}' must be positive integer."
-                        )
-                        raise ValueError(error_message)
         _validate_nwp_specifics(cfg, nwp_section)
