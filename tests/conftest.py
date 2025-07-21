@@ -9,10 +9,10 @@ import xarray as xr
 import torch
 import hydra
 
-from typing import Dict, Any
-from omegaconf import OmegaConf
-
-from pvnet.data import DataModule, SiteDataModule
+from pvnet.data import (
+    SitePresavedDataModule, 
+    UKRegionalPresavedDataModule,
+)
 import pvnet.models.multimodal.encoders.encoders3d
 import pvnet.models.multimodal.linear_networks.networks
 import pvnet.models.multimodal.site_encoders.encoders
