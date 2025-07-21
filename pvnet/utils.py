@@ -1,6 +1,5 @@
 """Utils"""
 import logging
-import warnings
 from collections.abc import Sequence
 from typing import Optional
 
@@ -98,8 +97,6 @@ def extras(config: DictConfig) -> None:
     """A couple of optional utilities.
 
     Controlled by main config file:
-    - disabling warnings
-    - easier access to debug mode
     - forcing debug friendly configuration
 
     Modifies DictConfig in place.
@@ -112,16 +109,6 @@ def extras(config: DictConfig) -> None:
 
     # enable adding new keys to config
     OmegaConf.set_struct(config, False)
-
-    # disable python warnings if <config.ignore_warnings=True>
-    if config.get("ignore_warnings"):
-        log.info("Disabling python warnings! <config.ignore_warnings=True>")
-        warnings.filterwarnings("ignore")
-
-    # set <config.trainer.fast_dev_run=True> if <config.debug=True>
-    if config.get("debug"):
-        log.info("Running in debug mode! <config.debug=True>")
-        config.trainer.fast_dev_run = True
 
     # force debugger friendly configuration if <config.trainer.fast_dev_run=True>
     if config.trainer.get("fast_dev_run"):
@@ -174,9 +161,6 @@ def print_config(
         branch.add(rich.syntax.Syntax(branch_content, "yaml"))
 
     rich.print(tree)
-
-    with open("config_tree.txt", "w") as fp:
-        rich.print(tree, file=fp)
 
 
 def empty(*args, **kwargs):
@@ -237,9 +221,6 @@ def plot_batch_forecasts(
     timesteps_to_plot: Optional[list[int]] = None,
 ):
     """Plot a batch of data and the forecast from that batch"""
-
-    def _get_numpy(key):
-        return batch[key].cpu().numpy().squeeze()
 
     y_key = key_to_plot
     y_id_key = f"{key_to_plot}_id"
