@@ -1,9 +1,6 @@
 """Validation functions for Multimodal configuration."""
 
-import logging
 from typing import Any, Type
-
-logger = logging.getLogger(__name__)
 
 
 def _check_key(
@@ -51,7 +48,7 @@ def _validate_nwp_specifics(cfg: dict[str, Any], nwp_section: dict[str, Any]) ->
     """
     nwp_sources: list[str] = list(nwp_section.keys())
     if not nwp_sources:
-        logger.warning("'nwp_encoders_dict' is defined but contains no NWP sources.")
+        raise ValueError("'nwp_encoders_dict' is defined but contains no NWP sources.")
         return
 
     context = (
