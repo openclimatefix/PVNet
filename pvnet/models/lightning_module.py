@@ -33,7 +33,7 @@ class PVNetLightningModule(pl.LightningModule):
         """Lightning module for training PVNet models
 
         Args:
-            Model: The PVNet model
+            model: The PVNet model
             optimizer: Optimizer
             save_validation_results_csv: whether to save full CSV outputs from validation results
         """
@@ -228,9 +228,10 @@ class PVNetLightningModule(pl.LightningModule):
                 "time_utc": time_utc_i,
             }
             if self.model.use_quantile_regression:
-                results_dict.update(
-                    {f"y_quantile_{q}": y_hat_i[:, i] for i, q in enumerate(self.model.output_quantiles)}
-                )
+                quantile_results  = {}
+                for i, q in enumerate(self.model.output_quantiles):
+                    quantile_results[f"y_quantile_{q}"] = y_hat_i[:, i]
+                results_dict.update(quantile_results)
             else:
                 results_dict["y_hat"] = y_hat_i
 
