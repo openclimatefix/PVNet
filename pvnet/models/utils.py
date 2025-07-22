@@ -7,8 +7,6 @@ import torch
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 
 class PredAccumulator:
     """A class for accumulating y-predictions using grad accumulation and small batch size.

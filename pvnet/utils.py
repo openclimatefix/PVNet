@@ -1,6 +1,5 @@
 """Utils"""
 import logging
-import warnings
 from collections.abc import Sequence
 from typing import Optional
 
@@ -10,11 +9,14 @@ import pandas as pd
 import pylab
 import rich.syntax
 import rich.tree
-import xarray as xr
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
-from ocf_data_sampler.select.location import Location
 from omegaconf import DictConfig, OmegaConf
+
+DATA_CONFIG_NAME = "data_config.yaml"
+MODEL_CONFIG_NAME = "model_config.yaml"
+DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
+MODEL_CARD_NAME = "README.md"
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
@@ -39,67 +41,10 @@ def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     return logger
 
 
-class GSPLocationLookup:
-    """Query object for GSP location from GSP ID"""
-
-    def __init__(self, x_osgb: xr.DataArray, y_osgb: xr.DataArray):
-        """Query object for GSP location from GSP ID
-
-        Args:
-            x_osgb: DataArray of the OSGB x-coordinate for any given GSP ID
-            y_osgb: DataArray of the OSGB y-coordinate for any given GSP ID
-
-        """
-        self.x_osgb = x_osgb
-        self.y_osgb = y_osgb
-
-    def __call__(self, gsp_id: int) -> Location:
-        """Returns the locations for the input GSP IDs.
-
-        Args:
-            gsp_id: Integer ID of the GSP
-        """
-        return Location(
-            x=self.x_osgb.sel(gsp_id=gsp_id).item(),
-            y=self.y_osgb.sel(gsp_id=gsp_id).item(),
-            id=gsp_id,
-        )
-
-
-class SiteLocationLookup:
-    """Query object for site location from site ID"""
-
-    def __init__(self, long: xr.DataArray, lat: xr.DataArray):
-        """Query object for site location from site ID
-
-        Args:
-            long: DataArray of the longitude coordinates for any given site ID
-            lat: DataArray of the latitude coordinates for any given site ID
-
-        """
-        self.longitude = long
-        self.latitude = lat
-
-    def __call__(self, site_id: int) -> Location:
-        """Returns the locations for the input site IDs.
-
-        Args:
-            site_id: Integer ID of the site
-        """
-        return Location(
-            coordinate_system="lon_lat",
-            x=self.longitude.sel(pv_system_id=site_id).item(),
-            y=self.latitude.sel(pv_system_id=site_id).item(),
-            id=site_id,
-        )
-
-
 def extras(config: DictConfig) -> None:
     """A couple of optional utilities.
 
     Controlled by main config file:
-    - disabling warnings
-    - easier access to debug mode
     - forcing debug friendly configuration
 
     Modifies DictConfig in place.
@@ -112,16 +57,6 @@ def extras(config: DictConfig) -> None:
 
     # enable adding new keys to config
     OmegaConf.set_struct(config, False)
-
-    # disable python warnings if <config.ignore_warnings=True>
-    if config.get("ignore_warnings"):
-        log.info("Disabling python warnings! <config.ignore_warnings=True>")
-        warnings.filterwarnings("ignore")
-
-    # set <config.trainer.fast_dev_run=True> if <config.debug=True>
-    if config.get("debug"):
-        log.info("Running in debug mode! <config.debug=True>")
-        config.trainer.fast_dev_run = True
 
     # force debugger friendly configuration if <config.trainer.fast_dev_run=True>
     if config.trainer.get("fast_dev_run"):
@@ -174,9 +109,6 @@ def print_config(
         branch.add(rich.syntax.Syntax(branch_content, "yaml"))
 
     rich.print(tree)
-
-    with open("config_tree.txt", "w") as fp:
-        rich.print(tree, file=fp)
 
 
 def empty(*args, **kwargs):
@@ -237,9 +169,6 @@ def plot_batch_forecasts(
     timesteps_to_plot: Optional[list[int]] = None,
 ):
     """Plot a batch of data and the forecast from that batch"""
-
-    def _get_numpy(key):
-        return batch[key].cpu().numpy().squeeze()
 
     y_key = key_to_plot
     y_id_key = f"{key_to_plot}_id"
