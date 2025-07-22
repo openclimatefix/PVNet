@@ -13,10 +13,10 @@ from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
 
-DATA_CONFIG_NAME = "data_config.yaml"
-MODEL_CONFIG_NAME = "model_config.yaml"
-DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
 PYTORCH_WEIGHTS_NAME = "pytorch_model.bin"
+MODEL_CONFIG_NAME = "model_config.yaml"
+DATA_CONFIG_NAME = "data_config.yaml"
+DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
 MODEL_CARD_NAME = "README.md"
 
 
