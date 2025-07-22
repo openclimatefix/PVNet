@@ -23,16 +23,13 @@ from torchvision.transforms.functional import center_crop
 
 from pvnet.models.utils import BatchAccumulator, MetricAccumulator, PredAccumulator
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.utils import plot_batch_forecasts
-
 from pvnet.utils import (
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
-    MODEL_CONFIG_NAME,
     MODEL_CARD_NAME,
+    MODEL_CONFIG_NAME,
     plot_batch_forecasts,
 )
-
 
 logger = logging.getLogger(__name__)
 
