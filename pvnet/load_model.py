@@ -11,11 +11,17 @@ from pyaml_env import parse_config
 from pvnet.models.ensemble import Ensemble
 from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
 
+# TODO
+# These variables can be imported from pvnet.utils after PR #416 is merged
+DATA_CONFIG_NAME = "data_config.yaml"
+MODEL_CONFIG_NAME = "model_config.yaml"
+DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
+
 
 def get_model_from_checkpoints(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-) -> tuple[torch.nn.Module, dict[str, Any] | str, str | None, str | None]:
+) -> tuple[torch.nn.Module, dict[str, Any], str, str | None]:
     """Load a model from its checkpoint directory
 
     Returns:
@@ -35,7 +41,7 @@ def get_model_from_checkpoints(
 
     for path in checkpoint_dir_paths:
         # Load the model
-        model_config = parse_config(f"{path}/model_config.yaml")
+        model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
 
         model = hydra.utils.instantiate(model_config)
 
@@ -59,16 +65,17 @@ def get_model_from_checkpoints(
         model_configs.append(model_config)
         models.append(model)
 
-        # Check for data config
-        data_config = f"{path}/data_config.yaml"
+        # Require data config to exist
+        data_config = f"{path}/{DATA_CONFIG_NAME}"
 
         if os.path.isfile(data_config):
             data_configs.append(data_config)
         else:
-            data_configs.append(None)
+            raise FileNotFoundError(f"File {data_config} does not exist")
 
-        # check for datamodule config
-        datamodule_config = f"{path}/datamodule_config.yaml"
+
+        # Check for datamodule config
+        datamodule_config = f"{path}/{DATAMODULE_CONFIG_NAME}"
         if os.path.isfile(datamodule_config):
             datamodule_configs.append(datamodule_config)
         else:
@@ -85,6 +92,7 @@ def get_model_from_checkpoints(
         model_config = model_configs[0]
         model = models[0]
 
+    # Assume if using an ensemble that the members were trained on the same input data
     data_config = data_configs[0]
     datamodule_config = datamodule_configs[0]
 
