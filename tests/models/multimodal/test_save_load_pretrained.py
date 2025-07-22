@@ -1,10 +1,11 @@
-import pytest
-import re
 import pkg_resources
 from pvnet.models.base_model import BaseModel
+import pvnet.models.model_cards
 import yaml
 import tempfile
 
+
+card_path = f"{pvnet.models.model_cards.__path__[0]}/pv_uk_regional_model_card_template.md"
 
 
 def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs, sample_datamodule):
@@ -70,39 +71,23 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
     # Save the model
     model_output_dir = f"{tmp_path}/model"
     multimodal_model.save_pretrained(
-        model_output_dir,
-        config=model_config,
-        data_config=data_config_path,
-        wandb_repo=None,
-        wandb_ids="excluded-for-text",
+        save_directory=model_output_dir,
+        model_config=model_config,
+        data_config_path=data_config_path,
+        wandb_repo="test",
+        wandb_ids="abc",
+        card_template_path=card_path,
         push_to_hub=False,
-        repo_id="openclimatefix/pvnet_uk_region",
     )
 
     # Load the model
-    _ = BaseModel.from_pretrained(
-        model_id=model_output_dir,
-        revision=None,
-    )
+    _ = BaseModel.from_pretrained(model_id=model_output_dir, revision=None)
 
-@pytest.mark.parametrize(
-    "repo_id, wandb_repo, wandb_ids",
-    [
-        (
-            "openclimatefix/pvnet_uk_region",
-            "None",
-            "excluded-for-text"
-        ),
-    ],
-)
-def test_create_hugging_face_model_card(repo_id, wandb_repo, wandb_ids):
+
+def test_create_hugging_face_model_card():
 
     # Create Hugging Face ModelCard
-    card = BaseModel.create_hugging_face_model_card(
-        repo_id=repo_id,
-        wandb_repo=wandb_repo,
-        wandb_ids=wandb_ids
-    )
+    card = BaseModel.create_hugging_face_model_card(card_path, wandb_repo="test", wandb_ids="abc")
 
     # Extract the card markdown
     card_markdown = card.content

@@ -45,7 +45,6 @@ class Model(BaseModel):
         nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
         sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
         pv_encoder: Optional[AbstractSitesEncoder] = None,
-        sensor_encoder: Optional[AbstractSitesEncoder] = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
         include_site_yield_history: Optional[bool] = False,
@@ -60,15 +59,12 @@ class Model(BaseModel):
         nwp_forecast_minutes: Optional[DictConfig] = None,
         nwp_history_minutes: Optional[DictConfig] = None,
         pv_history_minutes: Optional[int] = None,
-        sensor_history_minutes: Optional[int] = None,
-        sensor_forecast_minutes: Optional[int] = None,
         optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
         interval_minutes: int = 30,
         nwp_interval_minutes: Optional[DictConfig] = None,
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
-        sensor_interval_minutes: int = 30,
         timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
         forecast_minutes_ignore: Optional[int] = 0,
@@ -122,12 +118,8 @@ class Model(BaseModel):
                 data for each source
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
-            sensor_interval_minutes: The interval between each sample of the sensor data
             timestep_intervals_to_plot: Intervals, in timesteps, to plot in
             addition to the full forecast
-            sensor_encoder: Encoder for sensor data
-            sensor_history_minutes: Length of recent sensor data used as input.
-            sensor_forecast_minutes: Length of forecast sensor data used as input.
             adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
                 the model to use. This allows us to overprepare batches and slice from them for the
                 data we need for a model run.
@@ -143,7 +135,6 @@ class Model(BaseModel):
         self.include_pv = pv_encoder is not None
         self.include_sun = include_sun
         self.include_time = include_time
-        self.include_sensor = sensor_encoder is not None
         self.location_id_mapping = location_id_mapping
         self.embedding_dim = embedding_dim
         self.add_image_embedding_channel = add_image_embedding_channel
@@ -253,23 +244,6 @@ class Model(BaseModel):
 
             # Update num features
             fusion_input_features += self.pv_encoder.out_features
-
-        if self.include_sensor:
-            if sensor_history_minutes is None:
-                sensor_history_minutes = history_minutes
-            if sensor_forecast_minutes is None:
-                sensor_forecast_minutes = forecast_minutes
-
-            self.sensor_encoder = sensor_encoder(
-                sequence_length=sensor_history_minutes // sensor_interval_minutes
-                + sensor_forecast_minutes // sensor_interval_minutes
-                + 1,
-                target_key_to_use=self._target_key,
-                input_key_to_use="sensor",
-            )
-
-            # Update num features
-            fusion_input_features += self.sensor_encoder.out_features
 
         if self.use_id_embedding:
             self.embed = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)

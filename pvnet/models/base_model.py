@@ -5,7 +5,6 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict, Optional, Union
 
 import hydra
 import lightning.pytorch as pl
@@ -16,23 +15,20 @@ import torch
 import torch.nn.functional as F
 import wandb
 import yaml
-from huggingface_hub import ModelCard, ModelCardData, PyTorchModelHubMixin
-from huggingface_hub.constants import PYTORCH_WEIGHTS_NAME
+from huggingface_hub import ModelCard, ModelCardData
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
 from torchvision.transforms.functional import center_crop
 
-from pvnet.models.utils import (
-    BatchAccumulator,
-    MetricAccumulator,
-    PredAccumulator,
-)
+from pvnet.models.utils import BatchAccumulator, MetricAccumulator, PredAccumulator
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import (
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
+    MODEL_CARD_NAME,
     MODEL_CONFIG_NAME,
+    PYTORCH_WEIGHTS_NAME,
     plot_batch_forecasts,
 )
 
@@ -57,7 +53,7 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
     config["general"]["description"] = "Config for training the saved PVNet model"
     config["general"]["name"] = "PVNet current"
 
-    for source in ["gsp", "satellite", "hrvsatellite"]:
+    for source in ["gsp", "satellite"]:
         if source in config["input_data"]:
             # If not empty - i.e. if used
             if config["input_data"][source]["zarr_path"] != "":
@@ -72,11 +68,6 @@ def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
         for d in config["input_data"]["pv"]["pv_files_groups"]:
             d["pv_filename"] = f"{placeholder}.netcdf"
             d["pv_metadata_filename"] = f"{placeholder}.csv"
-
-    if "sensor" in config["input_data"]:
-        # If not empty - i.e. if used
-        if config["input_data"][source][f"{source}_filename"] != "":
-            config["input_data"][source][f"{source}_filename"] = f"{placeholder}.nc"
 
     with open(output_path, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
@@ -211,7 +202,7 @@ def download_hf_hub_with_retries(
             time.sleep(wait_time)
 
 
-class PVNetModelHubMixin(PyTorchModelHubMixin):
+class PVNetModelHubMixin:
     """
     Implementation of [`PyTorchModelHubMixin`] to provide model Hub upload/download capabilities.
     """
@@ -222,12 +213,12 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         *,
         model_id: str,
         revision: str,
-        cache_dir: Optional[Union[str, Path]] = None,
+        cache_dir: str | None = None,
         force_download: bool = False,
-        proxies: Optional[Dict] = None,
-        resume_download: Optional[bool] = None,
+        proxies: dict | None = None,
+        resume_download: bool | None  = None,
         local_files_only: bool = False,
-        token: Union[str, bool, None] = None,
+        token: str | bool | None = None,
         map_location: str = "cpu",
         strict: bool = False,
     ):
@@ -284,12 +275,12 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
         cls,
         model_id: str,
         revision: str,
-        cache_dir: Optional[Union[str, Path]] = None,
+        cache_dir: str | None = None,
         force_download: bool = False,
-        proxies: Optional[Dict] = None,
+        proxies: dict | None = None,
         resume_download: bool = False,
         local_files_only: bool = False,
-        token: Optional[Union[str, bool]] = None,
+        token: str | bool | None = None,
     ):
         """Load data config file."""
         if os.path.isdir(model_id):
@@ -312,37 +303,35 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
         return data_config_file
 
-    def _save_pretrained(self, save_directory: Path) -> None:
+    def _save_model_weights(self, save_directory: str) -> None:
         """Save weights from a Pytorch model to a local directory."""
-        model_to_save = self.module if hasattr(self, "module") else self  # type: ignore
-        torch.save(model_to_save.state_dict(), save_directory / PYTORCH_WEIGHTS_NAME)
+        torch.save(self.state_dict(), f"{save_directory}/{PYTORCH_WEIGHTS_NAME}")
 
     def save_pretrained(
         self,
-        save_directory: Union[str, Path],
-        config: dict,
-        data_config: Optional[Union[str, Path]],
-        datamodule_config: Optional[Union[str, Path]] = None,
-        repo_id: Optional[str] = None,
+        save_directory: str,
+        model_config: dict,
+        data_config_path: str,
+        wandb_repo: str,
+        wandb_ids: list[str] | str,
+        card_template_path: str,
+        datamodule_config_path: str | None = None,
+        hf_repo_id: str | None = None,
         push_to_hub: bool = False,
-        wandb_repo: Optional[str] = None,
-        wandb_ids: Optional[Union[list[str], str]] = None,
-        card_template_path: Optional[Path] = None,
-        **kwargs,
-    ) -> Optional[str]:
+    ) -> None:
         """
         Save weights in local directory.
 
         Args:
-            save_directory (`str` or `Path`):
+            save_directory:
                 Path to directory in which the model weights and configuration will be saved.
-            config (`dict`):
+            model_config (`dict`):
                 Model configuration specified as a key/value dictionary.
-            data_config (`str` or `Path`):
+            data_config_path:
                 The path to the data config.
-            datamodule_config (`str` or `Path`):
+            datamodule_config_path:
                 The path to the datamodule config.
-            repo_id (`str`, *optional*):
+            hf_repo_id:
                 ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
@@ -351,57 +340,42 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             wandb_ids: Identifier(s) of the model on wandb.
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
-            kwargs:
-                Additional key word arguments passed along to the
-                [`~ModelHubMixin._from_pretrained`] method.
         """
 
         save_directory = Path(save_directory)
         save_directory.mkdir(parents=True, exist_ok=True)
 
-        # saving model weights/files
-        self._save_pretrained(save_directory)
+        # Save model weights/files
+        self._save_model_weights(save_directory)
 
-        # saving model and data config
-        if isinstance(config, dict):
+        # Save the model config and data config
+        if isinstance(model_config, dict):
             with open(save_directory / MODEL_CONFIG_NAME, "w") as f:
-                yaml.dump(config, f, sort_keys=False, default_flow_style=False)
+                yaml.dump(model_config, f, sort_keys=False, default_flow_style=False)
 
-        # Save cleaned configuration file
-        if data_config is not None:
-            new_data_config_path = save_directory / DATA_CONFIG_NAME
+        # Save cleaned input data configuration file
+        new_data_config_path = save_directory / DATA_CONFIG_NAME
+        make_clean_data_config(data_config_path, new_data_config_path)
+        minimize_data_config(new_data_config_path, new_data_config_path, self)
 
-            # Replace the input filenames with place holders
-            make_clean_data_config(data_config, new_data_config_path)
-
-            # Taylor the data config to the model being saved
-            minimize_data_config(new_data_config_path, new_data_config_path, self)
-
-        if datamodule_config is not None:
-            with open(datamodule_config) as dm_cfg:
+        if datamodule_config_path is not None:
+            with open(datamodule_config_path) as dm_cfg:
                 datamodule_config = yaml.load(dm_cfg, Loader=yaml.FullLoader)
 
-            new_datamodule_config_path = save_directory / DATAMODULE_CONFIG_NAME
-            with open(new_datamodule_config_path, "w") as outfile:
+            with open(save_directory / DATAMODULE_CONFIG_NAME, "w") as outfile:
                 yaml.dump(datamodule_config, outfile, default_flow_style=False, sort_keys=False)
 
-        card = self.create_hugging_face_model_card(
-            repo_id, wandb_repo, wandb_ids, card_template_path
-        )
+        card = self.create_hugging_face_model_card(card_template_path, wandb_repo, wandb_ids)
 
-        (save_directory / "README.md").write_text(str(card))
+        (save_directory / MODEL_CARD_NAME).write_text(str(card))
 
         if push_to_hub:
             api = HfApi()
 
-            api.upload_folder(
-                repo_id=repo_id,
-                repo_type="model",
-                folder_path=save_directory,
-            )
+            api.upload_folder(repo_id=hf_repo_id, repo_type="model", folder_path=save_directory)
 
             # Print the most recent commit hash
-            c = api.list_repo_commits(repo_id=repo_id, repo_type="model")[0]
+            c = api.list_repo_commits(repo_id=hf_repo_id, repo_type="model")[0]
 
             message = (
                 f"The latest commit is now: \n"
@@ -413,46 +387,28 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
 
             print(message)
 
-        return None
+        return
 
     @staticmethod
     def create_hugging_face_model_card(
-        repo_id: Optional[str] = None,
-        wandb_repo: Optional[str] = None,
-        wandb_ids: Optional[Union[list[str], str]] = None,
-        card_template_path: Optional[Path] = None,
+        card_template_path: str,
+        wandb_repo: str,
+        wandb_ids: list[str] | str,
     ) -> ModelCard:
         """
         Creates Hugging Face model card
 
         Args:
-            repo_id (`str`, *optional*):
-                ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
-                the folder name if not provided.
+            card_template_path: Path to the HuggingFace model card template
             wandb_repo: Identifier of the repo on wandb.
             wandb_ids: Identifier(s) of the model on wandb.
-            card_template_path: Path to the HuggingFace model card template. Defaults to card in
-                PVNet library if set to None.
 
         Returns:
             card: ModelCard - Hugging Face model card object
         """
 
-        # Get appropriate model card
-        model_name = repo_id.split("/")[1]
-        if model_name == "windnet_india":
-            model_card = "wind_india_model_card_template.md"
-        elif model_name == "pvnet_india":
-            model_card = "pv_india_model_card_template.md"
-        else:
-            model_card = "pv_uk_regional_model_card_template.md"
-
         # Creating and saving model card.
         card_data = ModelCardData(language="en", license="mit", library_name="pytorch")
-        if card_template_path is None:
-            card_template_path = (
-                f"{os.path.dirname(os.path.abspath(__file__))}/model_cards/{model_card}"
-            )
 
         if isinstance(wandb_ids, str):
             wandb_ids = [wandb_ids]
@@ -477,7 +433,7 @@ class PVNetModelHubMixin(PyTorchModelHubMixin):
             card_data,
             template_path=card_template_path,
             wandb_links=wandb_links,
-            package_versions=package_versions_markdown
+            package_versions=package_versions_markdown,
         )
 
 
@@ -489,12 +445,12 @@ class BaseModel(pl.LightningModule, PVNetModelHubMixin):
         history_minutes: int,
         forecast_minutes: int,
         optimizer: AbstractOptimizer,
-        output_quantiles: Optional[list[float]] = None,
+        output_quantiles: list[float] | None = None,
         target_key: str = "gsp",
         interval_minutes: int = 30,
-        timestep_intervals_to_plot: Optional[list[int]] = None,
-        forecast_minutes_ignore: Optional[int] = 0,
-        save_validation_results_csv: Optional[bool] = False,
+        timestep_intervals_to_plot: list[int] | None = None,
+        forecast_minutes_ignore: int = 0,
+        save_validation_results_csv: bool = False,
     ):
         """Abtstract base class for PVNet submodels.
 
