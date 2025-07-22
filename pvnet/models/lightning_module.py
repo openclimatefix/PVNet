@@ -7,14 +7,12 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import wandb
-
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
 
+from pvnet.models.base_model import BaseModel
 from pvnet.models.utils import BatchAccumulator, MetricAccumulator, PredAccumulator
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.models.base_model import BaseModel
 from pvnet.utils import plot_batch_forecasts
-
 
 activities = [torch.profiler.ProfilerActivity.CPU]
 if torch.cuda.is_available():
@@ -81,7 +79,7 @@ class PVNetLightningModule(pl.LightningModule):
         losses = 2 * torch.cat(losses, dim=2)
 
         return losses.mean()
-    
+
 
     def _calculate_common_losses(self, y, y_hat):
         """Calculate losses common to train, and val"""
@@ -300,7 +298,7 @@ class PVNetLightningModule(pl.LightningModule):
         self.validation_epoch_results = []
 
         horizon_maes_dict = self._horizon_maes.flush()
-        
+
         if isinstance(self.logger, pl.loggers.WandbLogger):
             # Log error distribution metrics
             val_error = validation_results_df["y"] - validation_results_df["y_quantile_0.5"]
@@ -315,7 +313,7 @@ class PVNetLightningModule(pl.LightningModule):
                     "98th_percentile_median_forecast_absolute_error": abs(val_error).quantile(0.98),
                 }
             )
-        
+
             # Save all validation results
             if self.save_validation_results_csv:
                 with tempfile.TemporaryDirectory() as tempdir:
@@ -324,7 +322,7 @@ class PVNetLightningModule(pl.LightningModule):
 
                     validation_artifact = wandb.Artifact(filename, type="dataset")
                     validation_artifact.add_file(filename)
-                    
+
                     wandb.log_artifact(validation_artifact)
 
             # Create the horizon accuracy curve

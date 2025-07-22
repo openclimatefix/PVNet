@@ -6,7 +6,7 @@ def test_model_trainer_fit(multimodal_model, sample_train_val_datamodule):
     """Test end-to-end training."""
 
     ligtning_model = PVNetLightningModule(
-        model=multimodal_model, 
+        model=multimodal_model,
         optimizer=EmbAdamWReduceLROnPlateau(),
     )
 
