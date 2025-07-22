@@ -16,6 +16,7 @@ from omegaconf import DictConfig, OmegaConf
 DATA_CONFIG_NAME = "data_config.yaml"
 MODEL_CONFIG_NAME = "model_config.yaml"
 DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
+PYTORCH_WEIGHTS_NAME = "pytorch_model.bin"
 MODEL_CARD_NAME = "README.md"
 
 
