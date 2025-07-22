@@ -45,11 +45,7 @@ dev=[
     "pytest",
     "pytest-cov",
 ]
-all_models=[
-    "pytorch-tabnet",
-    "efficientnet_pytorch"
-]
-all=["PVNet[dev,all_models]"]
+all=["PVNet[dev]"]
 
 [tool.mypy]
 exclude = [
@@ -114,7 +110,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 fixable = ["A", "B", "C", "D", "E", "F", "I"]
 unfixable = []
 select = ["E", "F", "D", "I"]
-ignore-init-module-imports = true
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 ignore = ["D200","D202","D210","D212","D415","D105",]
 
