@@ -9,7 +9,6 @@ import torch
 from pyaml_env import parse_config
 
 from pvnet.models.ensemble import Ensemble
-from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
 
 # TODO
 # These variables can be imported from pvnet.utils after PR #416 is merged
@@ -40,10 +39,10 @@ def get_model_from_checkpoints(
     datamodule_configs = []
 
     for path in checkpoint_dir_paths:
-        # Load the model
-        model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
 
-        model = hydra.utils.instantiate(model_config)
+        # Load lightning training module
+        model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
+        lightning_module = hydra.utils.instantiate(model_config)
 
         if val_best:
             # Only one epoch (best) saved per model
@@ -57,22 +56,20 @@ def get_model_from_checkpoints(
         else:
             checkpoint = torch.load(f"{path}/last.ckpt", map_location="cpu", weights_only=False)
 
-        model.load_state_dict(state_dict=checkpoint["state_dict"])
+        lightning_module.load_state_dict(state_dict=checkpoint["state_dict"])
 
-        if isinstance(model, UMTModel):
-            model, model_config = model.convert_to_multimodal_model(model_config)
+        # Extract the model from the lightning module
+        models.append(lightning_module.model)
 
-        model_configs.append(model_config)
-        models.append(model)
+        # Extract the model config
+        model_configs.append(model_config["model"])
 
-        # Require data config to exist
+        # Store the data config used for the model
         data_config = f"{path}/{DATA_CONFIG_NAME}"
-
         if os.path.isfile(data_config):
             data_configs.append(data_config)
         else:
             raise FileNotFoundError(f"File {data_config} does not exist")
-
 
         # Check for datamodule config
         datamodule_config = f"{path}/{DATAMODULE_CONFIG_NAME}"

@@ -8,13 +8,11 @@ import torch
 from omegaconf import DictConfig
 from torch import nn
 
-import pvnet
 from pvnet.models.base_model import BaseModel
 from pvnet.models.multimodal.basic_blocks import ImageEmbedding
 from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
 from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
 from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
-from pvnet.optimizers import AbstractOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +33,6 @@ class Model(BaseModel):
 
     * if included
     """
-
-    name = "conv3d_sat_nwp"
 
     def __init__(
         self,
@@ -59,16 +55,12 @@ class Model(BaseModel):
         nwp_forecast_minutes: Optional[DictConfig] = None,
         nwp_history_minutes: Optional[DictConfig] = None,
         pv_history_minutes: Optional[int] = None,
-        optimizer: AbstractOptimizer = pvnet.optimizers.Adam(),
         target_key: str = "gsp",
         interval_minutes: int = 30,
         nwp_interval_minutes: Optional[DictConfig] = None,
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
-        timestep_intervals_to_plot: Optional[list[int]] = None,
         adapt_batches: Optional[bool] = False,
-        forecast_minutes_ignore: Optional[int] = 0,
-        save_validation_results_csv: Optional[bool] = False,
     ):
         """Neural network which combines information from different sources.
 
@@ -110,23 +102,24 @@ class Model(BaseModel):
             nwp_history_minutes: Period of historical NWP forecast used as input. Defaults to
                 `history_minutes` if not provided.
             pv_history_minutes: Length of recent site-level PV data used as
-            input. Defaults to `history_minutes` if not provided.
-            optimizer: Optimizer factory function used for network.
+                input. Defaults to `history_minutes` if not provided.
             target_key: The key of the target variable in the batch.
             interval_minutes: The interval between each sample of the target data
             nwp_interval_minutes: Dictionary of the intervals between each sample of the NWP
                 data for each source
             pv_interval_minutes: The interval between each sample of the PV data
             sat_interval_minutes: The interval between each sample of the satellite data
-            timestep_intervals_to_plot: Intervals, in timesteps, to plot in
-            addition to the full forecast
             adapt_batches: If set to true, we attempt to slice the batches to the expected shape for
                 the model to use. This allows us to overprepare batches and slice from them for the
                 data we need for a model run.
-            forecast_minutes_ignore: Number of forecast minutes to ignore when calculating losses.
-                For example if set to 60, the model doesnt predict the first 60 minutes
-            save_validation_results_csv: whether to save full csv outputs from validation results.
         """
+        super().__init__(
+            history_minutes=history_minutes,
+            forecast_minutes=forecast_minutes,
+            output_quantiles=output_quantiles,
+            target_key=target_key,
+            interval_minutes=interval_minutes,
+        )
 
         self.include_gsp_yield_history = include_gsp_yield_history
         self.include_site_yield_history = include_site_yield_history
@@ -143,8 +136,10 @@ class Model(BaseModel):
         self.adapt_batches = adapt_batches
 
         if self.location_id_mapping is None:
-            logger.warning("location_id_mapping` is not provided, "
-                           "defaulting to outdated GSP mapping (0 to 317)")
+            logger.warning(
+                "location_id_mapping` is not provided, defaulting to outdated GSP mapping"
+                "(0 to 317)"
+            )
 
             # Note 318 is the 2024 UK GSP count, so this is a temporary fix
             # for models trained with this default embedding
@@ -156,18 +151,6 @@ class Model(BaseModel):
 
         if self.use_id_embedding:
             num_embeddings = max(self.location_id_mapping.values()) + 1
-
-        super().__init__(
-            history_minutes=history_minutes,
-            forecast_minutes=forecast_minutes,
-            optimizer=optimizer,
-            output_quantiles=output_quantiles,
-            target_key=target_key,
-            interval_minutes=interval_minutes,
-            timestep_intervals_to_plot=timestep_intervals_to_plot,
-            forecast_minutes_ignore=forecast_minutes_ignore,
-            save_validation_results_csv=save_validation_results_csv
-        )
 
         # Number of features expected by the output_network
         # Add to this as network pieces are constructed
@@ -254,7 +237,7 @@ class Model(BaseModel):
         if self.include_sun:
             self.sun_fc1 = nn.Linear(
                 in_features=2
-                * (self.forecast_len + self.forecast_len_ignore + self.history_len + 1),
+                * (self.forecast_len + self.history_len + 1),
                 out_features=16,
             )
 
@@ -264,7 +247,7 @@ class Model(BaseModel):
         if self.include_time:
             self.time_fc1 = nn.Linear(
                 in_features=4
-                * (self.forecast_len + self.forecast_len_ignore + self.history_len + 1),
+                * (self.forecast_len + self.history_len + 1),
                 out_features=32,
             )
 
@@ -284,19 +267,18 @@ class Model(BaseModel):
             out_features=self.num_output_features,
         )
 
-        self.save_hyperparameters()
 
-    def forward(self, x):
+    def forward(self, x, return_mode_encodings=False):
         """Run model forward"""
 
         if self.adapt_batches:
             x = self._adapt_batch(x)
 
         if self.use_id_embedding:
-            # eg: x['gsp_id] = [1] with location_id_mapping = {1:0}, would give [0]
+            # eg: x['gsp_id'] = [1] with location_id_mapping = {1:0}, would give [0]
             id = torch.tensor(
                 [self.location_id_mapping[i.item()] for i in x[f"{self._target_key}_id"]],
-                device=self.device,
+                device=x[f"{self._target_key}_id"].device,
                 dtype=torch.int64,
             )
 
@@ -315,11 +297,10 @@ class Model(BaseModel):
         if self.include_nwp:
             # Loop through potentially many NMPs
             for nwp_source in self.nwp_encoders_dict:
-                # shape: batch_size, seq_len, n_chans, height, width
+                # Shape: batch_size, seq_len, n_chans, height, width
                 nwp_data = x["nwp"][nwp_source]["nwp"].float()
-                nwp_data = torch.swapaxes(nwp_data, 1, 2)  # switch time and channels
-                # Some NWP variables can overflow into NaNs when normalised if they have extreme
-                # tails
+                nwp_data = torch.swapaxes(nwp_data, 1, 2)  # Switch time and channels
+                # Some NWP variables in our input data have overflowed to NaN
                 nwp_data = torch.clip(nwp_data, min=-50, max=50)
 
                 if self.add_image_embedding_channel:
@@ -347,7 +328,7 @@ class Model(BaseModel):
                 modes["site"] = self.pv_encoder(x_tmp)
 
         # *********************** GSP Data ************************************
-        # add gsp yield history
+        # Add gsp yield history
         if self.include_gsp_yield_history:
             gsp_history = x["gsp"][:, : self.history_len].float()
             gsp_history = gsp_history.reshape(gsp_history.shape[0], -1)
@@ -358,14 +339,7 @@ class Model(BaseModel):
             modes["id"] = self.embed(id)
 
         if self.include_sun:
-            # Use only new direct keys
-            sun = torch.cat(
-                (
-                    x["solar_azimuth"],
-                    x["solar_elevation"],
-                ),
-                dim=1,
-            ).float()
+            sun = torch.cat((x["solar_azimuth"], x["solar_elevation"]), dim=1).float()
             sun = self.sun_fc1(sun)
             modes["sun"] = sun
 
@@ -388,4 +362,7 @@ class Model(BaseModel):
             # Shape: batch_size, seq_length * num_quantiles
             out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
 
-        return out
+        if return_mode_encodings:
+            return out, modes
+        else:
+            return out

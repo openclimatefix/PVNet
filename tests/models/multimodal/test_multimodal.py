@@ -41,14 +41,3 @@ def test_quantile_model_backward(multimodal_quantile_model, sample_batch):
 
     # Backwards on sum drives sum to zero
     y_quantiles.sum().backward()
-
-
-def test_weighted_quantile_model_forward(multimodal_quantile_model_ignore_minutes, sample_batch):
-    y_quantiles = multimodal_quantile_model_ignore_minutes(sample_batch)
-
-    # check output is the correct shape
-    # batch size=2, forecast_len=8, num_quantiles=3
-    assert tuple(y_quantiles.shape) == (2, 8, 3), y_quantiles.shape
-
-    # Backwards on sum drives sum to zero
-    y_quantiles.sum().backward()
