@@ -24,11 +24,11 @@ from torchvision.transforms.functional import center_crop
 from pvnet.models.utils import BatchAccumulator, MetricAccumulator, PredAccumulator
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import (
-    PYTORCH_WEIGHTS_NAME,
-    MODEL_CONFIG_NAME,
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
     MODEL_CARD_NAME,
+    MODEL_CONFIG_NAME,
+    PYTORCH_WEIGHTS_NAME,
     plot_batch_forecasts,
 )
 
