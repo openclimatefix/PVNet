@@ -10,6 +10,11 @@ from pyaml_env import parse_config
 
 from pvnet.models.ensemble import Ensemble
 from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
+from pvnet.utils import (
+    DATA_CONFIG_NAME,
+    DATAMODULE_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
+)
 
 
 def get_model_from_checkpoints(
@@ -35,7 +40,7 @@ def get_model_from_checkpoints(
 
     for path in checkpoint_dir_paths:
         # Load the model
-        model_config = parse_config(f"{path}/model_config.yaml")
+        model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
 
         model = hydra.utils.instantiate(model_config)
 
@@ -60,7 +65,7 @@ def get_model_from_checkpoints(
         models.append(model)
 
         # Check for data config
-        data_config = f"{path}/data_config.yaml"
+        data_config = f"{path}/{DATA_CONFIG_NAME}"
 
         if os.path.isfile(data_config):
             data_configs.append(data_config)
@@ -68,7 +73,7 @@ def get_model_from_checkpoints(
             data_configs.append(None)
 
         # check for datamodule config
-        datamodule_config = f"{path}/datamodule_config.yaml"
+        datamodule_config = f"{path}/{DATAMODULE_CONFIG_NAME}"
         if os.path.isfile(datamodule_config):
             datamodule_configs.append(datamodule_config)
         else:
