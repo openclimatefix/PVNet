@@ -14,13 +14,13 @@ from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
 from torchvision.transforms.functional import center_crop
 
-
-DATA_CONFIG_NAME = "data_config.yaml"
-MODEL_CONFIG_NAME = "model_config.yaml"
-DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
-PYTORCH_WEIGHTS_NAME = "pytorch_model.bin"
-MODEL_CARD_NAME = "README.md"
-
+from pvnet.utils import (
+    DATA_CONFIG_NAME,
+    DATAMODULE_CONFIG_NAME,
+    MODEL_CARD_NAME,
+    MODEL_CONFIG_NAME,
+    PYTORCH_WEIGHTS_NAME,
+)
 
 
 def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):

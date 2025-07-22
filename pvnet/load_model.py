@@ -9,12 +9,11 @@ import torch
 from pyaml_env import parse_config
 
 from pvnet.models.ensemble import Ensemble
-
-# TODO
-# These variables can be imported from pvnet.utils after PR #416 is merged
-DATA_CONFIG_NAME = "data_config.yaml"
-MODEL_CONFIG_NAME = "model_config.yaml"
-DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
+from pvnet.utils import (
+    DATA_CONFIG_NAME,
+    DATAMODULE_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
+)
 
 
 def get_model_from_checkpoints(
@@ -39,7 +38,6 @@ def get_model_from_checkpoints(
     datamodule_configs = []
 
     for path in checkpoint_dir_paths:
-
         # Load lightning training module
         model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
         lightning_module = hydra.utils.instantiate(model_config)
@@ -60,9 +58,10 @@ def get_model_from_checkpoints(
 
         # Extract the model from the lightning module
         models.append(lightning_module.model)
-
-        # Extract the model config
         model_configs.append(model_config["model"])
+
+        # Check for data config
+        data_config = f"{path}/{DATA_CONFIG_NAME}"
 
         # Store the data config used for the model
         data_config = f"{path}/{DATA_CONFIG_NAME}"
