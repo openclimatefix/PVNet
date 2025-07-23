@@ -1,14 +1,13 @@
 """Script to migrate old trained PVNet models (v4.1) to current version"""
-from huggingface_hub import HfApi
-
-import yaml
 import datetime
-import pkg_resources
 import os
 
-from pvnet.models.base_model import BaseModel
-from pvnet.utils import MODEL_CONFIG_NAME, MODEL_CARD_NAME
+import pkg_resources
+import yaml
+from huggingface_hub import HfApi
 
+from pvnet.models.base_model import BaseModel
+from pvnet.utils import MODEL_CARD_NAME, MODEL_CONFIG_NAME
 
 # ------------------------------------------
 # USER SETTINGS
@@ -33,9 +32,9 @@ api = HfApi()
 
 # Download the model repo
 local_dir = api.snapshot_download(
-    repo_id=repo_id, 
-    revision=revision, 
-    local_dir=local_dir, 
+    repo_id=repo_id,
+    revision=revision,
+    local_dir=local_dir,
     force_download=True,
 )
 
