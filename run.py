@@ -1,5 +1,4 @@
-"""Run training
-"""
+"""Run training."""
 
 import os
 
