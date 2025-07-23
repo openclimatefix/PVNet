@@ -1,11 +1,11 @@
 import pkg_resources
 from pvnet.models.base_model import BaseModel
-import pvnet.models.model_cards
+import pvnet.model_cards
 import yaml
 import tempfile
 
 
-card_path = f"{pvnet.models.model_cards.__path__[0]}/pv_uk_regional_model_card_template.md"
+card_path = f"{pvnet.model_cards.__path__[0]}/empty_model_card_template.md"
 
 
 def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs, sample_datamodule):

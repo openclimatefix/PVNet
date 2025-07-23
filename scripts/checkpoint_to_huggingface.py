@@ -4,7 +4,7 @@ use:
 python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
     --huggingface-repo="openclimatefix/pvnet_uk_region" \
     --wandb-repo="openclimatefix/pvnet2.1" \
-    --card-template-path="pvnet/models/model_cards/pv_uk_regional_model_card_template.md" \
+    --card-template-path="pvnet/model_cards/pv_uk_regional_model_card_template.md" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
 """
