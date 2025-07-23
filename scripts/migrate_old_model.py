@@ -1,8 +1,9 @@
-"""Script to migrate old trained PVNet models (v4.1) to current version"""
+"""Script to migrate old PVNet models (v4.1) which are hosted on huggingface to current version"""
 import datetime
 import os
 
 import pkg_resources
+
 import torch
 import yaml
 from huggingface_hub import CommitOperationAdd, CommitOperationDelete, HfApi
@@ -11,10 +12,11 @@ from safetensors.torch import save_file
 from pvnet.models.base_model import BaseModel
 from pvnet.utils import MODEL_CARD_NAME, MODEL_CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 
+
 # ------------------------------------------
 # USER SETTINGS
 
-# The model commit you want to update
+# The huggingface commit of the model you want to update
 repo_id = "openclimatefix/pvnet_uk_region"
 revision = "6feaa986a6bed3cc6c7961c6bf9e92fb15acca6a"
 
@@ -23,6 +25,7 @@ local_dir = "/home/jamesfulton/tmp/model_migration"
 
 # Whether to upload the migrated model back to the huggingface
 upload = False
+
 
 # ------------------------------------------
 # SETUP
@@ -52,12 +55,10 @@ del model_config["optimizer"]
 with open(f"{local_dir}/{MODEL_CONFIG_NAME}", "w") as f:
     yaml.dump(model_config, f, sort_keys=False, default_flow_style=False)
 
-
 # Resave the model weights as safetensors
 state_dict = torch.load(f"{local_dir}/pytorch_model.bin", map_location="cpu", weights_only=True)
 save_file(state_dict, f"{local_dir}/{PYTORCH_WEIGHTS_NAME}")
 os.remove(f"{local_dir}/pytorch_model.bin")
-
 
 # Add a note to the model card to say the model has been migrated
 with open(f"{local_dir}/{MODEL_CARD_NAME}", "a") as f:
