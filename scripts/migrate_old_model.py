@@ -24,7 +24,6 @@ local_dir = "/home/jamesfulton/tmp/model_migration"
 # Whether to upload the migrated model back to the huggingface
 upload = False
 
-
 # ------------------------------------------
 # SETUP
 
