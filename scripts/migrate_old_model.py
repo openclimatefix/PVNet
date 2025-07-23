@@ -1,3 +1,4 @@
+"""Script to migrate old trained PVNet models (v4.1) to current version"""
 from huggingface_hub import HfApi
 
 import yaml
