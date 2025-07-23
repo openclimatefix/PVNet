@@ -4,13 +4,14 @@ import logging
 import os
 import time
 from pathlib import Path
+import shutil
 
 import hydra
 import pkg_resources
 import torch
 import yaml
 from huggingface_hub import ModelCard, ModelCardData
-from huggingface_hub.file_download import hf_hub_download
+from huggingface_hub import snapshot_download
 from huggingface_hub.hf_api import HfApi
 from safetensors.torch import load_file, save_file
 from torchvision.transforms.functional import center_crop
@@ -24,61 +25,53 @@ from pvnet.utils import (
 )
 
 
-def make_clean_data_config(input_path, output_path, placeholder="PLACEHOLDER"):
-    """Resave the data config and replace the filepaths with a placeholder.
+def fill_config_paths_with_placeholder(config: dict, placeholder: str = "PLACEHOLDER") -> dict:
+    """Modify the config in place to fill data paths with placeholder strings.
 
     Args:
-        input_path: Path to input configuration file
-        output_path: Location to save the output configuration file
+        config: The data config
         placeholder: String placeholder for data sources
     """
-    with open(input_path) as cfg:
-        config = yaml.load(cfg, Loader=yaml.FullLoader)
-
-    config["general"]["description"] = "Config for training the saved PVNet model"
-    config["general"]["name"] = "PVNet current"
+    input_config = config["input_data"]
 
     for source in ["gsp", "satellite"]:
-        if source in config["input_data"]:
+        if source in input_config:
             # If not empty - i.e. if used
-            if config["input_data"][source]["zarr_path"] != "":
-                config["input_data"][source]["zarr_path"] = f"{placeholder}.zarr"
+            if input_config[source]["zarr_path"] != "":
+                input_config[source]["zarr_path"] = f"{placeholder}.zarr"
 
-    if "nwp" in config["input_data"]:
-        for source in config["input_data"]["nwp"]:
-            if config["input_data"]["nwp"][source]["zarr_path"] != "":
-                config["input_data"]["nwp"][source]["zarr_path"] = f"{placeholder}.zarr"
+    if "nwp" in input_config:
+        for source in input_config["nwp"]:
+            if input_config["nwp"][source]["zarr_path"] != "":
+                input_config["nwp"][source]["zarr_path"] = f"{placeholder}.zarr"
 
-    if "pv" in config["input_data"]:
-        for d in config["input_data"]["pv"]["pv_files_groups"]:
+    if "pv" in input_config:
+        for d in input_config["pv"]["pv_files_groups"]:
             d["pv_filename"] = f"{placeholder}.netcdf"
             d["pv_metadata_filename"] = f"{placeholder}.csv"
 
-    with open(output_path, "w") as outfile:
-        yaml.dump(config, outfile, default_flow_style=False)
+    return config
 
 
-def minimize_data_config(input_path, output_path, model):
+def minimize_config_for_model(config: dict, model: "BaseModel") -> dict:
     """Strip out parts of the data config which aren't used by the model
 
     Args:
-        input_path: Path to input configuration file
-        output_path: Location to save the output configuration file
+        config: The data config
         model: The PVNet model object
     """
-    with open(input_path) as cfg:
-        config = yaml.load(cfg, Loader=yaml.FullLoader)
+    input_config = config["input_data"]
 
-    if "nwp" in config["input_data"]:
+    if "nwp" in input_config:
         if not model.include_nwp:
-            del config["input_data"]["nwp"]
+            del input_config["nwp"]
         else:
-            for nwp_source in list(config["input_data"]["nwp"].keys()):
-                nwp_config = config["input_data"]["nwp"][nwp_source]
+            for nwp_source in list(input_config["nwp"].keys()):
+                nwp_config = input_config["nwp"][nwp_source]
 
                 if nwp_source not in model.nwp_encoders_dict:
                     # If not used, delete this source from the config
-                    del config["input_data"]["nwp"][nwp_source]
+                    del input_config["nwp"][nwp_source]
                 else:
                     # Replace the image size
                     nwp_pixel_size = model.nwp_encoders_dict[nwp_source].image_size_pixels
@@ -92,11 +85,11 @@ def minimize_data_config(input_path, output_path, model):
                         * nwp_config["time_resolution_minutes"]
                     )
 
-    if "satellite" in config["input_data"]:
+    if "satellite" in input_config:
         if not model.include_sat:
-            del config["input_data"]["satellite"]
+            del input_config["satellite"]
         else:
-            sat_config = config["input_data"]["satellite"]
+            sat_config = input_config["satellite"]
 
             # Replace the image size
             sat_pixel_size = model.sat_encoder.image_size_pixels
@@ -110,69 +103,61 @@ def minimize_data_config(input_path, output_path, model):
                 * sat_config["time_resolution_minutes"]
             )
 
-    if "pv" in config["input_data"]:
+    if "pv" in input_config:
         if not model.include_pv:
-            del config["input_data"]["pv"]
+            del input_config["pv"]
 
-    if "gsp" in config["input_data"]:
-        gsp_config = config["input_data"]["gsp"]
+    if "gsp" in input_config:
+        gsp_config = input_config["gsp"]
 
         # Replace the forecast minutes
         gsp_config["interval_end_minutes"] = model.forecast_minutes
 
-    if "solar_position" in config["input_data"]:
-        solar_config = config["input_data"]["solar_position"]
+    if "solar_position" in input_config:
+        solar_config = input_config["solar_position"]
         solar_config["interval_end_minutes"] = model.forecast_minutes
 
-    with open(output_path, "w") as outfile:
-        yaml.dump(config, outfile, default_flow_style=False)
+    return config
 
 
-def download_hf_hub_with_retries(
+def download_from_hf(
     repo_id: str,
-    filename: str,
+    filename: str | list[str],
     revision: str,
     cache_dir: str | None,
     force_download: bool,
-    proxies: dict | None,
-    resume_download: bool | None,
-    token: str | bool | None,
-    local_files_only: bool,
     max_retries: int = 5,
     wait_time: int = 10,
-):
-    """
-    Tries to download a file from HuggingFace up to max_retries times.
+) -> str | list[str]:
+    """Tries to download one ore more files from HuggingFace up to max_retries times.
 
     Args:
         repo_id: HuggingFace repo ID
-        filename: Name of the file to download
+        filename: Name of the file(s) to download
         revision: Specific model revision
         cache_dir: Cache directory
         force_download: Whether to force a new download
-        proxies: Proxy settings
-        resume_download: Resume interrupted downloads
-        token: HuggingFace auth token
-        local_files_only: Use local files only
         max_retries: Maximum number of retry attempts
         wait_time: Wait time (in seconds) before retrying
 
     Returns:
-        str: The local file path of the downloaded file
+        The local file path of the downloaded file(s)
     """
     for attempt in range(1, max_retries + 1):
         try:
-            return hf_hub_download(
+            save_dir = snapshot_download(
                 repo_id=repo_id,
-                filename=filename,
+                allow_patterns=filename,
                 revision=revision,
                 cache_dir=cache_dir,
                 force_download=force_download,
-                proxies=proxies,
-                resume_download=resume_download,
-                token=token,
-                local_files_only=local_files_only,
             )
+
+            if isinstance(filename, list):
+                return [f"{save_dir}/{f}" for f in filename]
+            else:
+                return f"{save_dir}/{filename}"
+        
         except Exception as e:
             if attempt == max_retries:
                 raise Exception(
@@ -193,59 +178,33 @@ class HuggingfaceMixin:
     @classmethod
     def from_pretrained(
         cls,
-        *,
         model_id: str,
         revision: str,
         cache_dir: str | None = None,
         force_download: bool = False,
-        proxies: dict | None = None,
-        resume_download: bool | None  = None,
-        local_files_only: bool = False,
-        token: str | bool | None = None,
-        map_location: str = "cpu",
-        strict: bool = False,
-    ):
+        strict: bool = True,
+    ) -> "BaseModel":
         """Load Pytorch pretrained weights and return the loaded model."""
 
         if os.path.isdir(model_id):
-            print("Loading weights from local directory")
-            model_file = os.path.join(model_id, PYTORCH_WEIGHTS_NAME)
-            config_file = os.path.join(model_id, MODEL_CONFIG_NAME)
+            print("Loading model from local directory")
+            model_file = f"{model_id}/{PYTORCH_WEIGHTS_NAME}"
+            config_file = f"{model_id}/{MODEL_CONFIG_NAME}"
         else:
-            # load model file
-            model_file = download_hf_hub_with_retries(
-                repo_id=model_id,
-                filename=PYTORCH_WEIGHTS_NAME,
-                revision=revision,
-                cache_dir=cache_dir,
-                force_download=force_download,
-                proxies=proxies,
-                resume_download=resume_download,
-                token=token,
-                local_files_only=local_files_only,
-                max_retries=5,
-                wait_time=10,
-            )
+            print("Loading model from huggingface repo")
 
-            # load config file
-            config_file = download_hf_hub_with_retries(
+            model_file, config_file = download_from_hf(
                 repo_id=model_id,
-                filename=MODEL_CONFIG_NAME,
+                filename=[PYTORCH_WEIGHTS_NAME, MODEL_CONFIG_NAME],
                 revision=revision,
                 cache_dir=cache_dir,
                 force_download=force_download,
-                proxies=proxies,
-                resume_download=resume_download,
-                token=token,
-                local_files_only=local_files_only,
                 max_retries=5,
                 wait_time=10,
             )
 
         with open(config_file, "r") as f:
-            config = yaml.safe_load(f)
-
-        model = hydra.utils.instantiate(config)
+            model = hydra.utils.instantiate(yaml.safe_load(f))
 
         state_dict = load_file(model_file)
         model.load_state_dict(state_dict, strict=strict)  # type: ignore
@@ -260,26 +219,19 @@ class HuggingfaceMixin:
         revision: str,
         cache_dir: str | None = None,
         force_download: bool = False,
-        proxies: dict | None = None,
-        resume_download: bool = False,
-        local_files_only: bool = False,
-        token: str | bool | None = None,
-    ):
+    ) -> str:
         """Load data config file."""
         if os.path.isdir(model_id):
             print("Loading data config from local directory")
             data_config_file = os.path.join(model_id, DATA_CONFIG_NAME)
         else:
-            data_config_file = download_hf_hub_with_retries(
+            print("Loading data config from huggingface repo")
+            data_config_file = download_from_hf(
                 repo_id=model_id,
                 filename=DATA_CONFIG_NAME,
                 revision=revision,
                 cache_dir=cache_dir,
                 force_download=force_download,
-                proxies=proxies,
-                resume_download=resume_download,
-                token=token,
-                local_files_only=local_files_only,
                 max_retries=5,
                 wait_time=10,
             )
@@ -332,20 +284,22 @@ class HuggingfaceMixin:
 
         # Save the model config and data config
         if isinstance(model_config, dict):
-            with open(save_directory / MODEL_CONFIG_NAME, "w") as f:
-                yaml.dump(model_config, f, sort_keys=False, default_flow_style=False)
+            with open(save_directory / MODEL_CONFIG_NAME, "w") as outfile:
+                yaml.dump(model_config, outfile, sort_keys=False, default_flow_style=False)
 
-        # Save cleaned input data configuration file
-        new_data_config_path = save_directory / DATA_CONFIG_NAME
-        make_clean_data_config(data_config_path, new_data_config_path)
-        minimize_data_config(new_data_config_path, new_data_config_path, self)
+        # Save cleaned version of input data configuration file
+        with open(data_config_path) as cfg:
+            config = yaml.load(cfg, Loader=yaml.FullLoader)
+        
+        config = fill_config_paths_with_placeholder(config)
+        config = minimize_config_for_model(config, self)
 
+        with open(save_directory / DATA_CONFIG_NAME, "w") as outfile:
+            yaml.dump(config, outfile, sort_keys=False, default_flow_style=False)
+
+        # Save the datamodule
         if datamodule_config_path is not None:
-            with open(datamodule_config_path) as dm_cfg:
-                datamodule_config = yaml.load(dm_cfg, Loader=yaml.FullLoader)
-
-            with open(save_directory / DATAMODULE_CONFIG_NAME, "w") as outfile:
-                yaml.dump(datamodule_config, outfile, default_flow_style=False, sort_keys=False)
+            shutil.copyfile(datamodule_config_path,save_directory / DATAMODULE_CONFIG_NAME)
 
         card = self.create_hugging_face_model_card(card_template_path, wandb_repo, wandb_ids)
 
@@ -354,7 +308,12 @@ class HuggingfaceMixin:
         if push_to_hub:
             api = HfApi()
 
-            api.upload_folder(repo_id=hf_repo_id, repo_type="model", folder_path=save_directory)
+            api.upload_folder(
+                repo_id=hf_repo_id,
+                folder_path=save_directory,
+                repo_type="model",
+                commit_message=f"Upload models - {wandb_ids}",
+            )
 
             # Print the most recent commit hash
             c = api.list_repo_commits(repo_id=hf_repo_id, repo_type="model")[0]
