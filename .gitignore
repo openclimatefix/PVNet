@@ -11,6 +11,12 @@ notebooks/
 *.csv
 latest_logged_train_batch.png
 
+# Ignore all model cards...
+pvnet/model_cards/*
+
+# ...except for the empty template.
+!pvnet/model_cards/empty_model_card_template.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
