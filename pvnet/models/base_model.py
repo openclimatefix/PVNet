@@ -12,6 +12,7 @@ import yaml
 from huggingface_hub import ModelCard, ModelCardData
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
+from safetensors.torch import save_file, load_file
 from torchvision.transforms.functional import center_crop
 
 from pvnet.utils import (
@@ -246,7 +247,7 @@ class HuggingfaceMixin:
 
         model = hydra.utils.instantiate(config)
 
-        state_dict = torch.load(model_file, map_location=torch.device(map_location))
+        state_dict = load_file(model_file)
         model.load_state_dict(state_dict, strict=strict)  # type: ignore
         model.eval()  # type: ignore
 
@@ -287,7 +288,7 @@ class HuggingfaceMixin:
 
     def _save_model_weights(self, save_directory: str) -> None:
         """Save weights from a Pytorch model to a local directory."""
-        torch.save(self.state_dict(), f"{save_directory}/{PYTORCH_WEIGHTS_NAME}")
+        save_file(self.state_dict(), f"{save_directory}/{PYTORCH_WEIGHTS_NAME}")
 
     def save_pretrained(
         self,
