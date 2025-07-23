@@ -29,14 +29,7 @@ dependencies = [
     "einops",
 ]
 
-[tool.setuptools.dynamic]
-version = {attr = "pvnet.__version__"}
-readme = {file = "README.md", content-type = "text/markdown"}
-
-[tool.setuptools.package-dir]
-"pvnet" = "pvnet"
-
-[project.optional-dependencies]
+[dependency-groups]
 dev=[
     "pvlive-api",
     "ruff",
@@ -45,7 +38,13 @@ dev=[
     "pytest",
     "pytest-cov",
 ]
-all=["PVNet[dev]"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pvnet.__version__"}
+readme = {file = "README.md", content-type = "text/markdown"}
+
+[tool.setuptools.package-dir]
+"pvnet" = "pvnet"
 
 [tool.mypy]
 exclude = [
@@ -61,8 +60,7 @@ show_error_codes = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = [
-]
+module = []
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
