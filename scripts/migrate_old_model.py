@@ -1,4 +1,6 @@
-"""Script to migrate old trained PVNet models (v4.1) to current version"""
+"""Script to migrate old trained PVNet models (v4.1) which are hosted on huggingface to current 
+version.
+"""
 import datetime
 import os
 
@@ -12,7 +14,7 @@ from pvnet.utils import MODEL_CARD_NAME, MODEL_CONFIG_NAME
 # ------------------------------------------
 # USER SETTINGS
 
-# The model commit you want to update
+# The huggingface commit of the model you want to update
 repo_id = "openclimatefix/pvnet_uk_region"
 revision = "6feaa986a6bed3cc6c7961c6bf9e92fb15acca6a"
 
