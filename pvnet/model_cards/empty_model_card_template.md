@@ -1,8 +1,8 @@
 ---
 {{ card_data }}
 ---
-<!-- 
-Do not remove elements like the above surrounded by two curly braces and do not add any more of them. These entries are required by the PVNet library and are automaticall infilled when the model is uploaded to huggingface 
+<!--
+Do not remove elements like the above surrounded by two curly braces and do not add any more of them. These entries are required by the PVNet library and are automaticall infilled when the model is uploaded to huggingface
 -->
 
 <!-- Title - e.g. PVNet2, WindNet, PVNet India -->
