@@ -1,7 +1,7 @@
 early_stopping:
   _target_: lightning.pytorch.callbacks.EarlyStopping
   # name of the logged metric which determines when model is improving
-  monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
+  monitor: "${resolve_monitor_loss:${model.model.output_quantiles}}"
   mode: "min" # can be "max" or "min"
   patience: 10 # how many epochs (or val check periods) of not improving until training stops
   min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
@@ -17,7 +17,7 @@ model_summary:
 model_checkpoint:
   _target_: lightning.pytorch.callbacks.ModelCheckpoint
   # name of the logged metric which determines when model is improving
-  monitor: "${resolve_monitor_loss:${model.output_quantiles}}"
+  monitor: "${resolve_monitor_loss:${model.model.output_quantiles}}"
   mode: "min" # can be "max" or "min"
   save_top_k: 1 # save k best models (determined by above metric)
   save_last: True # additionaly always save model from last epoch

@@ -51,7 +51,6 @@ class Ensemble(BaseModel):
         super().__init__(
             history_minutes=history_minutes[0],
             forecast_minutes=forecast_minutes[0],
-            optimizer=None,
             output_quantiles=output_quantiles[0],
             target_key=target_key[0],
             interval_minutes=interval_minutes[0],
