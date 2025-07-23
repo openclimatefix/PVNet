@@ -9,7 +9,6 @@ import torch
 from pyaml_env import parse_config
 
 from pvnet.models.ensemble import Ensemble
-from pvnet.models.multimodal.unimodal_teacher import Model as UMTModel
 from pvnet.utils import (
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
@@ -20,7 +19,7 @@ from pvnet.utils import (
 def get_model_from_checkpoints(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-) -> tuple[torch.nn.Module, dict[str, Any] | str, str | None, str | None]:
+) -> tuple[torch.nn.Module, dict[str, Any], str, str | None]:
     """Load a model from its checkpoint directory
 
     Returns:
@@ -39,10 +38,9 @@ def get_model_from_checkpoints(
     datamodule_configs = []
 
     for path in checkpoint_dir_paths:
-        # Load the model
+        # Load lightning training module
         model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
-
-        model = hydra.utils.instantiate(model_config)
+        lightning_module = hydra.utils.instantiate(model_config)
 
         if val_best:
             # Only one epoch (best) saved per model
@@ -56,23 +54,20 @@ def get_model_from_checkpoints(
         else:
             checkpoint = torch.load(f"{path}/last.ckpt", map_location="cpu", weights_only=False)
 
-        model.load_state_dict(state_dict=checkpoint["state_dict"])
+        lightning_module.load_state_dict(state_dict=checkpoint["state_dict"])
 
-        if isinstance(model, UMTModel):
-            model, model_config = model.convert_to_multimodal_model(model_config)
+        # Extract the model from the lightning module
+        models.append(lightning_module.model)
+        model_configs.append(model_config["model"])
 
-        model_configs.append(model_config)
-        models.append(model)
-
-        # Check for data config
+        # Store the data config used for the model
         data_config = f"{path}/{DATA_CONFIG_NAME}"
-
         if os.path.isfile(data_config):
             data_configs.append(data_config)
         else:
-            data_configs.append(None)
+            raise FileNotFoundError(f"File {data_config} does not exist")
 
-        # check for datamodule config
+        # Check for datamodule config
         datamodule_config = f"{path}/{DATAMODULE_CONFIG_NAME}"
         if os.path.isfile(datamodule_config):
             datamodule_configs.append(datamodule_config)
@@ -90,6 +85,7 @@ def get_model_from_checkpoints(
         model_config = model_configs[0]
         model = models[0]
 
+    # Assume if using an ensemble that the members were trained on the same input data
     data_config = data_configs[0]
     datamodule_config = datamodule_configs[0]
 

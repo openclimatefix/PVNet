@@ -467,8 +467,7 @@ def multimodal_model_kwargs(raw_multimodal_model_kwargs):
 
 @pytest.fixture()
 def multimodal_model(multimodal_model_kwargs):
-    model = Model(**multimodal_model_kwargs)
-    return model
+    return Model(**multimodal_model_kwargs)
 
 @pytest.fixture()
 def raw_multimodal_model_kwargs_site_history(model_minutes_kwargs):
@@ -512,13 +511,4 @@ def multimodal_model_site_history(multimodal_model_kwargs_site_history):
 @pytest.fixture()
 def multimodal_quantile_model(multimodal_model_kwargs):
     model = Model(output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs)
-    return model
-
-
-@pytest.fixture()
-def multimodal_quantile_model_ignore_minutes(multimodal_model_kwargs):
-    """Only forecsat second half of the 8 hours"""
-    model = Model(
-        output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, forecast_minutes_ignore=240
-    )
     return model
