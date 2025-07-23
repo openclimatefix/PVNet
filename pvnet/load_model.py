@@ -60,9 +60,6 @@ def get_model_from_checkpoints(
         models.append(lightning_module.model)
         model_configs.append(model_config["model"])
 
-        # Check for data config
-        data_config = f"{path}/{DATA_CONFIG_NAME}"
-
         # Store the data config used for the model
         data_config = f"{path}/{DATA_CONFIG_NAME}"
         if os.path.isfile(data_config):
