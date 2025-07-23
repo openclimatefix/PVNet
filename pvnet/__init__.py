@@ -1,2 +1,1 @@
-"""PVNet"""
-__version__ = "4.1.28"
+"""PVNet source code."""
