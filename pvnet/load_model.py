@@ -63,8 +63,6 @@ def get_model_from_checkpoints(
         # Store the data config used for the model
         data_config = f"{path}/{DATA_CONFIG_NAME}"
 
-        # Store the data config used for the model
-        data_config = f"{path}/{DATA_CONFIG_NAME}"
         if os.path.isfile(data_config):
             data_configs.append(data_config)
         else:

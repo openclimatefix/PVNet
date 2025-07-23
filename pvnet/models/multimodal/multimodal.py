@@ -268,7 +268,7 @@ class Model(BaseModel):
         )
 
 
-    def forward(self, x, return_mode_encodings=False):
+    def forward(self, x):
         """Run model forward"""
 
         if self.adapt_batches:
@@ -362,7 +362,4 @@ class Model(BaseModel):
             # Shape: batch_size, seq_length * num_quantiles
             out = out.reshape(out.shape[0], self.forecast_len, len(self.output_quantiles))
 
-        if return_mode_encodings:
-            return out, modes
-        else:
-            return out
+        return out

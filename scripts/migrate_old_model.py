@@ -1,5 +1,4 @@
 """Script to migrate old PVNet models (v4.1) which are hosted on huggingface to current version"""
-
 import datetime
 import os
 
@@ -57,7 +56,6 @@ with open(f"{local_dir}/{MODEL_CONFIG_NAME}", "w") as f:
 state_dict = torch.load(f"{local_dir}/pytorch_model.bin", map_location="cpu", weights_only=True)
 save_file(state_dict, f"{local_dir}/{PYTORCH_WEIGHTS_NAME}")
 os.remove(f"{local_dir}/pytorch_model.bin")
-
 
 # Add a note to the model card to say the model has been migrated
 with open(f"{local_dir}/{MODEL_CARD_NAME}", "a") as f:
