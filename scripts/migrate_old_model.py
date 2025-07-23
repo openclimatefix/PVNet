@@ -3,9 +3,9 @@ import datetime
 import os
 
 import pkg_resources
-import yaml
-from huggingface_hub import HfApi, CommitOperationAdd, CommitOperationDelete
 import torch
+import yaml
+from huggingface_hub import CommitOperationAdd, CommitOperationDelete, HfApi
 from safetensors.torch import save_file
 
 from pvnet.models.base_model import BaseModel
@@ -91,7 +91,7 @@ if upload:
                 path_or_fileobj=f"{local_dir}/{file}", # Local path to the file
             ),
         )
-    
+
     operations.append(
         # Remove old pytorch weights file
         CommitOperationDelete(path_in_repo="pytorch_model.bin")

@@ -12,7 +12,7 @@ import yaml
 from huggingface_hub import ModelCard, ModelCardData
 from huggingface_hub.file_download import hf_hub_download
 from huggingface_hub.hf_api import HfApi
-from safetensors.torch import save_file, load_file
+from safetensors.torch import load_file, save_file
 from torchvision.transforms.functional import center_crop
 
 from pvnet.utils import (
