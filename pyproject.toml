@@ -1,9 +1,15 @@
+[build-system]
+requires = ["setuptools>=67", "wheel", "setuptools-git-versioning>=2.0,<3"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name="PVNet"
 description = "PVNet"
 authors = [{name="Peter Dudfield", email="info@openclimatefix.org"}]
-dynamic = ["version", "readme"]
+dynamic = ["version"]
 license={file="LICENCE"}
+readme = {file="README.md", content-type="text/markdown"}
+requires-python = ">=3.10"
 
 dependencies = [
     "ocf-data-sampler>=0.2.32",
@@ -39,9 +45,8 @@ dev=[
     "pytest-cov",
 ]
 
-[tool.setuptools.dynamic]
-version = {attr = "pvnet.__version__"}
-readme = {file = "README.md", content-type = "text/markdown"}
+[tool.setuptools-git-versioning]
+enabled = true
 
 [tool.setuptools.package-dir]
 "pvnet" = "pvnet"
@@ -72,33 +77,7 @@ testpaths = [
 
 [tool.ruff]
 line-length = 100
-exclude = [
-    ".ipynb_checkpoints",
-    "configs.example",
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
-    "tests",
-]
-
-# Assume Python 3.10.
+exclude = ["tests"]
 target-version = "py310"
 fix = false
 
