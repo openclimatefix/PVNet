@@ -3,7 +3,6 @@ import datetime
 import os
 
 import pkg_resources
-
 import torch
 import yaml
 from huggingface_hub import CommitOperationAdd, CommitOperationDelete, HfApi
@@ -11,7 +10,6 @@ from safetensors.torch import save_file
 
 from pvnet.models.base_model import BaseModel
 from pvnet.utils import MODEL_CARD_NAME, MODEL_CONFIG_NAME, PYTORCH_WEIGHTS_NAME
-
 
 # ------------------------------------------
 # USER SETTINGS
