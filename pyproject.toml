@@ -21,8 +21,6 @@ dependencies = [
     "torch>=2.0.0",
     "lightning",
     "torchvision",
-    "pytest",
-    "pytest-cov",
     "typer",
     "sqlalchemy",
     "fsspec[s3]",
@@ -33,6 +31,7 @@ dependencies = [
     "hydra-core",
     "rich",
     "einops",
+    "safetensors",
 ]
 
 [dependency-groups]
