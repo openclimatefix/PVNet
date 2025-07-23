@@ -1,4 +1,4 @@
-"""Script to migrate old trained PVNet models (v4.1) which are hosted on huggingface to current 
+"""Script to migrate old trained PVNet models (v4.1) which are hosted on huggingface to current
 version.
 """
 import datetime
