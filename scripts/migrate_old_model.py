@@ -21,7 +21,7 @@ revision = "6feaa986a6bed3cc6c7961c6bf9e92fb15acca6a"
 # The local directory which will be downloaded to
 local_dir = "/home/jamesfulton/tmp/model_migration"
 
-# Whether to upload the migrated model back to the huggingface
+# Whether to upload the migrated model back to the huggingface repo
 upload = True
 
 # ------------------------------------------
