@@ -36,10 +36,8 @@ dependencies = [
 
 [dependency-groups]
 dev=[
-    "pvlive-api",
     "ruff",
     "mypy",
-    "pre-commit",
     "pytest",
     "pytest-cov",
 ]
