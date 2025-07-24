@@ -1,48 +1,28 @@
 """Utils"""
 import logging
-from collections.abc import Sequence
-from typing import Optional
 
-import lightning.pytorch as pl
 import matplotlib.pyplot as plt
 import pandas as pd
 import pylab
 import rich.syntax
 import rich.tree
-from lightning.pytorch.loggers import Logger
 from lightning.pytorch.utilities import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
+
+
+logger = logging.getLogger(__name__)
+
 
 PYTORCH_WEIGHTS_NAME = "model_weights.safetensors"
 MODEL_CONFIG_NAME = "model_config.yaml"
 DATA_CONFIG_NAME = "data_config.yaml"
 DATAMODULE_CONFIG_NAME = "datamodule_config.yaml"
+FULL_CONFIG_NAME =  "full_experiment_config.yaml"
 MODEL_CARD_NAME = "README.md"
 
 
-def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
-    """Initializes multi-GPU-friendly python logger."""
 
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    # this ensures all logging levels get marked with the rank zero decorator
-    # otherwise logs would get multiplied for each GPU process in multi-GPU setup
-    for level in (
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "exception",
-        "fatal",
-        "critical",
-    ):
-        setattr(logger, level, rank_zero_only(getattr(logger, level)))
-
-    return logger
-
-
-def extras(config: DictConfig) -> None:
+def run_config_utilities(config: DictConfig) -> None:
     """A couple of optional utilities.
 
     Controlled by main config file:
@@ -54,14 +34,12 @@ def extras(config: DictConfig) -> None:
         config (DictConfig): Configuration composed by Hydra.
     """
 
-    log = get_logger()
-
-    # enable adding new keys to config
+    # Enable adding new keys to config
     OmegaConf.set_struct(config, False)
 
-    # force debugger friendly configuration if <config.trainer.fast_dev_run=True>
+    # Force debugger friendly configuration if <config.trainer.fast_dev_run=True>
     if config.trainer.get("fast_dev_run"):
-        log.info("Forcing debugger friendly configuration! <config.trainer.fast_dev_run=True>")
+        logger.info("Forcing debugger friendly configuration! <config.trainer.fast_dev_run=True>")
         # Debuggers don't like GPUs or multiprocessing
         if config.trainer.get("gpus"):
             config.trainer.gpus = 0
@@ -70,14 +48,14 @@ def extras(config: DictConfig) -> None:
         if config.datamodule.get("num_workers"):
             config.datamodule.num_workers = 0
 
-    # disable adding new keys to config
+    # Disable adding new keys to config
     OmegaConf.set_struct(config, True)
 
 
 @rank_zero_only
 def print_config(
     config: DictConfig,
-    fields: Sequence[str] = (
+    fields: tuple[str] = (
         "trainer",
         "model",
         "datamodule",
@@ -112,62 +90,12 @@ def print_config(
     rich.print(tree)
 
 
-def empty(*args, **kwargs):
-    """Returns nothing"""
-    pass
-
-
-@rank_zero_only
-def log_hyperparameters(
-    config: DictConfig,
-    model: pl.LightningModule,
-    datamodule: pl.LightningDataModule,
-    trainer: pl.Trainer,
-    callbacks: list[pl.Callback],
-    logger: list[Logger],
-) -> None:
-    """This method controls which parameters from Hydra config are saved by Lightning loggers.
-
-    Additionaly saves:
-        - number of trainable model parameters
-    """
-
-    hparams = {}
-
-    # choose which parts of hydra config will be saved to loggers
-    hparams["trainer"] = config["trainer"]
-    hparams["model"] = config["model"]
-    hparams["datamodule"] = config["datamodule"]
-    if "seed" in config:
-        hparams["seed"] = config["seed"]
-    if "callbacks" in config:
-        hparams["callbacks"] = config["callbacks"]
-
-    # save number of model parameters
-    hparams["model/params_total"] = sum(p.numel() for p in model.parameters())
-    hparams["model/params_trainable"] = sum(
-        p.numel() for p in model.parameters() if p.requires_grad
-    )
-    hparams["model/params_not_trainable"] = sum(
-        p.numel() for p in model.parameters() if not p.requires_grad
-    )
-
-    # send hparams to all loggers
-    trainer.logger.log_hyperparams(hparams)
-
-    # disable logging any more hyperparameters for all loggers
-    # this is just a trick to prevent trainer from logging hparams of model,
-    # since we already did that above
-    trainer.logger.log_hyperparams = empty
-
-
 def plot_batch_forecasts(
     batch,
     y_hat,
     batch_idx=None,
     quantiles=None,
     key_to_plot: str = "gsp",
-    timesteps_to_plot: Optional[list[int]] = None,
 ):
     """Plot a batch of data and the forecast from that batch"""
 
@@ -183,10 +111,6 @@ def plot_batch_forecasts(
 
     times_utc = batch[time_utc_key].cpu().numpy().squeeze().astype("datetime64[ns]")
     times_utc = [pd.to_datetime(t) for t in times_utc]
-    if timesteps_to_plot is not None:
-        y = y[:, timesteps_to_plot[0] : timesteps_to_plot[1]]
-        y_hat = y_hat[:, timesteps_to_plot[0] : timesteps_to_plot[1]]
-        times_utc = [t[timesteps_to_plot[0] : timesteps_to_plot[1]] for t in times_utc]
 
     batch_size = y.shape[0]
 

@@ -4,6 +4,51 @@
 from abc import ABC, abstractmethod
 
 import torch
+from torch.nn import Module
+from torch.nn.parameter import Parameter
+
+
+def find_submodule_parameters(model: Module, search_modules: list[Module]) -> list[Parameter]:
+    """Finds all parameters within given submodule types
+
+    Args:
+        model: torch Module to search through
+        search_modules: List of submodule types to search for
+    """
+    if isinstance(model, search_modules):
+        return model.parameters()
+
+    children = list(model.children())
+    if len(children) == 0:
+        return []
+    else:
+        params = []
+        for c in children:
+            params += find_submodule_parameters(c, search_modules)
+        return params
+
+
+def find_other_than_submodule_parameters(
+        model: Module, 
+        ignore_modules: list[Module]
+    ) -> list[Parameter]:
+    """Finds all parameters not with given submodule types
+
+    Args:
+        model: torch Module to search through
+        ignore_modules: List of submodule types to ignore
+    """
+    if isinstance(model, ignore_modules):
+        return []
+
+    children = list(model.children())
+    if len(children) == 0:
+        return model.parameters()
+    else:
+        params = []
+        for c in children:
+            params += find_other_than_submodule_parameters(c, ignore_modules)
+        return params
 
 
 class AbstractOptimizer(ABC):
@@ -28,12 +73,12 @@ class AbstractOptimizer(ABC):
 class Adam(AbstractOptimizer):
     """Adam optimizer"""
 
-    def __init__(self, lr=0.0005, **kwargs):
+    def __init__(self, lr: float = 0.0005, **kwargs):
         """Adam optimizer"""
         self.lr = lr
         self.kwargs = kwargs
 
-    def __call__(self, model):
+    def __call__(self, model: Module):
         """Return optimizer"""
         return torch.optim.Adam(model.parameters(), lr=self.lr, **self.kwargs)
 
@@ -41,61 +86,28 @@ class Adam(AbstractOptimizer):
 class AdamW(AbstractOptimizer):
     """AdamW optimizer"""
 
-    def __init__(self, lr=0.0005, **kwargs):
+    def __init__(self, lr: float = 0.0005, **kwargs):
         """AdamW optimizer"""
         self.lr = lr
         self.kwargs = kwargs
 
-    def __call__(self, model):
+    def __call__(self, model: Module):
         """Return optimizer"""
         return torch.optim.AdamW(model.parameters(), lr=self.lr, **self.kwargs)
 
-
-def find_submodule_parameters(model, search_modules):
-    """Finds all parameters within given submodule types
-
-    Args:
-        model: torch Module to search through
-        search_modules: List of submodule types to search for
-    """
-    if isinstance(model, search_modules):
-        return model.parameters()
-
-    children = list(model.children())
-    if len(children) == 0:
-        return []
-    else:
-        params = []
-        for c in children:
-            params += find_submodule_parameters(c, search_modules)
-        return params
-
-
-def find_other_than_submodule_parameters(model, ignore_modules):
-    """Finds all parameters not with given submodule types
-
-    Args:
-        model: torch Module to search through
-        ignore_modules: List of submodule types to ignore
-    """
-    if isinstance(model, ignore_modules):
-        return []
-
-    children = list(model.children())
-    if len(children) == 0:
-        return model.parameters()
-    else:
-        params = []
-        for c in children:
-            params += find_other_than_submodule_parameters(c, ignore_modules)
-        return params
 
 
 class EmbAdamWReduceLROnPlateau(AbstractOptimizer):
     """AdamW optimizer and reduce on plateau scheduler"""
 
     def __init__(
-        self, lr=0.0005, weight_decay=0.01, patience=3, factor=0.5, threshold=2e-4, **opt_kwargs
+        self, 
+        lr: float = 0.0005, 
+        weight_decay: float = 0.01, 
+        patience: int = 3, 
+        factor: float = 0.5, 
+        threshold: float = 2e-4, 
+        **opt_kwargs,
     ):
         """AdamW optimizer and reduce on plateau scheduler"""
         self.lr = lr
@@ -136,7 +148,13 @@ class AdamWReduceLROnPlateau(AbstractOptimizer):
     """AdamW optimizer and reduce on plateau scheduler"""
 
     def __init__(
-        self, lr=0.0005, patience=3, factor=0.5, threshold=2e-4, step_freq=None, **opt_kwargs
+        self, 
+        lr: float = 0.0005, 
+        patience: int = 3, 
+        factor: float = 0.5, 
+        threshold: float = 2e-4, 
+        step_freq=None, 
+        **opt_kwargs,
     ):
         """AdamW optimizer and reduce on plateau scheduler"""
         self._lr = lr
@@ -166,7 +184,9 @@ class AdamWReduceLROnPlateau(AbstractOptimizer):
         group_args += [{"params": remaining_params}]
 
         opt = torch.optim.AdamW(
-            group_args, lr=self._lr["default"] if model.lr is None else model.lr, **self.opt_kwargs
+            group_args, 
+            lr=self._lr["default"] if model.lr is None else model.lr, 
+            **self.opt_kwargs,
         )
         sch = {
             "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(

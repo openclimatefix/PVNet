@@ -13,13 +13,14 @@ from pvnet.utils import (
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
     MODEL_CONFIG_NAME,
+    FULL_CONFIG_NAME,
 )
 
 
 def get_model_from_checkpoints(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-) -> tuple[torch.nn.Module, dict[str, Any], str, str | None]:
+) -> tuple[torch.nn.Module, dict[str, Any], str, str | None, str | None]:
     """Load a model from its checkpoint directory
 
     Returns:
@@ -28,6 +29,7 @@ def get_model_from_checkpoints(
             model_config: path to model config used to train the model.
             data_config: path to data config used to create samples for the model.
             datamodule_config: path to datamodule used to create samples e.g train/test split info.
+            experiment_configs: path to the full experimental config.
 
     """
     is_ensemble = len(checkpoint_dir_paths) > 1
@@ -36,6 +38,7 @@ def get_model_from_checkpoints(
     models = []
     data_configs = []
     datamodule_configs = []
+    experiment_configs = []
 
     for path in checkpoint_dir_paths:
         # Load lightning training module
@@ -69,11 +72,20 @@ def get_model_from_checkpoints(
             raise FileNotFoundError(f"File {data_config} does not exist")
 
         # Check for datamodule config
+        # This only exists if the model was trained with presaved samples
         datamodule_config = f"{path}/{DATAMODULE_CONFIG_NAME}"
         if os.path.isfile(datamodule_config):
             datamodule_configs.append(datamodule_config)
         else:
             datamodule_configs.append(None)
+
+        # Check for experiment config
+        # For backwards compatibility - this might always exist
+        experiment_config = f"{path}/{FULL_CONFIG_NAME}"
+        if os.path.isfile(datamodule_config):
+            experiment_configs.append(experiment_config)
+        else:
+            experiment_configs.append(None)
 
     if is_ensemble:
         model_config = {
@@ -90,4 +102,7 @@ def get_model_from_checkpoints(
     data_config = data_configs[0]
     datamodule_config = datamodule_configs[0]
 
-    return model, model_config, data_config, datamodule_config
+    # TODO: How should we save the experimental configs if we had an ensemble?
+    experiment_config = experiment_configs[0]
+
+    return model, model_config, data_config, datamodule_config, experiment_config
