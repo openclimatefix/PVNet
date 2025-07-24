@@ -22,7 +22,6 @@ This model class uses satellite data, and numerical weather predictions to forec
 
 # Training Details
 
-<!-- The data section should link to a Data Card, perhaps with a short stub of information on what the training data is all about as well as documentation related to data pre-processing or additional filtering. -->
 ## Data
 
 <!-- eg.
