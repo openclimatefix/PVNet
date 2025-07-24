@@ -128,7 +128,7 @@ def download_from_hf(
     max_retries: int = 5,
     wait_time: int = 10,
 ) -> str | list[str]:
-    """Tries to download one ore more files from HuggingFace up to max_retries times.
+    """Tries to download one or more files from HuggingFace up to max_retries times.
 
     Args:
         repo_id: HuggingFace repo ID
