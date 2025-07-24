@@ -1,7 +1,7 @@
 """Training"""
+import logging
 import os
 import shutil
-import logging
 
 import hydra
 import torch
@@ -17,12 +17,13 @@ from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
-
 from pvnet.data.base_datamodule import BasePresavedDataModule
 from pvnet.utils import (
-    MODEL_CONFIG_NAME, DATA_CONFIG_NAME, DATAMODULE_CONFIG_NAME, FULL_CONFIG_NAME
+    DATA_CONFIG_NAME,
+    DATAMODULE_CONFIG_NAME,
+    FULL_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
 )
-
 
 log = logging.getLogger(__name__)
 
@@ -82,10 +83,10 @@ def train(config: DictConfig) -> None:
     # - only works if wandb logger and model checkpoint used
     # - this makes it easy to push the model to huggingface
     use_wandb_logger = False
-    for l in loggers:
+    for logger in loggers:
         if isinstance(l, WandbLogger):
             use_wandb_logger = True
-            wandb_logger = l
+            wandb_logger = logger
             break
 
     # Set the output directory based in the wandb-id of the run

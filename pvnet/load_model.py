@@ -12,8 +12,8 @@ from pvnet.models.ensemble import Ensemble
 from pvnet.utils import (
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
-    MODEL_CONFIG_NAME,
     FULL_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
 )
 
 

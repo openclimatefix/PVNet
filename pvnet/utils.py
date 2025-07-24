@@ -9,7 +9,6 @@ import rich.tree
 from lightning.pytorch.utilities import rank_zero_only
 from omegaconf import DictConfig, OmegaConf
 
-
 logger = logging.getLogger(__name__)
 
 
