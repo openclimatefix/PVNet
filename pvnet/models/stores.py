@@ -1,11 +1,7 @@
 """Utility functions"""
 
-import logging
-
 import numpy as np
 import torch
-
-logger = logging.getLogger(__name__)
 
 
 class PredAccumulator:

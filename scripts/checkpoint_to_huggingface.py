@@ -1,12 +1,21 @@
 """Command line tool to push locally save model checkpoints to huggingface
 
-use:
+To use this script, you will need to write a custom model card. You can copy and fill out
+`pvnet/model_cards/empty_model_card_template.md` to get you started.
+
+These model cards should not be added to and version controlled in the repo since they are specific
+to each user.
+
+Then run using:
+
+```
 python checkpoint_to_huggingface.py "path/to/model/checkpoints" \
     --huggingface-repo="openclimatefix/pvnet_uk_region" \
     --wandb-repo="openclimatefix/pvnet2.1" \
-    --card-template-path="pvnet/models/model_cards/pv_uk_regional_model_card_template.md" \
+    --card-template-path="pvnet/models/model_cards/my_custom_model_card.md" \
     --local-path="~/tmp/this_model" \
     --no-push-to-hub
+```
 """
 
 import tempfile

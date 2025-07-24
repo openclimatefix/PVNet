@@ -10,7 +10,7 @@ import wandb
 from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
 
 from pvnet.models.base_model import BaseModel
-from pvnet.models.utils import BatchAccumulator, MetricAccumulator, PredAccumulator
+from pvnet.models.stores import BatchAccumulator, MetricAccumulator, PredAccumulator
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.utils import plot_batch_forecasts
 
