@@ -49,8 +49,7 @@ from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from pvnet.utils import print_config,  DATA_CONFIG_NAME, DATAMODULE_CONFIG_NAME
-
+from pvnet.utils import DATA_CONFIG_NAME, DATAMODULE_CONFIG_NAME, print_config
 
 dask.config.set(scheduler="threads", num_workers=4)
 
