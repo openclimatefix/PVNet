@@ -36,10 +36,8 @@ dependencies = [
 
 [dependency-groups]
 dev=[
-    "pvlive-api",
     "ruff",
     "mypy",
-    "pre-commit",
     "pytest",
     "pytest-cov",
 ]
@@ -78,16 +76,10 @@ testpaths = [
 line-length = 100
 exclude = ["tests"]
 target-version = "py310"
-fix = false
 
 [tool.ruff.lint]
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["A", "B", "C", "D", "E", "F", "I"]
-unfixable = []
-select = ["E", "F", "D", "I"]
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-ignore = ["D200","D202","D210","D212","D415","D105",]
+extend-select = ["E", "D", "I"]
+ignore = ["D200","D202","D210","D212","D415","D105"]
 
 [tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.

@@ -50,9 +50,9 @@ def get_model_from_checkpoints(
                     f"Found {len(files)} checkpoints @ {path}/epoch*.ckpt. Expected one."
                 )
             # TODO: Loading with weights_only=False is not recommended
-            checkpoint = torch.load(files[0], map_location="cpu", weights_only=False)
+            checkpoint = torch.load(files[0], map_location="cpu", weights_only=True)
         else:
-            checkpoint = torch.load(f"{path}/last.ckpt", map_location="cpu", weights_only=False)
+            checkpoint = torch.load(f"{path}/last.ckpt", map_location="cpu", weights_only=True)
 
         lightning_module.load_state_dict(state_dict=checkpoint["state_dict"])
 
