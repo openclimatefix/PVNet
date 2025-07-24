@@ -522,3 +522,17 @@ def multimodal_quantile_model_ignore_minutes(multimodal_model_kwargs):
         output_quantiles=[0.1, 0.5, 0.9], **multimodal_model_kwargs, forecast_minutes_ignore=240
     )
     return model
+
+@pytest.fixture
+def valid_config_dict() -> Dict[str, Any]:
+    config_filename = "test_valid_config_dict.yaml"
+    conftest_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(conftest_dir, config_filename)
+
+    cfg_omegaconf = OmegaConf.load(config_path)
+    cfg_dict = OmegaConf.to_container(cfg_omegaconf, resolve=True)
+
+    if cfg_dict is None:
+         raise ValueError(f"OmegaConf failed to load or parse YAML from {config_path}")
+
+    return cfg_dict
