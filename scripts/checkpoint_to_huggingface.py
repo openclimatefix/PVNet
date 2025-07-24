@@ -79,7 +79,7 @@ def push_to_huggingface(
         model_config, 
         data_config_path, 
         datamodule_config_path, 
-        experiment_config,
+        experiment_config_path,
     ) = get_model_from_checkpoints(checkpoint_dir_paths, val_best)
 
     if not is_ensemble:
@@ -97,7 +97,7 @@ def push_to_huggingface(
         model_config=model_config,
         data_config_path=data_config_path,
         datamodule_config_path=datamodule_config_path,
-        experiment_config=experiment_config,
+        experiment_config_path=experiment_config_path,
         wandb_repo=wandb_repo,
         wandb_ids=wandb_ids,
         card_template_path=card_template_path,
