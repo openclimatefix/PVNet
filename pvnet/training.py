@@ -84,7 +84,7 @@ def train(config: DictConfig) -> None:
     # - this makes it easy to push the model to huggingface
     use_wandb_logger = False
     for logger in loggers:
-        if isinstance(l, WandbLogger):
+        if isinstance(logger, WandbLogger):
             use_wandb_logger = True
             wandb_logger = logger
             break
