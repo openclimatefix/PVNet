@@ -56,19 +56,31 @@ def push_to_huggingface(
 
     is_ensemble = len(checkpoint_dir_paths) > 1
 
-    # Check if checkpoint dir name is wandb run ID
+    # Check that the wandb-IDs are correct
+    all_wandb_ids = [run.id for run in wandb.Api().runs(path=wandb_repo)]
+
+    # If the IDs are not supplied try and pull them from the checkpoint dir name
     if wandb_ids == []:
-        all_wandb_ids = [run.id for run in wandb.Api().runs(path=wandb_repo)]
         for path in checkpoint_dir_paths:
             dirname = path.split("/")[-1]
             if dirname in all_wandb_ids:
                 wandb_ids.append(dirname)
             else:
                 raise Exception(f"Could not find wand run for {path} within {wandb_repo}")
+    
+    # Else if they are provided check that they exist
+    else:
+        for wandb_id in wandb_ids:
+            if wandb_id not in all_wandb_ids:
+                raise Exception(f"Could not find wand run for {path} within {wandb_repo}")
 
-    model, model_config, data_config_path, datamodule_config_path = get_model_from_checkpoints(
-        checkpoint_dir_paths, val_best
-    )
+    (
+        model, 
+        model_config, 
+        data_config_path, 
+        datamodule_config_path, 
+        experiment_config_path,
+    ) = get_model_from_checkpoints(checkpoint_dir_paths, val_best)
 
     if not is_ensemble:
         wandb_ids = wandb_ids[0]
@@ -85,6 +97,7 @@ def push_to_huggingface(
         model_config=model_config,
         data_config_path=data_config_path,
         datamodule_config_path=datamodule_config_path,
+        experiment_config_path=experiment_config_path,
         wandb_repo=wandb_repo,
         wandb_ids=wandb_ids,
         card_template_path=card_template_path,

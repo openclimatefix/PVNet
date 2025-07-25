@@ -18,6 +18,7 @@ from torchvision.transforms.functional import center_crop
 from pvnet.utils import (
     DATA_CONFIG_NAME,
     DATAMODULE_CONFIG_NAME,
+    FULL_CONFIG_NAME,
     MODEL_CARD_NAME,
     MODEL_CONFIG_NAME,
     PYTORCH_WEIGHTS_NAME,
@@ -250,6 +251,7 @@ class HuggingfaceMixin:
         wandb_ids: list[str] | str,
         card_template_path: str,
         datamodule_config_path: str | None = None,
+        experiment_config_path: str | None = None,
         hf_repo_id: str | None = None,
         push_to_hub: bool = False,
     ) -> None:
@@ -262,15 +264,18 @@ class HuggingfaceMixin:
                 Model configuration specified as a key/value dictionary.
             data_config_path:
                 The path to the data config.
+            wandb_repo: Identifier of the repo on wandb.
+            wandb_ids: Identifier(s) of the model on wandb.
             datamodule_config_path:
                 The path to the datamodule config.
+            experiment_config_path:
+                The path to the full experimental config.
             hf_repo_id:
                 ID of your repository on the Hub. Used only if `push_to_hub=True`. Will default to
                 the folder name if not provided.
             push_to_hub (`bool`, *optional*, defaults to `False`):
                 Whether or not to push your model to the HuggingFace Hub after saving it.
-            wandb_repo: Identifier of the repo on wandb.
-            wandb_ids: Identifier(s) of the model on wandb.
+
             card_template_path: Path to the HuggingFace model card template. Defaults to card in
                 PVNet library if set to None.
         """
@@ -296,9 +301,13 @@ class HuggingfaceMixin:
         with open(save_directory / DATA_CONFIG_NAME, "w") as outfile:
             yaml.dump(config, outfile, sort_keys=False, default_flow_style=False)
 
-        # Save the datamodule
+        # Save the datamodule config
         if datamodule_config_path is not None:
-            shutil.copyfile(datamodule_config_path,save_directory / DATAMODULE_CONFIG_NAME)
+            shutil.copyfile(datamodule_config_path, save_directory / DATAMODULE_CONFIG_NAME)
+        
+        # Save the full experimental config
+        if experiment_config_path is not None:
+            shutil.copyfile(experiment_config_path, save_directory / FULL_CONFIG_NAME)
 
         card = self.create_hugging_face_model_card(card_template_path, wandb_repo, wandb_ids)
 

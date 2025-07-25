@@ -1,7 +1,7 @@
 """Training"""
+import logging
 import os
 import shutil
-from typing import Optional
 
 import hydra
 import torch
@@ -17,9 +17,15 @@ from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
-from pvnet import utils
+from pvnet.data.base_datamodule import BasePresavedDataModule
+from pvnet.utils import (
+    DATA_CONFIG_NAME,
+    DATAMODULE_CONFIG_NAME,
+    FULL_CONFIG_NAME,
+    MODEL_CONFIG_NAME,
+)
 
-log = utils.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 torch.set_default_dtype(torch.float32)
 
@@ -42,16 +48,13 @@ def resolve_monitor_loss(output_quantiles):
 OmegaConf.register_new_resolver("resolve_monitor_loss", resolve_monitor_loss)
 
 
-def train(config: DictConfig) -> Optional[float]:
+def train(config: DictConfig) -> None:
     """Contains training pipeline.
 
     Instantiates all PyTorch Lightning objects from config.
 
     Args:
         config (DictConfig): Configuration composed by Hydra.
-
-    Returns:
-        Optional[float]: Metric score for hyperparameter optimization.
     """
 
     # Set seed for random number generators in pytorch, numpy and python.random
@@ -59,74 +62,80 @@ def train(config: DictConfig) -> Optional[float]:
         seed_everything(config.seed, workers=True)
 
     # Init lightning datamodule
-    log.info(f"Instantiating datamodule <{config.datamodule._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(config.datamodule)
 
     # Init lightning model
-    log.info(f"Instantiating model <{config.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(config.model)
 
     # Init lightning loggers
     loggers: list[Logger] = []
     if "logger" in config:
         for _, lg_conf in config.logger.items():
-            if "_target_" in lg_conf:
-                log.info(f"Instantiating logger <{lg_conf._target_}>")
-                loggers.append(hydra.utils.instantiate(lg_conf))
+            loggers.append(hydra.utils.instantiate(lg_conf))
 
     # Init lightning callbacks
     callbacks: list[Callback] = []
     if "callbacks" in config:
         for _, cb_conf in config.callbacks.items():
-            if "_target_" in cb_conf:
-                log.info(f"Instantiating callback <{cb_conf._target_}>")
-                callbacks.append(hydra.utils.instantiate(cb_conf))
+            callbacks.append(hydra.utils.instantiate(cb_conf))
 
     # Align the wandb id with the checkpoint path
     # - only works if wandb logger and model checkpoint used
     # - this makes it easy to push the model to huggingface
     use_wandb_logger = False
     for logger in loggers:
-        log.info(f"{logger}")
         if isinstance(logger, WandbLogger):
             use_wandb_logger = True
             wandb_logger = logger
             break
 
+    # Set the output directory based in the wandb-id of the run
     if use_wandb_logger:
         for callback in callbacks:
-            log.info(f"{callback}")
             if isinstance(callback, ModelCheckpoint):
-                # Need to call the .experiment property to initialise the logger
+                # Need to call the .experiment property to have the logger create an ID
                 wandb_logger.experiment
-                callback.dirpath = "/".join(
+
+                # Save the run results to the expected parent folder but with the folder name
+                # set by the wandb ID
+                save_dir = "/".join(
                     callback.dirpath.split("/")[:-1] + [wandb_logger.version]
                 )
-                # Also save model config here - this makes for easy model push to huggingface
-                os.makedirs(callback.dirpath, exist_ok=True)
-                OmegaConf.save(config.model, f"{callback.dirpath}/model_config.yaml")
 
-                # Similarly save the data config
-                data_config = config.datamodule.configuration
-                if data_config is None:
-                    # Data config can be none if using presaved batches. We go to the presaved
-                    # batches to get the data config
-                    data_config = f"{config.datamodule.sample_dir}/data_configuration.yaml"
+                callback.dirpath = save_dir
+                
+                # Save the model config
+                os.makedirs(save_dir, exist_ok=True)
+                OmegaConf.save(config.model, f"{save_dir}/{MODEL_CONFIG_NAME}")
 
-                    # Also save additonal datamodule config related to presaved batches
-                    datamodule_config = f"{config.datamodule.sample_dir}/datamodule.yaml"
-                    shutil.copyfile(datamodule_config, f"{callback.dirpath}/datamodule_config.yaml")
+                # If using pre-saved samples we need to extract the data config from the directory
+                # those samples were saved to
+                if isinstance(datamodule, BasePresavedDataModule):
+                    data_config = f"{config.datamodule.sample_dir}/{DATA_CONFIG_NAME}"
 
-                assert os.path.isfile(data_config), f"Data config file not found: {data_config}"
-                shutil.copyfile(data_config, f"{callback.dirpath}/data_config.yaml")
+                    # We also save the datamodule config used to create the samples to the output 
+                    # directory and to wandb
+                    shutil.copyfile(
+                        f"{config.datamodule.sample_dir}/{DATAMODULE_CONFIG_NAME}", 
+                        f"{save_dir}/{DATAMODULE_CONFIG_NAME}"
+                    )
+                    wandb_logger.experiment.save(
+                        f"{save_dir}/{DATAMODULE_CONFIG_NAME}", 
+                        base_path=save_dir,
+                    )
+                else:
+                    # If we are streaming batches the data config is defined and we don't need to
+                    # save the datamodule config separately
+                    data_config = config.datamodule.configuration
 
-                # upload configuration up to wandb
-                OmegaConf.save(config, "./experiment_config.yaml")
-                wandb_logger.experiment.save(
-                    f"{callback.dirpath}/data_config.yaml", callback.dirpath
-                )
-                wandb_logger.experiment.save("./experiment_config.yaml")
+                # Save the data config to the output directory and to wandb
+                shutil.copyfile(data_config, f"{save_dir}/{DATA_CONFIG_NAME}")
+                wandb_logger.experiment.save(f"{save_dir}/{DATA_CONFIG_NAME}", base_path=save_dir)
 
+                # Save the full hydra config to the output directory and to wandb
+                OmegaConf.save(config, f"{save_dir}/{FULL_CONFIG_NAME}")
+                wandb_logger.experiment.save(f"{save_dir}/{FULL_CONFIG_NAME}", base_path=save_dir)
+                
                 break
 
     trainer: Trainer = hydra.utils.instantiate(

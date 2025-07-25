@@ -39,7 +39,6 @@ import logging
 import os
 import shutil
 import sys
-import warnings
 
 import dask
 import hydra
@@ -47,18 +46,15 @@ from ocf_data_sampler.torch_datasets.datasets import PVNetUKRegionalDataset, Sit
 from ocf_data_sampler.torch_datasets.sample.site import SiteSample
 from ocf_data_sampler.torch_datasets.sample.uk_regional import UKRegionalSample
 from omegaconf import DictConfig, OmegaConf
-from sqlalchemy import exc as sa_exc
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from pvnet.utils import print_config
+from pvnet.utils import DATA_CONFIG_NAME, DATAMODULE_CONFIG_NAME, print_config
 
 dask.config.set(scheduler="threads", num_workers=4)
 
 
 # ------- filter warning and set up config  -------
-
-warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +89,10 @@ class SaveFuncFactory:
 
 
 def get_dataset(
-    config_path: str, start_time: str, end_time: str, renewable: str = "pv_uk"
+    config_path: str, 
+    start_time: str, 
+    end_time: str, 
+    renewable: str = "pv_uk",
 ) -> Dataset:
     """Get the dataset for the given renewable type."""
     if renewable == "pv_uk":
@@ -136,12 +135,13 @@ def main(config: DictConfig) -> None:
     os.makedirs(config_dm.sample_output_dir, exist_ok=False)
 
     # Copy across configs which define the samples into the new sample directory
-    with open(f"{config_dm.sample_output_dir}/datamodule.yaml", "w") as f:
+
+    # Copy the datamodule config
+    with open(f"{config_dm.sample_output_dir}/{DATAMODULE_CONFIG_NAME}", "w") as f:
         f.write(OmegaConf.to_yaml(config_dm))
 
-    shutil.copyfile(
-        config_dm.configuration, f"{config_dm.sample_output_dir}/data_configuration.yaml"
-    )
+    # Copy the data config
+    shutil.copyfile(config_dm.configuration, f"{config_dm.sample_output_dir}/{DATA_CONFIG_NAME}")
 
     # Define the keywargs going into the train and val dataloaders
     dataloader_kwargs = dict(
