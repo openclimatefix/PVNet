@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import torch.nn.functional as F
+import wandb
 from ocf_data_sampler.torch_datasets.sample.base import TensorBatch, copy_batch_to_device
 
-import wandb
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer
 from pvnet.training.plots import plot_sample_forecasts
