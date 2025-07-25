@@ -327,7 +327,7 @@ class PVNetLightningModule(pl.LightningModule):
             # Log error distribution metrics
             val_error = validation_results_df["y"] - validation_results_df["y_quantile_0.5"]
 
-            extreme_error_methrics = {
+            extreme_error_metrics = {
                 "2nd_percentile_median_forecast_error": val_error.quantile(0.02),
                 "5th_percentile_median_forecast_error": val_error.quantile(0.05),
                 "95th_percentile_median_forecast_error": val_error.quantile(0.95),
@@ -336,7 +336,7 @@ class PVNetLightningModule(pl.LightningModule):
                 "98th_percentile_median_forecast_absolute_error": val_error.abs().quantile(0.98),
             }
 
-            self.log_dict(extreme_error_methrics, on_step=False, on_epoch=True)
+            self.log_dict(extreme_error_metrics, on_step=False, on_epoch=True)
 
             # Save all validation results
             if self.save_validation_results_csv:
