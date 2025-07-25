@@ -96,7 +96,7 @@ def train(config: DictConfig) -> None:
                 # Need to call the .experiment property to have the logger create an ID
                 wandb_logger.experiment
 
-                # Save the run results the the expected parent folder but with the folder name
+                # Save the run results to the expected parent folder but with the folder name
                 # set by the wandb ID
                 save_dir = "/".join(
                     callback.dirpath.split("/")[:-1] + [wandb_logger.version]
