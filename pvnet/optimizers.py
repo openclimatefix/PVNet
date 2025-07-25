@@ -29,9 +29,9 @@ def find_submodule_parameters(model: Module, search_modules: list[Module]) -> li
 
 
 def find_other_than_submodule_parameters(
-        model: Module, 
-        ignore_modules: list[Module]
-    ) -> list[Parameter]:
+    model: Module, 
+    ignore_modules: list[Module],
+) -> list[Parameter]:
     """Finds all parameters not with given submodule types
 
     Args:

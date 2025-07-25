@@ -2,11 +2,10 @@
 
 import glob
 import os
-from typing import Any
 
 import hydra
 import torch
-from pyaml_env import parse_config
+import yaml
 
 from pvnet.models.ensemble import Ensemble
 from pvnet.utils import (
@@ -20,7 +19,7 @@ from pvnet.utils import (
 def get_model_from_checkpoints(
     checkpoint_dir_paths: list[str],
     val_best: bool = True,
-) -> tuple[torch.nn.Module, dict[str, Any], str, str | None, str | None]:
+) -> tuple[torch.nn.Module, dict, str, str | None, str | None]:
     """Load a model from its checkpoint directory
 
     Returns:
@@ -41,8 +40,11 @@ def get_model_from_checkpoints(
     experiment_configs = []
 
     for path in checkpoint_dir_paths:
+
         # Load lightning training module
-        model_config = parse_config(f"{path}/{MODEL_CONFIG_NAME}")
+        with open(f"{path}/{MODEL_CONFIG_NAME}") as cfg:
+            model_config = yaml.load(cfg, Loader=yaml.FullLoader)
+
         lightning_module = hydra.utils.instantiate(model_config)
 
         if val_best:

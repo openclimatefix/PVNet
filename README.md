@@ -1,4 +1,4 @@
-# PVNet 2.1
+# PVNet
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-19-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
@@ -8,39 +8,34 @@
 
 This project is used for training PVNet and running PVNet on live data.
 
-PVNet2 is a multi-modal late-fusion model that largely inherits the same architecture from
-[PVNet1.0](https://github.com/openclimatefix/predict_pv_yield). The NWP (Numerical Weather Prediction) and
-satellite data are sent through some neural network which encodes them down to
-1D intermediate representations. These are concatenated together with the GSP (Grid Supply Point)
-output history, the calculated solar coordinates (azimuth and elevation) and the
-GSP ID which has been put through an embedding layer. This 1D concatenated
-feature vector is put through an output network which outputs predictions of the
-future GSP yield. National forecasts are made by adding all the GSP forecasts
-together.
+PVNet is a multi-modal late-fusion model for predicting renewable energy generation from weather 
+data. The NWP (Numerical Weather Prediction) and satellite data are sent through a neural network 
+which encodes them down to 1D intermediate representations. These are concatenated together with 
+recent generation, the calculated solar coordinates (azimuth and elevation) and the location ID 
+which has been put through an embedding layer. This 1D concatenated feature vector is put through 
+an output network which outputs predictions of the future energy yield.
 
 
 ## Experiments
 
-Our paper based on this repo was accepted into the Tackling Climate Change with Machine Learning workshop at ICLR 2024 and can be viewed [here](https://www.climatechange.ai/papers/iclr2024/46).
+Our paper based on this repo was accepted into the Tackling Climate Change with Machine Learning 
+workshop at ICLR 2024 and can be viewed [here](https://www.climatechange.ai/papers/iclr2024/46).
 
-Some slightly more structured notes on deliberate experiments we have performed with PVNet are [here](https://docs.google.com/document/d/1VumDwWd8YAfvXbOtJEv3ZJm_FHQDzrKXR0jU9vnvGQg).
-
-Some very rough, early working notes on this model are
-[here](https://docs.google.com/document/d/1fbkfkBzp16WbnCg7RDuRDvgzInA6XQu3xh4NCjV-WDA). These are now somewhat out of date.
-
+Some more structured notes on experiments we have performed with PVNet are 
+[here](https://docs.google.com/document/d/1VumDwWd8YAfvXbOtJEv3ZJm_FHQDzrKXR0jU9vnvGQg).
 
 
 ## Setup / Installation
 
 ```bash
-git clone https://github.com/openclimatefix/PVNet.git
+git clone git@github.com:openclimatefix/PVNet.git
 cd PVNet
 pip install .
 ```
 
 The commit history is extensive. To save download time, use a depth of 1:
 ```bash
-git clone --depth 1 https://github.com/openclimatefix/PVNet.git
+git clone --depth 1 git@github.com:openclimatefix/PVNet.git
 ```
 This means only the latest commit and its associated files will be downloaded.
 
@@ -98,7 +93,7 @@ here: https://huggingface.co/datasets/openclimatefix/uk_pv
 
 Outside the PVNet repo, clone the ocf-data-sampler repo and exit the conda env created for PVNet: https://github.com/openclimatefix/ocf-data-sampler
 ```bash
-git clone https://github.com/openclimatefix/ocf-data-sampler.git
+git clone git@github.com/openclimatefix/ocf-data-sampler.git
 conda create -n ocf-data-sampler python=3.11
 ```
 
@@ -114,7 +109,8 @@ Then exit this environment, and enter back into the pvnet conda environment and 
 pip install -e <PATH-TO-ocf-data-sampler-REPO>
 ```
 
-If you install the local version of `ocf-data-sampler` that is more recent than the version specified in PVNet, you might receive a warning. However, it should still function correctly.
+If you install the local version of `ocf-data-sampler` that is more recent than the version 
+specified in `PVNet` it is not guarenteed to function properly with this library.
 
 ## Pre-saving samples of data for training/validation of PVNet
 
@@ -173,14 +169,14 @@ Files stored in multiple locations can be added as a list. For example, in the `
 
 ```yaml
 satellite:
-    satellite_zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
+    zarr_path: gs://solar-pv-nowcasting-data/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr
 ```
 
 Or to satellite data hosted by Google:
 
 ```yaml
 satellite:
-    satellite_zarr_paths:
+    zarr_path:
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2020_nonhrv.zarr"
       - "gs://public-datasets-eumetsat-solar-forecasting/satellite/EUMETSAT/SEVIRI_RSS/v4/2021_nonhrv.zarr"
 ```
@@ -195,13 +191,13 @@ files. The configs stored in `PVNet/configs.example` should work with samples cr
 
 Make sure to update the following config files before training your model:
 
-1. In `configs/datamodule/local_presaved_samples.yaml`:
+1. In `configs/datamodule/presaved_samples.yaml`:
     - update `sample_dir` to point to the directory you stored your samples in during sample creation
-2. In `configs/model/local_multimodal.yaml`:
+2. In `configs/model/late_fusion.yaml`:
     - update the list of encoders to reflect the data sources you are using. If you are using different NWP sources, the encoders for these should follow the same structure with two important updates:
         - `in_channels`: number of variables your NWP source supplies
         - `image_size_pixels`: spatial crop of your NWP data. It depends on the spatial resolution of your NWP; should match `image_size_pixels_height` and/or `image_size_pixels_width` in `datamodule/configuration/site_example_configuration.yaml` for the NWP, unless transformations such as coarsening was applied (e. g. as for ECMWF data)
-3. In `configs/local_trainer.yaml`:
+3. In `configs/trainer/default.yaml`:
     - set `accelerator: 0` if running on a system without a supported GPU
 
 If creating copies of the config files instead of modifying existing ones, update `defaults` in the main `./configs/config.yaml` file to use
@@ -209,11 +205,10 @@ your customised config files:
 
 ```yaml
 defaults:
-  - trainer: local_trainer.yaml
-  - model: local_multimodal.yaml
-  - datamodule: local_presaved_samples.yaml
+  - trainer: default.yaml
+  - model: late_fusion.yaml
+  - datamodule: presaved_samples.yaml
   - callbacks: null
-  - logger: csv.yaml
   - experiment: null
   - hparams_search: null
   - hydra: default.yaml

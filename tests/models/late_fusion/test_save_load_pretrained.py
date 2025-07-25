@@ -1,5 +1,5 @@
 import pkg_resources
-from pvnet.models.base_model import BaseModel
+from pvnet.models import BaseModel
 import pvnet.model_cards
 import yaml
 import tempfile
@@ -8,7 +8,7 @@ import tempfile
 card_path = f"{pvnet.model_cards.__path__[0]}/empty_model_card_template.md"
 
 
-def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs, sample_datamodule):
+def test_save_pretrained(tmp_path, late_fusion_model, raw_late_fusion_model_kwargs, sample_datamodule):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
         # Get sample directory from the datamodule
         sample_dir = sample_datamodule.sample_dir
@@ -65,12 +65,12 @@ def test_save_pretrained(tmp_path, multimodal_model, raw_multimodal_model_kwargs
         data_config_path = temp_file.name
 
     # Construct the model config
-    model_config = {"_target_": "pvnet.models.multimodal.multimodal.Model"}
-    model_config.update(raw_multimodal_model_kwargs)
+    model_config = {"_target_": "pvnet.models.LateFusionModel"}
+    model_config.update(raw_late_fusion_model_kwargs)
 
     # Save the model
     model_output_dir = f"{tmp_path}/model"
-    multimodal_model.save_pretrained(
+    late_fusion_model.save_pretrained(
         save_directory=model_output_dir,
         model_config=model_config,
         data_config_path=data_config_path,

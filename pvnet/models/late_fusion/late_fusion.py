@@ -2,22 +2,23 @@
 
 import logging
 from collections import OrderedDict
-from typing import Any, Optional
+from typing import Any
 
 import torch
+from ocf_data_sampler.torch_datasets.sample.base import TensorBatch
 from omegaconf import DictConfig
 from torch import nn
 
 from pvnet.models.base_model import BaseModel
-from pvnet.models.multimodal.basic_blocks import ImageEmbedding
-from pvnet.models.multimodal.encoders.basic_blocks import AbstractNWPSatelliteEncoder
-from pvnet.models.multimodal.linear_networks.basic_blocks import AbstractLinearNetwork
-from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
+from pvnet.models.late_fusion.basic_blocks import ImageEmbedding
+from pvnet.models.late_fusion.encoders.basic_blocks import AbstractNWPSatelliteEncoder
+from pvnet.models.late_fusion.linear_networks.basic_blocks import AbstractLinearNetwork
+from pvnet.models.late_fusion.site_encoders.basic_blocks import AbstractSitesEncoder
 
 logger = logging.getLogger(__name__)
 
 
-class Model(BaseModel):
+class LateFusionModel(BaseModel):
     """Neural network which combines information from different sources
 
     Architecture is roughly as follows:
@@ -37,30 +38,30 @@ class Model(BaseModel):
     def __init__(
         self,
         output_network: AbstractLinearNetwork,
-        output_quantiles: Optional[list[float]] = None,
-        nwp_encoders_dict: Optional[dict[AbstractNWPSatelliteEncoder]] = None,
-        sat_encoder: Optional[AbstractNWPSatelliteEncoder] = None,
-        pv_encoder: Optional[AbstractSitesEncoder] = None,
+        output_quantiles: list[float] | None = None,
+        nwp_encoders_dict: dict[str, AbstractNWPSatelliteEncoder] | None = None,
+        sat_encoder: AbstractNWPSatelliteEncoder | None = None,
+        pv_encoder: AbstractSitesEncoder | None = None,
         add_image_embedding_channel: bool = False,
         include_gsp_yield_history: bool = True,
-        include_site_yield_history: Optional[bool] = False,
+        include_site_yield_history: bool = False,
         include_sun: bool = True,
         include_time: bool = False,
-        location_id_mapping: Optional[dict[Any, int]] = None,
-        embedding_dim: Optional[int] = 16,
+        location_id_mapping: dict[Any, int] | None = None,
+        embedding_dim: int = 16,
         forecast_minutes: int = 30,
         history_minutes: int = 60,
-        sat_history_minutes: Optional[int] = None,
-        min_sat_delay_minutes: Optional[int] = 30,
-        nwp_forecast_minutes: Optional[DictConfig] = None,
-        nwp_history_minutes: Optional[DictConfig] = None,
-        pv_history_minutes: Optional[int] = None,
+        sat_history_minutes: int | None = None,
+        min_sat_delay_minutes: int = 30,
+        nwp_forecast_minutes: DictConfig | None = None,
+        nwp_history_minutes: DictConfig | None = None,
+        pv_history_minutes: int | None = None,
         target_key: str = "gsp",
         interval_minutes: int = 30,
-        nwp_interval_minutes: Optional[DictConfig] = None,
+        nwp_interval_minutes: DictConfig | None = None,
         pv_interval_minutes: int = 5,
         sat_interval_minutes: int = 5,
-        adapt_batches: Optional[bool] = False,
+        adapt_batches: bool = False,
     ):
         """Neural network which combines information from different sources.
 
@@ -268,7 +269,7 @@ class Model(BaseModel):
         )
 
 
-    def forward(self, x):
+    def forward(self, x: TensorBatch) -> torch.Tensor:
         """Run model forward"""
 
         if self.adapt_batches:

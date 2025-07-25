@@ -1,10 +1,10 @@
 """Encoder modules for the satellite/NWP data based on 3D concolutions.
 """
-from typing import List, Union
 
+import torch
 from torch import nn
 
-from pvnet.models.multimodal.encoders.basic_blocks import (
+from pvnet.models.late_fusion.encoders.basic_blocks import (
     AbstractNWPSatelliteEncoder,
     ResidualConv3dBlock2,
 )
@@ -24,7 +24,7 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
         fc_features: int = 128,
         spatial_kernel_size: int = 3,
         temporal_kernel_size: int = 3,
-        padding: Union[int, List[int]] = (1, 0, 0),
+        padding: int | tuple[int] = (1, 0, 0),
     ):
         """This is the original encoding module used in PVNet, with a few minor tweaks.
 
@@ -42,8 +42,10 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
                 is used in all dimensions
         """
         super().__init__(sequence_length, image_size_pixels, in_channels, out_features)
+
         if isinstance(padding, int):
             padding = (padding, padding, padding)
+        
         # Check that the output shape of the convolutional layers will be at least 1x1
         cnn_spatial_output_size = (
             image_size_pixels
@@ -93,12 +95,10 @@ class DefaultPVNet(AbstractNWPSatelliteEncoder):
             nn.ELU(),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Run model forward"""
         out = self.conv_layers(x)
         out = out.reshape(x.shape[0], -1)
-
-        # Fully connected layers
         return self.final_block(out)
 
 
@@ -120,8 +120,8 @@ class ResConv3DNet2(AbstractNWPSatelliteEncoder):
         hidden_channels: int = 32,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
-        batch_norm=True,
-        dropout_frac=0.0,
+        batch_norm: bool = True,
+        dropout_frac: float = 0.0,
     ):
         """Fully connected deep network based on ResNet architecture.
 
@@ -175,6 +175,6 @@ class ResConv3DNet2(AbstractNWPSatelliteEncoder):
 
         self.model = nn.Sequential(*model)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Run model forward"""
         return self.model(x)

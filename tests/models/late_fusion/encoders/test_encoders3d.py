@@ -1,4 +1,4 @@
-from pvnet.models.multimodal.encoders.encoders3d import (
+from pvnet.models.late_fusion.encoders.encoders3d import (
     DefaultPVNet,
     ResConv3DNet2,
 )

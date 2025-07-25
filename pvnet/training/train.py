@@ -4,7 +4,6 @@ import os
 import shutil
 
 import hydra
-import torch
 from lightning.pytorch import (
     Callback,
     LightningDataModule,
@@ -13,8 +12,7 @@ from lightning.pytorch import (
     seed_everything,
 )
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import Logger
-from lightning.pytorch.loggers.wandb import WandbLogger
+from lightning.pytorch.loggers import Logger, WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
 from pvnet.data.base_datamodule import BasePresavedDataModule
@@ -27,10 +25,9 @@ from pvnet.utils import (
 
 log = logging.getLogger(__name__)
 
-torch.set_default_dtype(torch.float32)
 
 
-def resolve_monitor_loss(output_quantiles):
+def resolve_monitor_loss(output_quantiles: list | None) -> str:
     """Return the desired metric to monitor based on whether quantile regression is being used.
 
     The adds the option to use something like:

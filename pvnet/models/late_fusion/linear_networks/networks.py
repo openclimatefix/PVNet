@@ -1,7 +1,10 @@
 """Linear networks used for the fusion model"""
+from collections import OrderedDict
+
+import torch
 from torch import nn
 
-from pvnet.models.multimodal.linear_networks.basic_blocks import (
+from pvnet.models.late_fusion.linear_networks.basic_blocks import (
     AbstractLinearNetwork,
     ResidualLinearBlock2,
 )
@@ -25,7 +28,7 @@ class ResFCNet2(AbstractLinearNetwork):
         fc_hidden_features: int = 128,
         n_res_blocks: int = 4,
         res_block_layers: int = 2,
-        dropout_frac=0.0,
+        dropout_frac: float = 0.0,
     ):
         """Fully connected deep network based on ResNet architecture.
 
@@ -39,9 +42,7 @@ class ResFCNet2(AbstractLinearNetwork):
         """
         super().__init__(in_features, out_features)
 
-        model = [
-            nn.Linear(in_features=in_features, out_features=fc_hidden_features),
-        ]
+        model = [nn.Linear(in_features=in_features, out_features=fc_hidden_features)]
 
         for i in range(n_res_blocks):
             model += [
@@ -60,7 +61,7 @@ class ResFCNet2(AbstractLinearNetwork):
 
         self.model = nn.Sequential(*model)
 
-    def forward(self, x):
+    def forward(self, x: OrderedDict[str, torch.Tensor] | torch.Tensor) -> torch.Tensor:
         """Run model forward"""
         x = self.cat_modes(x)
         return self.model(x)

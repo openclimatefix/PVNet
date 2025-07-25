@@ -4,10 +4,11 @@
 
 import einops
 import torch
+from ocf_data_sampler.torch_datasets.sample.base import TensorBatch
 from torch import nn
 
-from pvnet.models.multimodal.linear_networks.networks import ResFCNet2
-from pvnet.models.multimodal.site_encoders.basic_blocks import AbstractSitesEncoder
+from pvnet.models.late_fusion.linear_networks.networks import ResFCNet2
+from pvnet.models.late_fusion.site_encoders.basic_blocks import AbstractSitesEncoder
 
 
 class SimpleLearnedAggregator(AbstractSitesEncoder):
@@ -73,12 +74,12 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
             dropout_frac=0,
         )
 
-    def _calculate_attention(self, x):
+    def _calculate_attention(self, x: TensorBatch) -> torch.Tensor:
         gsp_ids = x["gsp_id"].squeeze().int()
         attention = self._attention_network(gsp_ids)
         return attention
 
-    def _encode_value(self, x):
+    def _encode_value(self, x: TensorBatch) -> torch.Tensor:
         # Shape: [batch size, sequence length, PV site]
         pv_site_seqs = x["pv"].float()
         batch_size = pv_site_seqs.shape[0]
@@ -89,7 +90,7 @@ class SimpleLearnedAggregator(AbstractSitesEncoder):
         x_seq_out = x_seq_enc.unflatten(0, (batch_size, self.num_sites))
         return x_seq_out
 
-    def forward(self, x):
+    def forward(self, x: TensorBatch) -> torch.Tensor:
         """Run model forward"""
         # Output has shape: [batch size, num_sites, value_dim]
         encodeded_seqs = self._encode_value(x)
@@ -202,7 +203,7 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
             batch_first=True,
         )
 
-    def _encode_inputs(self, x):
+    def _encode_inputs(self, x: TensorBatch) -> tuple[torch.Tensor, int]:
         # Shape: [batch size, sequence length, number of sites]
         # Shape: [batch size,  station_id, sequence length,  channels]
         input_data = x[f"{self.input_key_to_use}"]
@@ -218,8 +219,7 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
         site_seqs = site_seqs.swapaxes(1, 2)  # [batch size, Site ID, sequence length]
         return site_seqs, batch_size
 
-    def _encode_query(self, x):
-        # Select the first one
+    def _encode_query(self, x: TensorBatch) -> torch.Tensor:
         if self.target_key_to_use == "gsp":
             # GSP seems to have a different structure
             ids = x[f"{self.target_key_to_use}_id"]
@@ -229,7 +229,7 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
         query = self.target_id_embedding(ids).unsqueeze(1)
         return query
 
-    def _encode_key(self, x):
+    def _encode_key(self, x: TensorBatch) -> torch.Tensor:
         site_seqs, batch_size = self._encode_inputs(x)
 
         # site ID embeddings are the same for each sample
@@ -242,7 +242,7 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
         key = key.unflatten(0, (batch_size, self.num_sites))
         return key
 
-    def _encode_value(self, x):
+    def _encode_value(self, x: TensorBatch) -> torch.Tensor:
         site_seqs, batch_size = self._encode_inputs(x)
 
         if self.use_id_in_value:
@@ -259,7 +259,10 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
         value = value.unflatten(0, (batch_size, self.num_sites))
         return value
 
-    def _attention_forward(self, x, average_attn_weights=True):
+    def _attention_forward(
+        self, x: dict, 
+        average_attn_weights: bool = True
+    ) -> tuple[torch.Tensor, torch.Tensor:]:
         query = self._encode_query(x)
         key = self._encode_key(x)
         value = self._encode_value(x)
@@ -269,10 +272,10 @@ class SingleAttentionNetwork(AbstractSitesEncoder):
 
         return attn_output, attn_weights
 
-    def forward(self, x):
+    def forward(self, x: TensorBatch) -> torch.Tensor:
         """Run model forward"""
-        # Do slicing here to only get history
-        attn_output, attn_output_weights = self._attention_forward(x)
+
+        attn_output, _ = self._attention_forward(x)
 
         # Reshape from [batch_size, 1, vdim] to [batch_size, vdim]
         x_out = attn_output.squeeze()

@@ -1,7 +1,7 @@
-_target_: pvnet.models.lightning_module.PVNetLightningModule
+_target_: pvnet.training.lightning_module.PVNetLightningModule
 
 model:
-  _target_: pvnet.models.multimodal.multimodal.Model
+  _target_: pvnet.models.LateFusionModel
   output_quantiles: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
 
   #--------------------------------------------
@@ -10,7 +10,7 @@ model:
 
   nwp_encoders_dict:
     ukv:
-      _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+      _target_: pvnet.models.late_fusion.encoders.encoders3d.DefaultPVNet
       _partial_: True
       in_channels: 2
       out_features: 256
@@ -18,7 +18,7 @@ model:
       conv3d_channels: 32
       image_size_pixels: 24
     ecmwf:
-      _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+      _target_: pvnet.models.late_fusion.encoders.encoders3d.DefaultPVNet
       _partial_: True
       in_channels: 12
       out_features: 256
@@ -31,7 +31,7 @@ model:
   #--------------------------------------------
 
   sat_encoder:
-    _target_: pvnet.models.multimodal.encoders.encoders3d.DefaultPVNet
+    _target_: pvnet.models.late_fusion.encoders.encoders3d.DefaultPVNet
     _partial_: True
     in_channels: 11
     out_features: 256
@@ -46,7 +46,7 @@ model:
   #--------------------------------------------
 
   pv_encoder:
-    _target_: pvnet.models.multimodal.site_encoders.encoders.SingleAttentionNetwork
+    _target_: pvnet.models.late_fusion.site_encoders.encoders.SingleAttentionNetwork
     _partial_: True
     num_sites: 349
     out_features: 40
@@ -59,7 +59,7 @@ model:
   #--------------------------------------------
 
   output_network:
-    _target_: pvnet.models.multimodal.linear_networks.networks.ResFCNet2
+    _target_: pvnet.models.late_fusion.linear_networks.networks.ResFCNet2
     _partial_: True
     fc_hidden_features: 128
     n_res_blocks: 6

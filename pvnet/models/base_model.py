@@ -12,6 +12,7 @@ import torch
 import yaml
 from huggingface_hub import ModelCard, ModelCardData, snapshot_download
 from huggingface_hub.hf_api import HfApi
+from ocf_data_sampler.torch_datasets.sample.base import TensorBatch
 from safetensors.torch import load_file, save_file
 from torchvision.transforms.functional import center_crop
 
@@ -429,7 +430,7 @@ class BaseModel(torch.nn.Module, HuggingfaceMixin):
         else:
             self.num_output_features = self.forecast_len
 
-    def _adapt_batch(self, batch):
+    def _adapt_batch(self, batch: TensorBatch) -> TensorBatch:
         """Slice batches into appropriate shapes for model.
 
         Returns a new batch dictionary with adapted data, leaving the original batch unchanged.
@@ -492,7 +493,7 @@ class BaseModel(torch.nn.Module, HuggingfaceMixin):
 
         return new_batch
 
-    def _quantiles_to_prediction(self, y_quantiles):
+    def _quantiles_to_prediction(self, y_quantiles: torch.Tensor) -> torch.Tensor:
         """
         Convert network prediction into a point prediction.
 
