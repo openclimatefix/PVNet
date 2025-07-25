@@ -6,17 +6,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from ocf_data_sampler.torch_datasets.sample.base import TensorBatch, copy_batch_to_device
+
 import wandb
-from ocf_data_sampler.torch_datasets.sample.base import copy_batch_to_device
-
 from pvnet.models.base_model import BaseModel
-from pvnet.models.stores import BatchAccumulator, MetricAccumulator, PredAccumulator
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.utils import plot_batch_forecasts
-
-activities = [torch.profiler.ProfilerActivity.CPU]
-if torch.cuda.is_available():
-    activities.append(torch.profiler.ProfilerActivity.CUDA)
+from pvnet.training.plots import plot_sample_forecasts
+from pvnet.training.stores import BatchAccumulator, MetricAccumulator, PredAccumulator
 
 
 class PVNetLightningModule(pl.LightningModule):
@@ -53,11 +49,16 @@ class PVNetLightningModule(pl.LightningModule):
         self.validation_epoch_results = []
         self.save_validation_results_csv = save_validation_results_csv
 
-    def transfer_batch_to_device(self, batch, device, dataloader_idx):
+    def transfer_batch_to_device(
+        self, 
+        batch: TensorBatch, 
+        device: torch.device, 
+        dataloader_idx: int,
+    ) -> dict:
         """Method to move custom batches to a given device"""
         return copy_batch_to_device(batch, device)
 
-    def _calculate_quantile_loss(self, y_quantiles, y):
+    def _calculate_quantile_loss(self, y_quantiles: list[float], y: torch.Tensor) -> torch.Tensor:
         """Calculate quantile loss.
 
         Note:
@@ -80,8 +81,11 @@ class PVNetLightningModule(pl.LightningModule):
 
         return losses.mean()
 
-
-    def _calculate_common_losses(self, y, y_hat):
+    def _calculate_common_losses(
+        self, 
+        y: torch.Tensor,
+        y_hat: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Calculate losses common to train, and val"""
 
         losses = {}
@@ -90,8 +94,7 @@ class PVNetLightningModule(pl.LightningModule):
             losses["quantile_loss"] = self._calculate_quantile_loss(y_hat, y)
             y_hat = self.model._quantiles_to_prediction(y_hat)
 
-        losses.update(
-            {
+        losses.update({
                 "MSE":  F.mse_loss(y_hat, y),
                 "MAE": F.l1_loss(y_hat, y),
             }
@@ -99,7 +102,12 @@ class PVNetLightningModule(pl.LightningModule):
 
         return losses
 
-    def _step_mae_and_mse_metrics(self, y, y_hat, dict_key_root):
+    def _step_mae_and_mse_metrics(
+        self, 
+        y: torch.Tensor, 
+        y_hat: torch.Tensor, 
+        dict_key_root: str,
+    ) -> dict[str, torch.Tensor]:
         """Calculate the MSE and MAE at each forecast step"""
         losses = {}
 
@@ -111,7 +119,11 @@ class PVNetLightningModule(pl.LightningModule):
 
         return losses
 
-    def _calculate_val_losses(self, y, y_hat):
+    def _calculate_val_losses(
+        self, 
+        y: torch.Tensor, 
+        y_hat: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Calculate additional validation losses"""
 
         losses = {}
@@ -140,7 +152,12 @@ class PVNetLightningModule(pl.LightningModule):
         losses.update(self._step_mae_and_mse_metrics(y, y_persist, dict_key_root="persistence"))
         return losses
 
-    def _training_accumulate_log(self, batch, batch_idx, losses, y_hat):
+    def _training_accumulate_log(
+        self, 
+        batch: TensorBatch, 
+        losses: dict[str, torch.Tensor], 
+        y_hat: torch.Tensor,
+    ) -> None:
         """Internal function to accumulate training batches and log results.
 
         This is used when accummulating grad batches. Should make the variability in logged training
@@ -163,7 +180,7 @@ class PVNetLightningModule(pl.LightningModule):
             self.log_dict(losses, on_step=True, on_epoch=True)
 
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: TensorBatch, batch_idx: int) -> torch.Tensor:
         """Run training step"""
         y_hat = self.model(batch)
 
@@ -175,7 +192,7 @@ class PVNetLightningModule(pl.LightningModule):
         losses = self._calculate_common_losses(y, y_hat)
         losses = {f"{k}/train": v for k, v in losses.items()}
 
-        self._training_accumulate_log(batch, batch_idx, losses, y_hat)
+        self._training_accumulate_log(batch, losses, y_hat)
 
         if self.model.use_quantile_regression:
             opt_target = losses["quantile_loss/train"]
@@ -183,9 +200,14 @@ class PVNetLightningModule(pl.LightningModule):
             opt_target = losses["MAE/train"]
         return opt_target
 
-    def _log_forecast_plot(self, batch, y_hat, accum_batch_num):
+    def _log_forecast_plot(
+        self, 
+        batch: TensorBatch,
+        y_hat: torch.Tensor, 
+        accum_batch_num: int,
+    ) -> None:
         """Log forecast plot to wandb"""
-        fig = plot_batch_forecasts(
+        fig = plot_sample_forecasts(
             batch,
             y_hat,
             quantiles=self.model.output_quantiles,
@@ -198,7 +220,12 @@ class PVNetLightningModule(pl.LightningModule):
 
         plt.close(fig)
 
-    def _log_validation_results(self, batch, y_hat, accum_batch_num):
+    def _log_validation_results(
+        self, 
+        batch: TensorBatch, 
+        y_hat: torch.Tensor, 
+        accum_batch_num: int,
+    ) -> None:
         """Append validation results to self.validation_epoch_results"""
 
         # Get truth values - shape: (batch_size, history_len + forecast_len)
@@ -240,7 +267,7 @@ class PVNetLightningModule(pl.LightningModule):
 
             self.validation_epoch_results.append(results_df)
 
-    def validation_step(self, batch: dict, batch_idx):
+    def validation_step(self, batch: TensorBatch, batch_idx: int) -> dict[str, torch.Tensor]:
         """Run validation step"""
 
         accum_batch_num = batch_idx // self.trainer.accumulate_grad_batches
@@ -281,18 +308,14 @@ class PVNetLightningModule(pl.LightningModule):
                     y_hat = self._val_y_hats.flush()
                     batch = self._val_batches.flush()
 
-                    self._log_forecast_plot(
-                        batch,
-                        y_hat,
-                        accum_batch_num,
-                    )
+                    self._log_forecast_plot(batch, y_hat, accum_batch_num)
 
                     del self._val_y_hats
                     del self._val_batches
 
         return logged_losses
 
-    def on_validation_epoch_end(self):
+    def on_validation_epoch_end(self) -> None:
         """Run on epoch end"""
 
         validation_results_df = pd.concat(self.validation_epoch_results)
@@ -304,16 +327,16 @@ class PVNetLightningModule(pl.LightningModule):
             # Log error distribution metrics
             val_error = validation_results_df["y"] - validation_results_df["y_quantile_0.5"]
 
-            wandb.log(
-                {
-                    "2nd_percentile_median_forecast_error": val_error.quantile(0.02),
-                    "5th_percentile_median_forecast_error": val_error.quantile(0.05),
-                    "95th_percentile_median_forecast_error": val_error.quantile(0.95),
-                    "98th_percentile_median_forecast_error": val_error.quantile(0.98),
-                    "95th_percentile_median_forecast_absolute_error": abs(val_error).quantile(0.95),
-                    "98th_percentile_median_forecast_absolute_error": abs(val_error).quantile(0.98),
-                }
-            )
+            extreme_error_methrics = {
+                "2nd_percentile_median_forecast_error": val_error.quantile(0.02),
+                "5th_percentile_median_forecast_error": val_error.quantile(0.05),
+                "95th_percentile_median_forecast_error": val_error.quantile(0.95),
+                "98th_percentile_median_forecast_error": val_error.quantile(0.98),
+                "95th_percentile_median_forecast_absolute_error": val_error.abs().quantile(0.95),
+                "98th_percentile_median_forecast_absolute_error": val_error.abs().quantile(0.98),
+            }
+
+            self.log_dict(extreme_error_methrics, on_step=False, on_epoch=True)
 
             # Save all validation results
             if self.save_validation_results_csv:

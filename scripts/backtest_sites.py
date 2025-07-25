@@ -46,7 +46,7 @@ from tqdm import tqdm
 
 from pvnet.load_model import get_model_from_checkpoints
 from pvnet.models.base_model import BaseModel as PVNetBaseModel
-from pvnet.models.multimodal.multimodal import Model
+from pvnet.models.late_fusion.late_fusion import Model
 
 # ------------------------------------------------------------------
 # USER CONFIGURED VARIABLES TO RUN THE SCRIPT

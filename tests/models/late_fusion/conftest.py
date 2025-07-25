@@ -9,7 +9,13 @@ import xarray as xr
 import torch
 import hydra
 
-from pvnet.data import SitePresavedDataModule, UKRegionalPresavedDataModule
+from pvnet.data import (
+    SitePresavedDataModule,
+    UKRegionalPresavedDataModule,
+)
+import pvnet.models.late_fusion.encoders.encoders3d
+import pvnet.models.late_fusion.linear_networks.networks
+import pvnet.models.late_fusion.site_encoders.encoders
 from pvnet.models import LateFusionModel
 
 

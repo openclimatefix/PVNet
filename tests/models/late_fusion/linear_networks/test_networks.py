@@ -1,4 +1,4 @@
-from pvnet.models.multimodal.linear_networks.networks import ResFCNet2
+from pvnet.models.late_fusion.linear_networks.networks import ResFCNet2
 import pytest
 import torch
 from collections import OrderedDict
@@ -10,13 +10,13 @@ def simple_linear_batch():
 
 
 @pytest.fixture()
-def multimodal_linear_batch():
+def late_fusion_linear_batch():
     return OrderedDict(nwp=torch.rand(2, 50), sat=torch.rand(2, 40), sun=torch.rand(2, 10))
 
 
 @pytest.fixture()
-def multiple_batch_types(simple_linear_batch, multimodal_linear_batch):
-    return [simple_linear_batch, multimodal_linear_batch]
+def multiple_batch_types(simple_linear_batch, late_fusion_linear_batch):
+    return [simple_linear_batch, late_fusion_linear_batch]
 
 
 @pytest.fixture()

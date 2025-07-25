@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from pvnet.models.multimodal.site_encoders.encoders import (
+from pvnet.models.late_fusion.site_encoders.encoders import (
     SimpleLearnedAggregator,
     SingleAttentionNetwork,
 )

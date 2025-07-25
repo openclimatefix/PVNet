@@ -47,8 +47,26 @@ local_dir = api.snapshot_download(
 with open(f"{local_dir}/{MODEL_CONFIG_NAME}") as cfg:
     model_config = yaml.load(cfg, Loader=yaml.FullLoader)
 
+# Get rid of the optimiser - we don't store this anymore
 del model_config["optimizer"]
 
+# Rename the top level model
+if model_config["_target_"]=="pvnet.models.multimodal.multimodal.Model":
+    model_config["_target_"] = "pvnet.models.LateFusionModel"
+else:
+    raise Exception("Unknown model: " + model_config["_target_"])
+
+# Re-find the model components in the new package structure
+if model_config.get("nwp_encoders_dict", None) is not None:
+    for k, v in model_config["nwp_encoders_dict"].items():
+        v["_target_"] = v["_target_"].replace("multimodal", "late_fusion")
+
+for component in ["sat_encoder", "pv_encoder", "output_network"]:
+    if model_config.get(component, None) is not None:
+        model_config[component]["_target_"] = (
+            model_config[component]["_target_"].replace("multimodal", "late_fusion")
+        )
+    
 with open(f"{local_dir}/{MODEL_CONFIG_NAME}", "w") as f:
     yaml.dump(model_config, f, sort_keys=False, default_flow_style=False)
 

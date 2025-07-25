@@ -15,8 +15,7 @@ class UKRegionalPresavedDataModule(BasePresavedDataModule):
     """Datamodule for loading pre-saved samples."""
 
     def _get_premade_samples_dataset(self, subdir: str) -> Dataset:
-        split_dir = f"{self.sample_dir}/{subdir}"
-        return PresavedSamplesDataset(split_dir, UKRegionalSample)
+        return PresavedSamplesDataset(f"{self.sample_dir}/{subdir}", UKRegionalSample)
 
 
 class UKRegionalStreamedDataModule(BaseStreamedDataModule):

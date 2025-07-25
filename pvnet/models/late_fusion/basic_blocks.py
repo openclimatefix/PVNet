@@ -8,7 +8,7 @@ from torch import nn
 class ImageEmbedding(nn.Module):
     """A embedding layer which concatenates an ID embedding as a new channel onto 3D inputs."""
 
-    def __init__(self, num_embeddings, sequence_length, image_size_pixels, **kwargs):
+    def __init__(self, num_embeddings: int, sequence_length: int, image_size_pixels: int, **kwargs):
         """A embedding layer which concatenates an ID embedding as a new channel onto 3D inputs.
 
         The embedding is a single 2D image and is appended at each step in the 1st dimension
@@ -29,7 +29,7 @@ class ImageEmbedding(nn.Module):
             **kwargs,
         )
 
-    def forward(self, x, id):
+    def forward(self, x: torch.Tensor, id: torch.Tensor) -> torch.Tensor:
         """Append ID embedding to image"""
         emb = self._embed(id)
         emb = emb.reshape((-1, 1, 1, self.image_size_pixels, self.image_size_pixels))

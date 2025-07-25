@@ -1,7 +1,6 @@
 """Model which uses mutliple prediction heads"""
-from typing import Optional
-
 import torch
+from ocf_data_sampler.torch_datasets.sample.base import TensorBatch
 from torch import nn
 
 from pvnet.models.base_model import BaseModel
@@ -13,7 +12,7 @@ class Ensemble(BaseModel):
     def __init__(
         self,
         model_list: list[BaseModel],
-        weights: Optional[list[float]] = None,
+        weights: list[float] | None = None,
     ):
         """Ensemble of PVNet models
 
@@ -65,9 +64,9 @@ class Ensemble(BaseModel):
             weights = torch.Tensor(weights) / sum(weights)
         self.weights = nn.Parameter(weights, requires_grad=False)
 
-    def forward(self, batch):
+    def forward(self, x: TensorBatch) -> torch.Tensor:
         """Run the model forward"""
         y_hat = 0
         for weight, model in zip(self.weights, self.model_list):
-            y_hat = model(batch) * weight + y_hat
+            y_hat = model(x) * weight + y_hat
         return y_hat

@@ -1,6 +1,7 @@
 """Basic blocks for PV-site encoders"""
 from abc import ABCMeta, abstractmethod
 
+import torch
 from torch import nn
 
 
@@ -30,6 +31,6 @@ class AbstractSitesEncoder(nn.Module, metaclass=ABCMeta):
         self.out_features = out_features
 
     @abstractmethod
-    def forward(self):
+    def forward(self) -> torch.Tensor:
         """Run model forward"""
         pass

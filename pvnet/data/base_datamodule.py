@@ -7,6 +7,7 @@ from lightning.pytorch import LightningDataModule
 from ocf_data_sampler.numpy_sample.collate import stack_np_samples_into_batch
 from ocf_data_sampler.torch_datasets.sample.base import (
     NumpyBatch,
+    NumpySample,
     SampleBase,
     TensorBatch,
     batch_to_tensor,
@@ -32,10 +33,10 @@ class PresavedSamplesDataset(Dataset):
         self.sample_paths = glob(f"{sample_dir}/*")
         self.sample_class = sample_class
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.sample_paths)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> NumpySample:
         sample = self.sample_class.load(self.sample_paths[idx])
         return sample.to_numpy()
 

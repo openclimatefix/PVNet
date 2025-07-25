@@ -22,7 +22,7 @@ class AbstractLinearNetwork(nn.Module, metaclass=ABCMeta):
         """
         super().__init__()
 
-    def cat_modes(self, x):
+    def cat_modes(self, x: OrderedDict[str, torch.Tensor] | torch.Tensor) -> torch.Tensor:
         """Concatenate modes of input data into 1D feature vector"""
         if isinstance(x, OrderedDict):
             return torch.cat([value for key, value in x.items()], dim=1)
@@ -32,7 +32,7 @@ class AbstractLinearNetwork(nn.Module, metaclass=ABCMeta):
             raise ValueError(f"Input of unexpected type {type(x)}")
 
     @abstractmethod
-    def forward(self):
+    def forward(self, x: OrderedDict[str, torch.Tensor] | torch.Tensor) -> torch.Tensor:
         """Run model forward"""
         pass
 
@@ -81,6 +81,6 @@ class ResidualLinearBlock2(nn.Module):
 
         self.model = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Run model forward"""
         return self.model(x) + x

@@ -1,21 +1,21 @@
 from pvnet.models.ensemble import Ensemble
 
 
-def test_model_init(multimodal_model):
+def test_model_init(late_fusion_model):
     ensemble_model = Ensemble(
-        model_list=[multimodal_model] * 3,
+        model_list=[late_fusion_model] * 3,
         weights=None,
     )
 
     ensemble_model = Ensemble(
-        model_list=[multimodal_model] * 3,
+        model_list=[late_fusion_model] * 3,
         weights=[1, 2, 3],
     )
 
 
-def test_model_forward(multimodal_model, sample_batch):
+def test_model_forward(late_fusion_model, sample_batch):
     ensemble_model = Ensemble(
-        model_list=[multimodal_model] * 3,
+        model_list=[late_fusion_model] * 3,
     )
 
     y = ensemble_model(sample_batch)
@@ -25,9 +25,9 @@ def test_model_forward(multimodal_model, sample_batch):
     assert tuple(y.shape) == (2, 16), y.shape
 
 
-def test_quantile_model_forward(multimodal_quantile_model, sample_batch):
+def test_quantile_model_forward(late_fusion_quantile_model, sample_batch):
     ensemble_model = Ensemble(
-        model_list=[multimodal_quantile_model] * 3,
+        model_list=[late_fusion_quantile_model] * 3,
     )
 
     y_quantiles = ensemble_model(sample_batch)

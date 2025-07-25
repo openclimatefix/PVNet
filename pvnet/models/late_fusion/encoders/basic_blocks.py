@@ -1,6 +1,7 @@
 """Basic blocks for image sequence encoders"""
 from abc import ABCMeta, abstractmethod
 
+import torch
 from torch import nn
 
 
@@ -88,6 +89,6 @@ class ResidualConv3dBlock2(nn.Module):
 
         self.model = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Run model forward"""
         return self.model(x) + x
