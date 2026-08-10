@@ -40,16 +40,6 @@ def wandb_line_plot(
         title=title
     )
 
-def wandb_line_plot_custom(
-    x: Sequence[float], 
-    y: Sequence[float], 
-    xlabel: str, 
-    ylabel: str, 
-    title: str | None = None):
-    return wandb_line_plot(x=x, y=y, xlabel=xlabel, ylabel=ylabel, 
-                           title=title, add_identity_line=True)
-   
-
 def plot_sample_forecasts(
     batch: TensorBatch,
     y_hat: torch.Tensor,

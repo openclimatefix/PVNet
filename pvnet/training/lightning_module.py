@@ -366,12 +366,13 @@ class PVNetLightningModule(pl.LightningModule):
                 val_quantiles = np.mean(self._val_quantiles, axis=0)
                 self._val_quantiles = []
                     
-                qq_plot = wandb_line_plot_custom(
+                qq_plot = wandb_line_plot(
                     x=self.model.output_quantiles,
                     y=val_quantiles,
                     xlabel="True quantiles",
                     ylabel="Predicted quantiles",
                     title="Quantile-quantile plot",
+                    add_identity_line=True,
                 )
 
                 wandb.log(
