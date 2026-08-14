@@ -14,7 +14,7 @@ from ocf_data_sampler.torch_datasets.utils.torch_batch_utils import copy_batch_t
 from pvnet.datamodule import collate_fn
 from pvnet.models.base_model import BaseModel
 from pvnet.optimizers import AbstractOptimizer
-from pvnet.training.plots import plot_sample_forecasts, wandb_line_plot, wandb_line_plot_custom
+from pvnet.training.plots import plot_sample_forecasts, wandb_line_plot
 from pvnet.utils import validate_batch_against_config
 
 
