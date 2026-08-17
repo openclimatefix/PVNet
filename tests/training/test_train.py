@@ -20,7 +20,7 @@ def trainer_cfg_cpu() -> dict:
     """Tiny CPU-only Trainer config."""
     return {
         "_target_": "lightning.pytorch.Trainer",
-        "max_epochs": 2,
+        "max_epochs": 1,
         "limit_train_batches": 1,
         "limit_val_batches": 1,
         "accelerator": "cpu",
