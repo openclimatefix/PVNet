@@ -19,18 +19,18 @@ def wandb_line_plot(
 ) -> wandb.plot.CustomChart:
     """Make a wandb line plot"""
     # Main series data
-    data = [[xi, yi, "Data"] for xi, yi in zip(x, y)]
+    data = [[xi, yi, "model"] for xi, yi in zip(x, y)]
     
     # Add identity line endpoints if requested
     if add_identity_line:
         min_val, max_val = min(x), max(x)
-        data.append([min_val, min_val, "x=y"])
-        data.append([max_val, max_val, "x=y"])
+        data.append([min_val, min_val, "y=x"])
+        data.append([max_val, max_val, "y=x"])
 
-    table = wandb.Table(data=data, columns=[xlabel, ylabel, "Series"])
+    table = wandb.Table(data=data, columns=[xlabel, ylabel, "key"])
 
-    # stroke=None creates a clean single line; stroke="Series" creates multi-line legend
-    stroke_col = "Series" if add_identity_line else None
+    # stroke=None creates a clean single line; stroke="key" creates multi-line legend
+    stroke_col = "key" if add_identity_line else None
 
     return wandb.plot.line(
         table=table, 

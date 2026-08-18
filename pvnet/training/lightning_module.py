@@ -369,10 +369,10 @@ class PVNetLightningModule(pl.LightningModule):
                 qq_plot = wandb_line_plot(
                     x=self.model.output_quantiles,
                     y=val_quantiles,
-                    xlabel="True quantiles",
-                    ylabel="Predicted quantiles",
+                    xlabel="Target quantile",
+                    ylabel="Fraction below quantile",
                     title="Quantile-quantile plot",
-                    add_identity_line=True,
+                    add_identity_line=True
                 )
 
                 wandb.log(
