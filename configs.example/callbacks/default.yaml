@@ -17,8 +17,11 @@ model_summary:
 model_checkpoint:
   _target_: lightning.pytorch.callbacks.ModelCheckpoint
   # name of the logged metric which determines when model is improving
+  monitor: "${resolve_monitor_loss:${model.model.output_quantiles}}"
   mode: "min" # can be "max" or "min"
-  save_last: False # last.ckpt saved by different callback below
+  save_top_k: 1 # save k best models (determined by above metric)
+  save_last: False # last.ckpt is saved by the last_checkpoint callback below
+  every_n_epochs: 1
   verbose: False
   filename: "epoch={epoch}-step={step}"
   # The path to where the model checkpoints will be stored
@@ -26,13 +29,10 @@ model_checkpoint:
   auto_insert_metric_name: False
   save_on_train_epoch_end: False
 
-# Saves model from most recent epoch to last.ckpt, overwriting each instance
+# Saves the model from the most recent epoch to last.ckpt, overwriting it each time
 last_checkpoint:
   _target_: lightning.pytorch.callbacks.ModelCheckpoint
-  monitor: null
-  save_top_k: 1
   filename: "last"
-  every_n_epochs: 1
   enable_version_counter: False
   save_on_train_epoch_end: False
   dirpath: "PLACEHOLDER/${model_name}"
