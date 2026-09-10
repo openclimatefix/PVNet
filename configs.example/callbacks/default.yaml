@@ -20,7 +20,7 @@ model_checkpoint:
   monitor: "${resolve_monitor_loss:${model.model.output_quantiles}}"
   mode: "min" # can be "max" or "min"
   save_top_k: 1 # save k best models (determined by above metric)
-  save_last: True # save a last.ckpt copy whenever a checkpoint file gets saved
+  save_last: False # save a last.ckpt copy whenever a checkpoint file gets saved
   every_n_epochs: 1
   verbose: False
   filename: "epoch={epoch}-step={step}"
@@ -28,3 +28,13 @@ model_checkpoint:
   dirpath: "PLACEHOLDER/${model_name}" #${..model_name}
   auto_insert_metric_name: False
   save_on_train_epoch_end: False
+
+last_checkpoint:
+  _target_: lightning.pytorch.callbacks.ModelCheckpoint
+  monitor: null
+  save_top_k: 1
+  filename: "last"
+  every_n_epochs: 1
+  enable_version_counter: False
+  save_on_train_epoch_end: False
+  dirpath: "PLACEHOLDER/${model_name}"

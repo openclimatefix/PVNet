@@ -85,31 +85,29 @@ def train(config: DictConfig) -> None:
 
     # Set the output directory based in the wandb-id of the run
     if use_wandb_logger:
-        for callback in callbacks:
-            if isinstance(callback, ModelCheckpoint):
-                # Calling the .experiment property instantiates a wandb run
-                wandb_id = wandb_logger.experiment.id
+        ckpt_callbacks = [cb for cb in callbacks if isinstance(cb, ModelCheckpoint)]
+        if ckpt_callbacks:
+            wandb_id = wandb_logger.experiment.id
 
-                # Save the run results to the expected parent folder but with the folder name
-                # set by the wandb ID
-                save_dir = "/".join(callback.dirpath.split("/")[:-1] + [wandb_id])
+            # Save run results to the expected folder but with folder name set by ID
+            save_dir = "/".join(ckpt_callbacks[0].dirpath.split("/")[:-1] + [wandb_id])
 
-                callback.dirpath = save_dir
-                
-                # Save the model config
-                os.makedirs(save_dir, exist_ok=True)
-                OmegaConf.save(config.model, f"{save_dir}/{MODEL_CONFIG_NAME}")
+            # Point every ckpt callback (best + last) at same folder
+            for cb in ckpt_callbacks:
+                cb.dirpath = save_dir
 
-                # Save the data config to the output directory and to wandb
-                data_config = config.datamodule.configuration
-                shutil.copyfile(data_config, f"{save_dir}/{DATA_CONFIG_NAME}")
-                wandb_logger.experiment.save(f"{save_dir}/{DATA_CONFIG_NAME}", base_path=save_dir)
+            # Save model config
+            os.makedirs(save_dir, exist_ok=True)
+            OmegaConf.save(config.model, f"{save_dir}/{MODEL_CONFIG_NAME}")
 
-                # Save the full hydra config to the output directory and to wandb
-                OmegaConf.save(config, f"{save_dir}/{FULL_CONFIG_NAME}")
-                wandb_logger.experiment.save(f"{save_dir}/{FULL_CONFIG_NAME}", base_path=save_dir)
-                
-                break
+            # Save data config to output directory and to wandb
+            data_config = config.datamodule.configuration
+            shutil.copyfile(data_config, f"{save_dir}/{DATA_CONFIG_NAME}")
+            wandb_logger.experiment.save(f"{save_dir}/{DATA_CONFIG_NAME}", base_path=save_dir)
+
+            # Save full hydra config to output directory and to wandb
+            OmegaConf.save(config, f"{save_dir}/{FULL_CONFIG_NAME}")
+            wandb_logger.experiment.save(f"{save_dir}/{FULL_CONFIG_NAME}", base_path=save_dir)
 
     trainer: Trainer = hydra.utils.instantiate(
         config.trainer,
