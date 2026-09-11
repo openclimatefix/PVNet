@@ -50,15 +50,23 @@ def logger_cfg(wandb_save_dir: str) -> dict:
 @pytest.fixture()
 def ckpt_cfg(wandb_save_dir: str) -> dict:
     """ModelCheckpoint config."""
+    ckpt_dir = str(Path(wandb_save_dir).parent / "ckpts")
     return {
         "ckpt": {
             "_target_": "lightning.pytorch.callbacks.ModelCheckpoint",
-            "dirpath": str(Path(wandb_save_dir).parent / "ckpts"),
-            "save_last": True,
+            "dirpath": ckpt_dir,
             "save_top_k": 1,
             "monitor": "MAE/val",
             "mode": "min",
-        }
+            "save_on_train_epoch_end": False,
+        },
+        "last_ckpt": {
+            "_target_": "lightning.pytorch.callbacks.ModelCheckpoint",
+            "dirpath": ckpt_dir,
+            "filename": "last",
+            "enable_version_counter": False,
+            "save_on_train_epoch_end": False,
+        },
     }
 
 
